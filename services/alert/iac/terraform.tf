@@ -13,6 +13,12 @@ terraform {
       version = "~> 2.4.2"
     }
   }
+
+  backend "s3" {
+    bucket = "jsmithdenverdev-pager-tf-state"
+    key    = "alert-service"
+    region = "us-west-1"
+  }
 }
 
 provider "aws" {
