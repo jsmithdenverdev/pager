@@ -28,32 +28,19 @@ resource "aws_apigatewayv2_stage" "lambda" {
   }
 }
 
-resource "aws_apigatewayv2_integration" "create_alert_function" {
-  api_id = aws_apigatewayv2_api.lambda.id
-
-  integration_uri    = module.create_alert_function.invoke_arn
-  integration_type   = "AWS_PROXY"
-  integration_method = "POST"
-}
-
-resource "aws_apigatewayv2_route" "create_alert" {
-  api_id = aws_apigatewayv2_api.lambda.id
-
-  route_key = "POST /alert"
-  target    = "integrations/${aws_apigatewayv2_integration.create_alert_function.id}"
-}
-
 resource "aws_cloudwatch_log_group" "api_gw" {
   name = "/aws/api_gw/${aws_apigatewayv2_api.lambda.name}"
 
   retention_in_days = 30
 }
 
-resource "aws_lambda_permission" "api_gw" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = module.create_alert_function.function_name
-  principal     = "apigateway.amazonaws.com"
+module create_alert_route {
+  source = "./modules/route"
 
-  source_arn = "${aws_apigatewayv2_api.lambda.execution_arn}/*/*"
+  api_id          = aws_apigatewayv2_api.lambda.id
+  integration_uri = module.create_alert_function.invoke_arn
+  function_name   = module.create_alert_function.function_name
+  source_arn      = "${aws_apigatewayv2_api.lambda.execution_arn}/*/*"
+  method          = "POST"
+  path            = "/alert"
 }
