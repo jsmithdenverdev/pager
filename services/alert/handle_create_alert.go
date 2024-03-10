@@ -7,11 +7,11 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
-func HandleAlert() func(context.Context, events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func HandleCreate() func(context.Context, events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	return func(context.Context, events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusOK,
-			Body:       "Alert",
+			Body:       "Creating alert!",
 		}, nil
 	}
 }

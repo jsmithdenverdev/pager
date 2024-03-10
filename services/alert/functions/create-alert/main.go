@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	handler := alert.HandleAlert()
+	handler := alert.HandleCreate()
 	lambda.Start(handler)
 }
