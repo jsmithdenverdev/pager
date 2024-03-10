@@ -4,12 +4,6 @@ output "lambda_bucket_name" {
   value = aws_s3_bucket.lambda_bucket.id
 }
 
-output "alert_function_name" {
-  description = "Name of the alert Lambda function."
-
-  value = aws_lambda_function.alert.function_name
-}
-
 output "base_url" {
   description = "Base URL for API Gateway stage."
 
