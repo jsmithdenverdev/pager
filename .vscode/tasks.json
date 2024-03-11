@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "shell",
+      "label": "go: build package",
+      "group": "build",
+      "detail": "cd ${fileDirname}; go build -o build/bootstrap -tags lambda.noprpc ${fileName}",
+      "command": "go",
+      "args": [
+        "build",
+        "-o",
+        "build/bootstrap",
+        "-tags",
+        "lambda.norpc",
+        "${fileName}"
+      ],
+      "options": {
+        "cwd": "${fileDirname}",
+        "env": {
+          "GOOS": "linux",
+          "GOARCH": "amd64"
+        }
+      },
+      "problemMatcher": ["$go"]
+    }
+  ]
+}
