@@ -96,16 +96,18 @@ func newResultType[Result any](name string, resultType *graphql.Object, errTypes
 		Name:  name,
 		Types: types,
 		ResolveType: func(p graphql.ResolveTypeParams) *graphql.Object {
+			// To check the type, we need to go from most specific to least specific
+			// the last item in this list should be the error interface.
 			if _, ok := p.Value.(Result); ok {
 				return resultType
+			}
+			if _, ok := p.Value.(authzError); ok {
+				return authzErrorType
 			}
 			if _, ok := p.Value.(validator.ValidationErrors); ok {
 				return validationErrorType
 			}
 			if _, ok := p.Value.(error); ok {
-				return baseErrorType
-			}
-			if _, ok := p.Value.(authzError); ok {
 				return baseErrorType
 			}
 			return nil
