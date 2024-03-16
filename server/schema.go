@@ -74,8 +74,8 @@ func registerMutations(schema *graphql.SchemaConfig, logger *slog.Logger, valida
 	schema.Mutation = graphql.NewObject(rootMutation)
 }
 
-// toFields converts a slice of `*graphql.Field` into a `graphql.Fields` Fields
-// in the slice must have a `Name`, which is used as the key in
+// toFields converts a slice of `*graphql.Field` into a `graphql.Fields`. All
+// fields in the slice must have a `Name`, which is used as the key in
 // `graphql.Fields`.
 func toFields(fields []*graphql.Field) graphql.Fields {
 	var f graphql.Fields = make(graphql.Fields)

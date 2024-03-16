@@ -23,6 +23,7 @@ func main() {
 	}
 }
 
+// run initializes dependencies and kicks this pig.
 func run(ctx context.Context, stdout io.Writer, getenv func(string) string) error {
 	logger := slog.New(slog.NewJSONHandler(stdout, &slog.HandlerOptions{
 		AddSource: true,
