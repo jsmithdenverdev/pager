@@ -36,6 +36,8 @@ services:
       PORT: 8080
       SQITCH_CONN: db:pg://postgres:postgres@db:5432/pager
       DB_CONN: postgresql://postgres:postgres@db:5432/pager
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
     depends_on:
       db:
         condition: service_healthy

@@ -28,6 +28,7 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 	logger := slog.New(slog.NewJSONHandler(stdout, &slog.HandlerOptions{
 		AddSource: true,
 	}))
+
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
 
@@ -44,7 +45,10 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 	})
 
 	mux := http.NewServeMux()
-	mux.Handle("/graphql", handler)
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.Handle("/graphql", ensureValidToken(getenv, logger)(handler))
 
 	httpServer := http.Server{
 		Addr:    net.JoinHostPort(getenv("HOST"), getenv("PORT")),

@@ -30,6 +30,8 @@ ENV HOST=0.0.0.0
 ENV PORT=8080
 ENV SQITCH_CONN=
 ENV DB_CONN=
+ENV AUTH0_DOMAIN=
+ENV AUTH0_AUDIENCE=
 
 COPY sqitch.conf sqitch.plan ./
 COPY deploy ./deploy
