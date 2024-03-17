@@ -1,0 +1,9 @@
+# Development container
+tmp
+
+# Exclude "build-time" ignore files.
+.dockerignore
+.gcloudignore
+
+# Exclude git history and configuration.
+.gitignore

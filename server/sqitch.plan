@@ -1,0 +1,5 @@
+%syntax-version=1.0.0
+%project=pager
+%uri=github.com/jsmithdenverdev/pager/
+
+appschema 2024-03-16T23:45:09Z Jake Smith <jsmithdenverdev@gmail.com> # Initial pager schema

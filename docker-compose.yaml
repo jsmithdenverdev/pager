@@ -1,0 +1,43 @@
+version: "3"
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    expose:
+      - 5432
+    ports:
+      - 5432:5432
+    volumes:
+      - ./pg-init/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./pg-init/pg_hba.conf:/docker-entrypoint-initdb.d/pg_hba.conf
+      - pgdata:/var/lib/postgresql
+    command:
+      ["postgres", "-c", "hba_file=/docker-entrypoint-initdb.d/pg_hba.conf"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      start_period: 10s
+      timeout: 5s
+      retries: 5
+  server:
+    build:
+      context: ./server
+      target: development
+    ports:
+      - 8080:8080
+      - 2345:2345
+    volumes:
+      - ./server:/app
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+      SQITCH_CONN: db:pg://postgres:postgres@db:5432/pager
+      DB_CONN: postgresql://postgres:postgres@db:5432/pager
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  pgdata:
