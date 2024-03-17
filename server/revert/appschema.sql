@@ -2,6 +2,7 @@
 
 BEGIN;
 
--- XXX Add DDLs here.
+DROP TABLE IF EXISTS agency;
+DROP EXTENSION IF EXISTS "uuid-ossp";;
 
 COMMIT;
