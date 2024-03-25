@@ -1,8 +1,6 @@
 package main
 
-import (
-	"github.com/graphql-go/graphql"
-)
+import "github.com/graphql-go/graphql"
 
 // agency is the core entity of pager.
 //
@@ -12,10 +10,11 @@ import (
 // Members of an agency are tracked as devices, to which notifications can be
 // pushed.
 type agency struct {
+	auditable
 	// ID is the UUID representing this agency in the pager system.
-	ID string `json:"id"`
+	ID string `json:"id" db:"id"`
 	// Name is the name of the agency.
-	Name string `json:"name"`
+	Name string `json:"name" db:"name"`
 }
 
 // agencyType creates a new graphql object for an agency. The function accepts
