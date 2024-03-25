@@ -22,6 +22,33 @@ services:
       start_period: 10s
       timeout: 5s
       retries: 5
+
+  migratespicedb:
+    image: "authzed/spicedb"
+    command: "migrate head"
+    restart: "on-failure"
+    environment:
+      - "SPICEDB_DATASTORE_ENGINE=postgres"
+      - "SPICEDB_DATASTORE_CONN_URI=postgres://postgres:postgres@db:5432/spicedb?sslmode=disable"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  spicedb:
+    image: "authzed/spicedb"
+    command: "serve"
+    restart: "always"
+    ports:
+      - "8081:8080"
+      - "9090:9090"
+      - "50051:50051"
+    environment:
+      - "SPICEDB_GRPC_PRESHARED_KEY=foobar"
+      - "SPICEDB_DATASTORE_ENGINE=postgres"
+      - "SPICEDB_DATASTORE_CONN_URI=postgres://postgres:postgres@db:5432/spicedb?sslmode=disable"
+    depends_on:
+      - migratespicedb
+
   server:
     build:
       context: ./server
@@ -38,8 +65,12 @@ services:
       DB_CONN: postgresql://postgres:postgres@db:5432/pager
       AUTH0_DOMAIN: ${AUTH0_DOMAIN}
       AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      SPICEDB_ENDPOINT: spicedb:50051
+      SPICEDB_TOKEN: foobar
     depends_on:
       db:
         condition: service_healthy
+      spicedb:
+        condition: service_started
 volumes:
   pgdata:
