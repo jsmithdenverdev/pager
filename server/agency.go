@@ -29,6 +29,35 @@ func agencyType() *graphql.Object {
 			"name": &graphql.Field{
 				Type: graphql.String,
 			},
+			// Because these fields are on an embedded struct, this stupid fucking
+			// library won't resolve them. Instead, we have to write a fucking field
+			// resolver for each field, convert the source to its own type (?!) and
+			// then return the property.
+			// I'm about fucking sick of graphql-go. Its a shit library.
+			"created": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(agency).Created, nil
+				},
+			},
+			"createdBy": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(agency).CreatedBy, nil
+				},
+			},
+			"modified": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(agency).Modified, nil
+				},
+			},
+			"modifiedBy": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(agency).ModifiedBy, nil
+				},
+			},
 		},
 	})
 }

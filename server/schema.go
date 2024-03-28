@@ -1,10 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 
+	"github.com/authzed/authzed-go/v1"
 	"github.com/go-playground/validator/v10"
 	"github.com/graphql-go/graphql"
+	"github.com/jmoiron/sqlx"
 )
 
 // newSchema creates a new `graphql.Schema` used to describe our application.
@@ -19,11 +22,17 @@ import (
 //
 // newSchema accepts the full set of dependencies for all of its fields as
 // arguments.
-func newSchema(logger *slog.Logger, validate *validator.Validate) (graphql.Schema, error) {
+func newSchema(
+	config config,
+	logger *slog.Logger,
+	validate *validator.Validate,
+	authz *authzed.Client,
+	db *sqlx.DB) (graphql.Schema, error) {
 	schemaConfig := graphql.SchemaConfig{}
 
-	registerQueries(&schemaConfig, logger, validate)
-	registerMutations(&schemaConfig, logger, validate)
+	types := newGraphTypes()
+	registerQueries(&schemaConfig, config, types, logger, validate, authz, db)
+	registerMutations(&schemaConfig, config, types, logger, validate, authz, db)
 
 	if schema, err := graphql.NewSchema(schemaConfig); err != nil {
 		return graphql.Schema{}, err
@@ -40,10 +49,17 @@ func newSchema(logger *slog.Logger, validate *validator.Validate) (graphql.Schem
 //
 // registerQueries accepts the full set of dependencies for all of its queries
 // as arguments.
-func registerQueries(schema *graphql.SchemaConfig, logger *slog.Logger, validate *validator.Validate) {
+func registerQueries(
+	schema *graphql.SchemaConfig,
+	config config,
+	types graphTypes,
+	logger *slog.Logger,
+	validate *validator.Validate,
+	authz *authzed.Client,
+	db *sqlx.DB) {
 	// Register additional graphql queries here
 	queries := []*graphql.Field{
-		readAgencyQuery(logger),
+		readAgencyQuery(logger, types, authz, db),
 	}
 	var rootQuery = graphql.ObjectConfig{
 		Name:   "RootQuery",
@@ -60,10 +76,17 @@ func registerQueries(schema *graphql.SchemaConfig, logger *slog.Logger, validate
 //
 // registerMutations accepts the full set of dependencies for all of its queries
 // as arguments.
-func registerMutations(schema *graphql.SchemaConfig, logger *slog.Logger, validate *validator.Validate) {
+func registerMutations(
+	schema *graphql.SchemaConfig,
+	config config,
+	types graphTypes,
+	logger *slog.Logger,
+	validate *validator.Validate,
+	authz *authzed.Client,
+	db *sqlx.DB) {
 	// Register additional graphql mutations here
 	mutations := []*graphql.Field{
-		createAgencyMutation(logger, validate),
+		createAgencyMutation(logger, types, validate, authz, db),
 		updateAgencyMutation(logger),
 		deleteAgencyMutation(logger),
 	}
@@ -72,6 +95,22 @@ func registerMutations(schema *graphql.SchemaConfig, logger *slog.Logger, valida
 		Fields: toFields(mutations),
 	}
 	schema.Mutation = graphql.NewObject(rootMutation)
+}
+
+// graphTypes holds references to shared GraphQL types. GraphQL types must have
+// unique names within a schema, which requires the types being initialized
+// exactly once. This struct can be passed as an argument to query and mutation
+// constructors, allowing them to reference the shared graph types.
+type graphTypes struct {
+	agency *graphql.Object
+}
+
+// newGraphTypes returns an initialized graphTypes object.
+func newGraphTypes() graphTypes {
+	agencyType := agencyType()
+	return graphTypes{
+		agency: agencyType,
+	}
 }
 
 // toFields converts a slice of `*graphql.Field` into a `graphql.Fields`. All
@@ -85,15 +124,15 @@ func toFields(fields []*graphql.Field) graphql.Fields {
 	return f
 }
 
-// newResultType wraps a `*graphql.Object` with a union  type. This union has a
+// toResultType wraps a `*graphql.Object` with a union  type. This union has a
 // `Result` member for the original object, as well as a member for each type of
 // provided error.
-func newResultType[Result any](name string, resultType *graphql.Object, errTypes ...*graphql.Object) *graphql.Union {
+func toResultType[Result any](resultType *graphql.Object, errTypes ...*graphql.Object) *graphql.Union {
 	var types []*graphql.Object
 	types = append(types, resultType)
 	types = append(types, errTypes...)
 	return graphql.NewUnion(graphql.UnionConfig{
-		Name:  name,
+		Name:  fmt.Sprintf("%sResult", resultType.Name()),
 		Types: types,
 		ResolveType: func(p graphql.ResolveTypeParams) *graphql.Object {
 			// To check the type, we need to go from most specific to least specific

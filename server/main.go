@@ -12,13 +12,21 @@ import (
 	"sync"
 	"time"
 
+	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
+	jwtvalidator "github.com/auth0/go-jwt-middleware/v2/validator"
+	"github.com/authzed/authzed-go/v1"
+	"github.com/authzed/grpcutil"
 	"github.com/go-playground/validator/v10"
 	"github.com/graphql-go/handler"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
 	if err := run(context.Background(), os.Stdout, os.Getenv); err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "error: could not start pager: %s", err.Error())
 		os.Exit(1)
 	}
 }
@@ -32,9 +40,28 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
 
+	config, err := newConfigFromProcessEnv(getenv)
+	if err != nil {
+		return err
+	}
+
 	validate := validator.New(validator.WithRequiredStructEnabled())
 
-	schema, err := newSchema(logger, validate)
+	authz, err := authzed.NewClient(
+		config.SpiceDBEndpoint,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpcutil.WithInsecureBearerToken(config.SpiceDBToken))
+
+	if err != nil {
+		return err
+	}
+
+	db, err := sqlx.Connect("postgres", config.DBConn)
+	if err != nil {
+		return err
+	}
+
+	schema, err := newSchema(config, logger, validate, authz, db)
 	if err != nil {
 		return err
 	}
@@ -44,14 +71,25 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		Pretty: true,
 	})
 
+	// ctxHandler supplies a custom context to graphql query and mutation
+	// resolvers.
+	ctxHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		claims := ctx.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
+		ctx = context.WithValue(ctx, pagerContextKey{}, pagerContext{
+			User: claims.RegisteredClaims.Subject,
+		})
+		handler.ContextHandler(ctx, w, r)
+	})
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	mux.Handle("/graphql", ensureValidToken(getenv, logger)(handler))
+	mux.Handle("/graphql", ensureValidToken(config, logger)(ctxHandler))
 
 	httpServer := http.Server{
-		Addr:    net.JoinHostPort(getenv("HOST"), getenv("PORT")),
+		Addr:    net.JoinHostPort(config.Host, config.Port),
 		Handler: mux,
 	}
 

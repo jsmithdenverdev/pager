@@ -1,30 +1,28 @@
-/**
- * user represents a user that can be granted role(s)
- */
-definition user {}
-
-/**
- * document represents a document protected by Authzed.
- */
-definition document {
-    /**
-     * writer indicates that the user is a writer on the document.
-     */
-    relation writer: user
-
-    /**
-     * reader indicates that the user is a reader on the document.
-     */
-    relation reader: user
-
-    /**
-     * edit indicates that the user has permission to edit the document.
-     */
-    permission edit = writer
-
-    /**
-     * view indicates that the user has permission to view the document, if they
-     * are a `reader` *or* have `edit` permission.
-     */
-    permission view = reader + edit
+definition platform {
+	relation administrator: user
+	permission super_admin = administrator
+	permission create_agency = administrator
 }
+
+definition agency {
+	relation platform: platform
+	relation reader: user
+	relation writer: user
+ 
+	permission invite_user = platform->super_admin
+  
+  permission read = reader + writer + platform->super_admin
+  permission write = writer
+ 
+	permission create_device = writer
+	permission list_devices = reader + writer
+}
+
+definition device {
+	relation agency: agency
+	permission admin = agency->admin
+	permission delete = agency->writer
+	permission read = agency->writer + agency->reader
+}
+
+definition user {}
