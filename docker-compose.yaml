@@ -61,8 +61,8 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 8080
-      SQITCH_CONN: db:pg://postgres:postgres@db:5432/pager
-      DB_CONN: postgresql://postgres:postgres@db:5432/pager
+      SQITCH_CONN: db:pg://postgres:postgres@db:5432/pager?sslmode=disable
+      DB_CONN: postgresql://postgres:postgres@db:5432/pager?sslmode=disable
       AUTH0_DOMAIN: ${AUTH0_DOMAIN}
       AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
       SPICEDB_ENDPOINT: spicedb:50051
