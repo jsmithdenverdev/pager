@@ -2,8 +2,9 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect, useState } from "react";
 
 export default function Home() {
-  const { user, getAccessTokenSilently } = useAuth0();
   const [token, setToken] = useState<string>("");
+  const { user, getAccessTokenSilently } = useAuth0();
+
   useEffect(() => {
     getAccessTokenSilently().then((token) => {
       setToken(token);
@@ -16,7 +17,7 @@ export default function Home() {
       <p>Signed in as {user?.name}</p>
       <div>
         <h3>Token</h3>
-        <pre>{token}</pre>
+        <code>{token}</code>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import Login from "./routes/login";
 import AuthCallback from "./routes/auth-callback";
 import Home from "./routes/home";
 import "./index.css";
+import AuthGuard from "./routes/auth-guard";
 
 function App() {
   const {} = useAuth0();
@@ -20,13 +21,18 @@ function App() {
           errorElement: <ErrorPage />,
           children: [
             {
-              index: true,
-              element: <Home />,
+              element: <AuthGuard />,
+              children: [
+                {
+                  index: true,
+                  element: <Home />,
+                },
+              ],
             },
+            { path: "callback", element: <AuthCallback /> },
+            { path: "login", element: <Login /> },
           ],
         },
-        { path: "callback", element: <AuthCallback /> },
-        { path: "login", element: <Login /> },
       ])}
     />
   );
@@ -38,6 +44,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       domain={import.meta.env.VITE_AUTH0_DOMAIN}
       clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
       authorizationParams={{
+        audience: import.meta.env.VITE_AUTH0_AUDIENCE,
         redirect_uri: window.location.origin,
       }}
     >
