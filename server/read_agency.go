@@ -57,7 +57,7 @@ func readAgencyQuery(logger *slog.Logger, types graphTypes, authz *authzed.Clien
 			var agency agency
 			if err := db.QueryRowxContext(
 				p.Context,
-				"SELECT id, name, created, created_by, modified, modified_by FROM agency WHERE id = $1",
+				"SELECT id, name, status, created, created_by, modified, modified_by FROM agencies WHERE id = $1",
 				id,
 			).StructScan(&agency); err != nil {
 				return nil, err
