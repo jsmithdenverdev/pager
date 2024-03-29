@@ -1,6 +1,16 @@
 package main
 
-import "github.com/graphql-go/graphql"
+import (
+	"github.com/graphql-go/graphql"
+)
+
+type agencyStatus string
+
+const (
+	agencyStatusPending  agencyStatus = "PENDING"
+	agencyStatusActive   agencyStatus = "ACTIVE"
+	agencyStatusInactive agencyStatus = "INACTIVE"
+)
 
 // agency is the core entity of pager.
 //
@@ -14,8 +24,24 @@ type agency struct {
 	// ID is the UUID representing this agency in the pager system.
 	ID string `json:"id" db:"id"`
 	// Name is the name of the agency.
-	Name string `json:"name" db:"name"`
+	Name   string       `json:"name" db:"name"`
+	Status agencyStatus `json:"status" db:"status"`
 }
+
+var agencyStatusType = graphql.NewEnum(graphql.EnumConfig{
+	Name: "AgencyStatus",
+	Values: graphql.EnumValueConfigMap{
+		"PENDING": &graphql.EnumValueConfig{
+			Value: agencyStatusPending,
+		},
+		"ACTIVE": &graphql.EnumValueConfig{
+			Value: agencyStatusActive,
+		},
+		"INACTIVE": &graphql.EnumValueConfig{
+			Value: agencyStatusInactive,
+		},
+	},
+})
 
 // agencyType creates a new graphql object for an agency. The function accepts
 // any dependencies needed for field resolvers.
@@ -29,11 +55,9 @@ func agencyType() *graphql.Object {
 			"name": &graphql.Field{
 				Type: graphql.String,
 			},
-			// Because these fields are on an embedded struct, this stupid fucking
-			// library won't resolve them. Instead, we have to write a fucking field
-			// resolver for each field, convert the source to its own type (?!) and
-			// then return the property.
-			// I'm about fucking sick of graphql-go. Its a shit library.
+			"status": &graphql.Field{
+				Type: agencyStatusType,
+			},
 			"created": &graphql.Field{
 				Type: graphql.String,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
