@@ -6,5 +6,9 @@ export ZED_ENDPOINT=localhost:50051
 export ZED_TOKEN=foobar 
 export ZED_INSECURE=true 
 
-zed relationship create "platform:platform" administrator "user:auth0|6605e47b2d33ca8319f7f7e3" || true
+# Assign pager-admin@pager.com as an adminstrator in the platform:platform
+zed relationship create "platform:platform" administrator "user:auth0|6606e16332edd5a3975a6e9f" || true
+# Assign platform:platform as the platform for Test Agency
+zed relationship create "agency:8d282649-708b-4523-ab2a-122bd8739bd1" platform "platform:platform" || true
+# Assign agency-admin@pager.com as a writer for Test Agency
 zed relationship create "agency:8d282649-708b-4523-ab2a-122bd8739bd1" writer "user:auth0|6606e29442d9ec8442da383c" || true
