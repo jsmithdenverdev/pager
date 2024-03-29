@@ -1,6 +1,8 @@
 definition platform {
 	relation administrator: user
 	permission super_admin = administrator
+
+	// Creating child entities
 	permission create_agency = administrator
 }
 
@@ -8,21 +10,51 @@ definition agency {
 	relation platform: platform
 	relation reader: user
 	relation writer: user
- 
-	permission invite_user = platform->super_admin
-  
-  permission read = reader + writer + platform->super_admin
-  permission write = writer
- 
+
+	// Agency permissions
+	permission read = reader + writer + platform->super_admin
+	permission update = writer
+	permission delete = writer
+
+	// Creating child entities
 	permission create_device = writer
+	permission create_page = writer
+	permission invite_user = writer + platform->super_admin
+
+	// Listing child entities
 	permission list_devices = reader + writer
+	permission list_pages = reader + writer
+	permission list_users = reader + writer + platform->super_admin
 }
 
 definition device {
 	relation agency: agency
-	permission admin = agency->admin
+
+	// Device permissions
+	permission read = agency->reader + agency->writer
+	permission update = agency->writer
 	permission delete = agency->writer
-	permission read = agency->writer + agency->reader
 }
 
-definition user {}
+definition page {
+	relation agency: agency
+
+	// Page permissions
+	permission read = agency->reader
+	permission update = agency->writer
+	permission delete = agency->writer
+}
+
+definition user {
+	relation agency: agency
+
+	// Authzed does not support traversing from an agency back to its platform at 
+  // the moment, so we simply include the platform as a relation to check for
+	// super_admin priveleges.
+	relation platform: platform
+
+	// User permissions
+	permission read = agency->reader + agency->writer + platform->super_admin
+	permission update = agency->writer + platform->super_admin
+	permission delete = agency->writer + platform->super_admin
+}
