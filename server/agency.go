@@ -28,6 +28,7 @@ type agency struct {
 	Status agencyStatus `json:"status" db:"status"`
 }
 
+// agencyStatusType is a graphql enum representing the status of an agency.
 var agencyStatusType = graphql.NewEnum(graphql.EnumConfig{
 	Name: "AgencyStatus",
 	Values: graphql.EnumValueConfigMap{
