@@ -117,7 +117,7 @@ func newGraphTypes(config config,
 	// are used in subtypes. E.g., if a type has a dependency on another type
 	// (e.g., for a field) the sub type must be created first.
 	agencyType := agencyType()
-	userType := userType()
+	userType := userType(logger, agencyType, authz, db)
 
 	return graphTypes{
 		agency: agencyType,
