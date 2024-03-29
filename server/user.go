@@ -73,7 +73,7 @@ func userType() *graphql.Object {
 				},
 			},
 			"modifiedBy": &graphql.Field{
-				Type: graphql.DateTime,
+				Type: graphql.String,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					return p.Source.(user).ModifiedBy, nil
 				},
