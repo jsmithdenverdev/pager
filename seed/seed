@@ -1,0 +1,10 @@
+#!/bin/zsh
+
+psql "postgresql://postgres:postgres@localhost:5432/pager?sslmode=disable" -f seed.sql
+
+export ZED_ENDPOINT=localhost:50051 
+export ZED_TOKEN=foobar 
+export ZED_INSECURE=true 
+
+zed relationship create "platform:platform" administrator "user:auth0|6605e47b2d33ca8319f7f7e3" || true
+zed relationship create "agency:8d282649-708b-4523-ab2a-122bd8739bd1" writer "user:auth0|6606e29442d9ec8442da383c" || true
