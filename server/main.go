@@ -77,7 +77,8 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		ctx := r.Context()
 		claims := ctx.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
 		ctx = context.WithValue(ctx, pagerContextKey{}, pagerContext{
-			User: claims.RegisteredClaims.Subject,
+			User:        claims.RegisteredClaims.Subject,
+			DataLoaders: newDataLoaders(config, logger, validate, authz, db),
 		})
 		handler.ContextHandler(ctx, w, r)
 	})

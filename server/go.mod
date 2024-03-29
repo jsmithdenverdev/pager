@@ -7,6 +7,7 @@ require (
 	github.com/authzed/authzed-go v0.11.1
 	github.com/authzed/grpcutil v0.0.0-20240123194739-2ea1e3d2d98b
 	github.com/go-playground/validator/v10 v10.19.0
+	github.com/graph-gophers/dataloader/v7 v7.1.0
 	github.com/graphql-go/graphql v0.8.1
 	github.com/graphql-go/handler v0.2.3
 	github.com/jmoiron/sqlx v1.3.5

@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log/slog"
 
+	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
 	"github.com/go-playground/validator/v10"
+	"github.com/graph-gophers/dataloader/v7"
 	"github.com/graphql-go/graphql"
 	"github.com/jmoiron/sqlx"
 )
@@ -59,7 +61,7 @@ func registerQueries(
 	db *sqlx.DB) {
 	// Register additional graphql queries here
 	queries := []*graphql.Field{
-		readAgencyQuery(logger, types, authz, db),
+		readAgencyQuery(logger, types),
 		userInfoQuery(logger, types, authz, db),
 	}
 	var rootQuery = graphql.ObjectConfig{
@@ -122,6 +124,29 @@ func newGraphTypes(config config,
 	return graphTypes{
 		agency: agencyType,
 		user:   userType,
+	}
+}
+
+// dataLoaders holds references to request scoped data loaders. newDataLoaders
+// is called from a piece of middleware and initializes a dataLoaders for the
+// lifetime of that request. All read and list operations should be done via a
+// dataloader.
+
+type dataLoaders struct {
+	checkPermission    *dataloader.Loader[*v1.CheckPermissionRequest, *v1.CheckPermissionResponse]
+	readAgency         *dataloader.Loader[string, agency]
+	listAgenciesByUser *dataloader.Loader[string, []agency]
+}
+
+func newDataLoaders(config config,
+	logger *slog.Logger,
+	validate *validator.Validate,
+	authz *authzed.Client,
+	db *sqlx.DB) dataLoaders {
+	return dataLoaders{
+		checkPermission:    newCheckPermissionDataLoader(authz),
+		readAgency:         newReadAgencyDataLoader(db),
+		listAgenciesByUser: newListAgenciesByUserDataloader(logger, db),
 	}
 }
 

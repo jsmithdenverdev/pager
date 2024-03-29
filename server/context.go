@@ -6,5 +6,6 @@ type pagerContextKey struct{}
 // pagerContext represents request scoped values accessible from graphql
 // resolvers.
 type pagerContext struct {
-	User string `json:"user"`
+	User        string `json:"user"`
+	DataLoaders dataLoaders
 }

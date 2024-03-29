@@ -87,32 +87,12 @@ func userType(logger *slog.Logger, agencyType *graphql.Object, authz *authzed.Cl
 			"agencies": &graphql.Field{
 				Type: graphql.NewList(agencyType),
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					var agencies []agency
+					requestContext := p.Context.Value(pagerContextKey{}).(pagerContext)
 
-					logger.Info("user -> agencies", "idpId", p.Source.(user).IdpID)
-
-					rows, err := db.QueryxContext(
-						p.Context,
-						`SELECT a.id, a.name, a.status, a.created, a.created_by, a.modified, a.modified_by
-						 FROM agencies a
-						 INNER JOIN user_agencies ua ON ua.agency_id = a.id
-						 INNER JOIN users u ON u.id = ua.user_id
-						 WHERE u.idp_id = $1`,
-						p.Source.(user).IdpID)
-
-					if err != nil {
-						return agencies, err
-					}
-
-					for rows.Next() {
-						var agency agency
-						if err := rows.StructScan(&agency); err != nil {
-							return nil, err
-						}
-						agencies = append(agencies, agency)
-					}
-
-					return agencies, nil
+					return requestContext.
+						DataLoaders.
+						listAgenciesByUser.
+						Load(p.Context, p.Source.(user).IdpID)()
 				},
 			},
 		},
