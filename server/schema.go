@@ -30,7 +30,7 @@ func newSchema(
 	db *sqlx.DB) (graphql.Schema, error) {
 	schemaConfig := graphql.SchemaConfig{}
 
-	types := newGraphTypes()
+	types := newGraphTypes(config, logger, validate, authz, db)
 	registerQueries(&schemaConfig, config, types, logger, validate, authz, db)
 	registerMutations(&schemaConfig, config, types, logger, validate, authz, db)
 
@@ -103,13 +103,24 @@ func registerMutations(
 // constructors, allowing them to reference the shared graph types.
 type graphTypes struct {
 	agency *graphql.Object
+	user   *graphql.Object
 }
 
 // newGraphTypes returns an initialized graphTypes object.
-func newGraphTypes() graphTypes {
+func newGraphTypes(config config,
+	logger *slog.Logger,
+	validate *validator.Validate,
+	authz *authzed.Client,
+	db *sqlx.DB) graphTypes {
+	// Invoke type generators here. Types need to be created in the order they
+	// are used in subtypes. E.g., if a type has a dependency on another type
+	// (e.g., for a field) the sub type must be created first.
 	agencyType := agencyType()
+	userType := userType()
+
 	return graphTypes{
 		agency: agencyType,
+		user:   userType,
 	}
 }
 
