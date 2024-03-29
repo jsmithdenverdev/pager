@@ -60,6 +60,7 @@ func registerQueries(
 	// Register additional graphql queries here
 	queries := []*graphql.Field{
 		readAgencyQuery(logger, types, authz, db),
+		userInfoQuery(logger, types, authz, db),
 	}
 	var rootQuery = graphql.ObjectConfig{
 		Name:   "RootQuery",
