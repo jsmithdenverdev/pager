@@ -63,6 +63,8 @@ func registerQueries(
 	queries := []*graphql.Field{
 		readAgencyQuery(logger, types),
 		userInfoQuery(logger, types, authz, db),
+		listAgenciesQuery(types),
+		userInfosQuery(logger, types, authz, db),
 	}
 	var rootQuery = graphql.ObjectConfig{
 		Name:   "RootQuery",
@@ -133,9 +135,10 @@ func newGraphTypes(config config,
 // dataloader.
 
 type dataLoaders struct {
-	checkPermission    *dataloader.Loader[*v1.CheckPermissionRequest, *v1.CheckPermissionResponse]
-	readAgency         *dataloader.Loader[string, agency]
-	listAgenciesByUser *dataloader.Loader[string, []agency]
+	checkPermission *dataloader.Loader[*v1.CheckPermissionRequest, *v1.CheckPermissionResponse]
+	lookupResources *dataloader.Loader[*v1.LookupResourcesRequest, []*v1.LookupResourcesResponse]
+	readAgency      *dataloader.Loader[string, agency]
+	listAgencies    *dataloader.Loader[listAgencyKey, agency]
 }
 
 func newDataLoaders(config config,
@@ -144,9 +147,10 @@ func newDataLoaders(config config,
 	authz *authzed.Client,
 	db *sqlx.DB) dataLoaders {
 	return dataLoaders{
-		checkPermission:    newCheckPermissionDataLoader(authz),
-		readAgency:         newReadAgencyDataLoader(db),
-		listAgenciesByUser: newListAgenciesByUserDataloader(logger, db),
+		checkPermission: newCheckPermissionDataLoader(authz),
+		lookupResources: newLookupResourcesDataloader(logger, authz),
+		readAgency:      newReadAgencyDataLoader(db),
+		listAgencies:    newListAgenciesDataLoader(logger, db),
 	}
 }
 

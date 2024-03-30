@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"log/slog"
 
+	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
 	"github.com/graphql-go/graphql"
 	"github.com/jmoiron/sqlx"
@@ -42,7 +44,7 @@ var userStatusType = graphql.NewEnum(graphql.EnumConfig{
 	},
 })
 
-// userType creates a new graphql object for an account. The function accepts
+// userType creates a new graphql object for an agency. The function accepts
 // any dependencies needed for field resolvers.
 func userType(logger *slog.Logger, agencyType *graphql.Object, authz *authzed.Client, db *sqlx.DB) *graphql.Object {
 	return graphql.NewObject(graphql.ObjectConfig{
@@ -89,10 +91,45 @@ func userType(logger *slog.Logger, agencyType *graphql.Object, authz *authzed.Cl
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					requestContext := p.Context.Value(pagerContextKey{}).(pagerContext)
 
-					return requestContext.
+					// Use the lookupResources data loader to fetch all the agency
+					// resources this user has read permission on
+					resources, err := requestContext.DataLoaders.lookupResources.Load(p.Context, &v1.LookupResourcesRequest{
+						ResourceObjectType: "agency",
+						Subject: &v1.SubjectReference{
+							Object: &v1.ObjectReference{
+								ObjectType: "user",
+								ObjectId:   p.Source.(user).IdpID,
+							},
+						},
+						Permission: "read",
+					})()
+
+					if err != nil {
+						return nil, err
+					}
+
+					var agencyKeys []listAgencyKey
+					for _, resource := range resources {
+						agencyKeys = append(agencyKeys, listAgencyKey{
+							key:   resource.ResourceObjectId,
+							order: "asc",
+						})
+					}
+
+					// Use the listAgencies data loader to list all the agencies the user
+					// has access to
+					results := requestContext.
 						DataLoaders.
-						listAgenciesByUser.
-						Load(p.Context, p.Source.(user).IdpID)()
+						listAgencies.
+						LoadMany(p.Context, agencyKeys)
+
+					r, errs := results()
+
+					if len(errs) > 0 {
+						return nil, errors.Join(errs...)
+					}
+
+					return r, nil
 				},
 			},
 		},
