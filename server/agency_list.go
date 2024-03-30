@@ -29,11 +29,11 @@ func newListAgenciesDataLoader(logger *slog.Logger, db *sqlx.DB) *dataloader.Loa
 		q := fmt.Sprintf(`SELECT id, name, status, created, created_by, modified, modified_by
 						 FROM agencies
 						 WHERE id IN (?)
-						 ORDER BY %s`, keys[0].order)
+						 ORDER BY created %s`, keys[0].order)
 
 		query, args, err := sqlx.In(
 			q,
-			keys)
+			ids)
 
 		if err != nil {
 			results = append(results, &dataloader.Result[agency]{
@@ -68,7 +68,7 @@ func newListAgenciesDataLoader(logger *slog.Logger, db *sqlx.DB) *dataloader.Loa
 		}
 
 		return results
-	})
+	}, dataloader.WithCache[listAgencyKey, agency](&dataloader.NoCache[listAgencyKey, agency]{}))
 }
 
 // listAgenciesQuery returns the `agencies` query.
@@ -78,6 +78,11 @@ func listAgenciesQuery(types graphTypes) *graphql.Field {
 	return &graphql.Field{
 		Name: "agencies",
 		Type: graphql.NewList(types.agency),
+		Args: graphql.FieldConfigArgument{
+			"sort": &graphql.ArgumentConfig{
+				Type: graphql.String,
+			},
+		},
 		Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 			requestContext := p.Context.Value(pagerContextKey{}).(pagerContext)
 			resources, err := requestContext.DataLoaders.lookupResources.Load(p.Context, &v1.LookupResourcesRequest{
@@ -99,7 +104,7 @@ func listAgenciesQuery(types graphTypes) *graphql.Field {
 			for _, resource := range resources {
 				agencyKeys = append(agencyKeys, listAgencyKey{
 					key:   resource.ResourceObjectId,
-					order: "desc",
+					order: p.Args["sort"].(string),
 				})
 			}
 
