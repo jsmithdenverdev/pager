@@ -12,12 +12,9 @@ import (
 	"sync"
 	"time"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
-	jwtvalidator "github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/authzed/authzed-go/v1"
 	"github.com/authzed/grpcutil"
 	"github.com/go-playground/validator/v10"
-	"github.com/graphql-go/handler"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -61,33 +58,8 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		return err
 	}
 
-	schema, err := newSchema(config, logger, validate, authz, db)
-	if err != nil {
-		return err
-	}
-
-	handler := handler.New(&handler.Config{
-		Schema: &schema,
-		Pretty: true,
-	})
-
-	// ctxHandler supplies a custom context to graphql query and mutation
-	// resolvers.
-	ctxHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		claims := ctx.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
-		ctx = context.WithValue(ctx, pagerContextKey{}, pagerContext{
-			User:        claims.RegisteredClaims.Subject,
-			DataLoaders: newDataLoaders(config, logger, validate, authz, db),
-		})
-		handler.ContextHandler(ctx, w, r)
-	})
-
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-	mux.Handle("/graphql", ensureValidToken(config, logger)(ctxHandler))
+	addRoutes(mux, config, logger, validate, authz, db)
 
 	httpServer := http.Server{
 		Addr:    net.JoinHostPort(config.Host, config.Port),
