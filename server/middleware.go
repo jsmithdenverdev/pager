@@ -25,8 +25,8 @@ func (c customClaims) Validate(ctx context.Context) error {
 	return nil
 }
 
-// AuthMiddleware is a middleware that will check the validity of our JWT.
-func AuthMiddleware(config config, logger *slog.Logger) func(next http.Handler) http.Handler {
+// ensureValidToken is a middleware that will check the validity of our JWT.
+func ensureValidToken(config config, logger *slog.Logger) func(next http.Handler) http.Handler {
 	issuerURL, err := url.Parse("https://" + config.Auth0Domain + "/")
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to parse issuer url: %s", err.Error()))
