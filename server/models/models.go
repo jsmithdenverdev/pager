@@ -1,9 +1,8 @@
-package main
+package models
 
 import "time"
 
-// auditable represents an auditable entity in our system.
-type auditable struct {
+type Auditable struct {
 	Created    time.Time `json:"created" db:"created"`
 	CreatedBy  string    `json:"createdBy" db:"created_by"`
 	Modified   time.Time `json:"modified" db:"modified"`

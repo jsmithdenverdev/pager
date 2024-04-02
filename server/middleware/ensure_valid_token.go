@@ -1,4 +1,4 @@
-package main
+package middleware
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/jwks"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
+	"github.com/jsmithdenverdev/pager/config"
 )
 
 // customClaims contains custom data we want from the token.
@@ -25,9 +26,9 @@ func (c customClaims) Validate(ctx context.Context) error {
 	return nil
 }
 
-// ensureValidToken is a middleware that will check the validity of our JWT.
-func ensureValidToken(config config, logger *slog.Logger) func(next http.Handler) http.Handler {
-	issuerURL, err := url.Parse("https://" + config.Auth0Domain + "/")
+// EnsureValidToken is a middleware that will check the validity of our JWT.
+func EnsureValidToken(cfg config.Config, logger *slog.Logger) func(next http.Handler) http.Handler {
+	issuerURL, err := url.Parse("https://" + cfg.Auth0Domain + "/")
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to parse issuer url: %s", err.Error()))
 	}
@@ -38,7 +39,7 @@ func ensureValidToken(config config, logger *slog.Logger) func(next http.Handler
 		provider.KeyFunc,
 		validator.RS256,
 		issuerURL.String(),
-		[]string{config.Auth0Audience},
+		[]string{cfg.Auth0Audience},
 		validator.WithCustomClaims(
 			func() validator.CustomClaims {
 				return &customClaims{}

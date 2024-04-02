@@ -1,19 +1,19 @@
-package main
+package config
 
 import (
 	"fmt"
 	"strings"
 )
 
-type environment string
+type Environment string
 
 const (
-	environmentDev environment = "development"
-	enviromentProd environment = "production"
+	EnvironmentDev Environment = "development"
+	EnviromentProd Environment = "production"
 )
 
-type config struct {
-	Environment     environment
+type Config struct {
+	Environment     Environment
 	Host            string
 	Port            string
 	DBConn          string
@@ -23,11 +23,11 @@ type config struct {
 	SpiceDBToken    string
 }
 
-func newConfigFromProcessEnv(getenv func(string) string) (config, error) {
+func LoadFromEnv(getenv func(string) string) (Config, error) {
 	missing := make([]string, 0)
 	env := getenv("ENVIRONMENT")
 	if env == "" {
-		env = string(environmentDev)
+		env = string(EnvironmentDev)
 	}
 
 	host := getenv("HOST")
@@ -66,11 +66,11 @@ func newConfigFromProcessEnv(getenv func(string) string) (config, error) {
 	}
 
 	if len(missing) > 0 {
-		return config{}, fmt.Errorf("missing required environment variables: %s", strings.Join(missing, ","))
+		return Config{}, fmt.Errorf("missing required environment variables: %s", strings.Join(missing, ","))
 	}
 
-	return config{
-		Environment:     environment(env),
+	return Config{
+		Environment:     Environment(env),
 		Host:            host,
 		Port:            port,
 		DBConn:          dbConn,
