@@ -6,20 +6,20 @@ import (
 )
 
 type Agency struct {
-	*models.Agency
+	models.Agency
 }
 
 func (a *Agency) ID() graphql.ID {
 	return graphql.ID(a.Agency.ID)
 }
 
-func (a *Agency) Name() *string {
-	return &a.Agency.Name
+func (a *Agency) Name() string {
+	return a.Agency.Name
 }
 
-func (a *Agency) Status() *string {
+func (a *Agency) Status() string {
 	var status = string(a.Agency.Status)
-	return &status
+	return status
 }
 
 func (a *Agency) Created() graphql.Time {
@@ -28,16 +28,16 @@ func (a *Agency) Created() graphql.Time {
 	}
 }
 
-func (a *Agency) CreatedBy() *string {
-	return &a.Agency.CreatedBy
+func (a *Agency) CreatedBy() string {
+	return a.Agency.CreatedBy
 }
 
 func (a *Agency) Modified() graphql.Time {
 	return graphql.Time{
-		Time: a.Agency.Created,
+		Time: a.Agency.Modified,
 	}
 }
 
-func (a *Agency) ModifiedBy() *string {
-	return &a.Agency.ModifiedBy
+func (a *Agency) ModifiedBy() string {
+	return a.Agency.ModifiedBy
 }

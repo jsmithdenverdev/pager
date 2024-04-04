@@ -2,7 +2,7 @@ scalar Time
 
 schema {
   query: Query
-  # mutation: Mutation
+  mutation: Mutation
 }
 
 type User {
@@ -13,8 +13,28 @@ type User {
   createdBy: String!
   modified: Time!
   modifiedBy: String!
+  agencies: [Agency]
+}
+
+type Agency {
+  id: ID!
+  name: String!
+  status: String!
+  created: Time!
+  createdBy: String!
+  modified: Time!
+  modifiedBy: String!
 }
 
 type Query {
   userInfo: User!
+  agency(id: ID!): Agency
+}
+
+input CreateAgencyInput {
+  Name: String!
+}
+
+type Mutation {
+  createAgency(input: CreateAgencyInput!): Agency!
 }
