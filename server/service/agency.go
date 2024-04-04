@@ -151,6 +151,12 @@ func newReadAgencyDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloader.
 				}
 			}
 
+			// If the user isn't authorized to read any of these agencies skip running
+			// the query.
+			if len(authorizedIds) == 0 {
+				return results
+			}
+
 			query, args, err := sqlx.In(
 				`SELECT id, name, status, created, created_by, modified, modified_by
 					 FROM agencies
