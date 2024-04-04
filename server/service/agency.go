@@ -137,7 +137,7 @@ func newReadAgencyDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloader.
 
 			// We'll loop through the results of the authz check and assign a zero
 			// value to any records the user did not have authz to read, and add an
-			// entry to our authorizedResultMap to have the indexes of authorized
+			// entry to our authorizedIndexes array to have the indexes of authorized
 			// results handy for the next couple steps.
 			for i, authzResult := range authzResults {
 				// For the index i, if the user does not have permission, set the Result
@@ -157,6 +157,9 @@ func newReadAgencyDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloader.
 				return results
 			}
 
+			// Generate our database query, we aren't worried about sorting here
+			// because even though this is batching requests, we need to rememebr that
+			// the caller of this method is intending to get a single response.
 			query, args, err := sqlx.In(
 				`SELECT id, name, status, created, created_by, modified, modified_by
 					 FROM agencies
@@ -170,6 +173,10 @@ func newReadAgencyDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloader.
 			// user wasn't authorized to read on a particular ID they shouldn't get
 			// a SQL error, they should get no result).
 			if err != nil {
+				// This is a little odd looking because we're not actually interested
+				// in the current index of the range call we're interested in the value
+				// at that position in the array. That value corresponds to an index in
+				// the result set that would be an authorized read.
 				for _, index := range authorizedIndexes {
 					results[index] = &dataloader.Result[models.Agency]{
 						Error: err,
@@ -185,6 +192,10 @@ func newReadAgencyDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloader.
 			// the dataloader results. But we need to only add an error to the result
 			// that would have been from an authorized read.
 			if err != nil {
+				// Like above, this is a little odd looking because we're not actually
+				// interested in the current index of the range call we're interested in
+				// the value at that position in the array. That value corresponds to an
+				// index in the result set that would be an authorized read.
 				for _, index := range authorizedIndexes {
 					results[index] = &dataloader.Result[models.Agency]{
 						Error: err,
@@ -192,13 +203,14 @@ func newReadAgencyDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloader.
 				}
 			}
 
-			// Now we get into really tricky error handling. We'll loop through the
-			// rows returned from the query, and attempt to scan each row into a
-			// models.Agency struct. If that scan fails, we need to add an error to
-			// dataloader results. But because the scan failed, we won't have an ID.
-			// Instead we'll use a counter, and find the value of authorizedIndexes at
-			// the index of the counter. That will tell us which source key this row
-			// read was for.
+			// We'll loop through the rows returned from the query, and attempt to
+			// scan each row into a models.Agency struct. If that scan fails, we need
+			// to add an error to dataloader result.
+			// Because all of our arrays are ordered the same, we can use the rowCount
+			// to get a value from authorizedIndexes. That value is the position of
+			// this record in the final results array. If we have an error we'll
+			// assign an error result to that position, otherwise we'll assign a data
+			// result to that position.
 			rowCount := 0
 			for rows.Next() {
 				resultIndex := authorizedIndexes[rowCount]
