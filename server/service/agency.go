@@ -12,56 +12,165 @@ import (
 	"github.com/jsmithdenverdev/pager/models"
 )
 
-type AgenciesOrder string
+// AgenciesOrder represents the sort order in a request to list agencies.
+type AgenciesOrder int
 
 const (
-	AgenciesOrderNameAsc AgenciesOrder = "NAME_ASC"
+	AgenciesOrderCreatedAsc AgenciesOrder = iota
+	AgenciesOrderCreatedDesc
+	AgenciesOrderModifiedAsc
+	AgenciesOrderModifiedDesc
+	AgenciesOrderNameAsc
+	AgenciesOrderNameDesc
 )
+
+var (
+	agenciesOrderNames = [...]string{
+		"CREATED_ASC",
+		"CREATED_DESC",
+		"MODIFIED_ASC",
+		"MODIFIED_DESC",
+		"NAME_ASC",
+		"NAME_DESC",
+	}
+	agencyOrderMap = map[AgenciesOrder]string{
+		AgenciesOrderCreatedAsc:   "created ASC",
+		AgenciesOrderCreatedDesc:  "created DESC",
+		AgenciesOrderModifiedAsc:  "modified ASC",
+		AgenciesOrderModifiedDesc: "modified DESC",
+		AgenciesOrderNameAsc:      "name ASC",
+		AgenciesOrderNameDesc:     "name DESC",
+	}
+)
+
+func (order AgenciesOrder) String() string {
+	return agenciesOrderNames[order]
+}
 
 type AgenciesPagination struct {
 	First int
+	After string
 	Order AgenciesOrder
 }
 
-func newListAgenciesDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloader.Loader[AgenciesPagination, []models.Agency] {
+// listAgenciesDataloader is a request scoped data loader that is used to batch
+// agency list operations across multiple concurrent resolvers.
+func listAgenciesDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.Loader[AgenciesPagination, []models.Agency] {
 	return dataloader.NewBatchedLoader(
-		func(ctx context.Context, paginations []AgenciesPagination) []*dataloader.Result[[]models.Agency] {
-			results := make([]*dataloader.Result[[]models.Agency], len(paginations))
-			// Give me the list of agencies this user has the read permission on
+		func(ctx context.Context, keys []AgenciesPagination) []*dataloader.Result[[]models.Agency] {
+			results := make([]*dataloader.Result[[]models.Agency], len(keys))
+			// Fetch a list of IDs that this user has access to. This data comes from
+			// spice db, and we can use it to narrow down our query to the most
+			// restrictive set of data for this user.
 			ids, err := authclient.List("read", authz.Resource{Type: "agency"})
-			// We're not actually using pagination settings yet, I just want to get
-			// this working through a loader to start.
-			for i, _ := range paginations {
-				if err != nil {
+
+			// If List failed, we need to return an error to every caller of the
+			// loader.
+			if err != nil {
+				for i := range results {
 					results[i] = &dataloader.Result[[]models.Agency]{
 						Error: err,
 					}
-					continue
 				}
 
-				// Query the agencies
-				query, args, err := sqlx.In(
-					`SELECT id, name, status, created, created_by, modified, modified_by
-					 FROM agencies
-					 WHERE id IN (?)
-					 ORDER BY created DESC`,
-					ids)
+				return results
+			}
 
-				if err != nil {
-					results[i] = &dataloader.Result[[]models.Agency]{
-						Error: err,
+			for i := range keys {
+				var (
+					first = keys[i].First
+					order = agencyOrderMap[keys[i].Order]
+					after = keys[i].After
+					query string
+					args  []interface{}
+					err   error
+				)
+
+				// Create a query using the pagination key. In theory postgres doesn't
+				// have an upper limit to the number of values we supply to IN, and the
+				// number of agencies one user could possibly belong to is much lower
+				// than whatever upper bounds we'd see with postgres.
+				// In theory we'd have better performance by performing a single bulk db
+				// query but that would prevent each call to load from being able to
+				// define its own sort and filters, or we'd have to fetch all the data
+				// and do the sorting and filtering in memory which I'm guessing would
+				// be slower and more complicated than allowing postgres to do that.
+				if after == "" {
+					query, args, err = sqlx.Named(
+						`SELECT id, name, status, created, created_by, modified, modified_by
+					 FROM agencies
+					 WHERE id IN (:ids)
+					 ORDER BY created desc
+					 LIMIT :limit`,
+						map[string]interface{}{
+							"ids":   ids,
+							"order": order,
+							"limit": first,
+						})
+
+					// If we failed to create the query, attach an error to the dataloader
+					// result for this index. Continue the loop to process the next key in
+					// the batch.
+					if err != nil {
+						results[i] = &dataloader.Result[[]models.Agency]{
+							Error: err,
+						}
+						continue
 					}
-					continue
+
+					query, args, err = sqlx.In(query, args...)
+					if err != nil {
+						results[i] = &dataloader.Result[[]models.Agency]{
+							Error: err,
+						}
+						continue
+					}
+				} else {
+					query, args, err = sqlx.Named(
+						`SELECT id, name, status, created, created_by, modified, modified_by
+					 FROM agencies
+					 WHERE id > :after
+					 AND id IN (:ids)
+					 ORDER BY :order
+					 LIMIT :limit`,
+						map[string]interface{}{
+							"after": after,
+							"ids":   ids,
+							"order": order,
+							"limit": first,
+						})
+
+					// If we failed to create the query, attach an error to the dataloader
+					// result for this index. Continue the loop to process the next key in
+					// the batch.
+					if err != nil {
+						results[i] = &dataloader.Result[[]models.Agency]{
+							Error: err,
+						}
+						continue
+					}
+
+					query, args, err = sqlx.In(query, args...)
+					if err != nil {
+						results[i] = &dataloader.Result[[]models.Agency]{
+							Error: err,
+						}
+						continue
+					}
 				}
 
 				query = db.Rebind(query)
 
+				// Execute the query
 				rows, err := db.QueryxContext(
 					ctx,
 					query,
 					args...,
 				)
 
+				// If we failed to execute the query, attach an error to the dataloader
+				// result for this index. Continue the loop to process the next key in
+				// the batch.
 				if err != nil {
 					results[i] = &dataloader.Result[[]models.Agency]{
 						Error: err,
@@ -69,6 +178,11 @@ func newListAgenciesDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloade
 					continue
 				}
 
+				// Begin looping through the rows returned in the query. We'll map each
+				// row into a `models.Agency`. If mapping the row fails, we close the
+				// reader to and attach an error to the dataloader result for this
+				// index. We break out of the inner for loop to prevent additional calls
+				// to the closed reader.
 				var agencies []models.Agency
 				for rows.Next() {
 					var a models.Agency
@@ -76,18 +190,25 @@ func newListAgenciesDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloade
 						results[i] = &dataloader.Result[[]models.Agency]{
 							Error: err,
 						}
+						// As we continue operations we need to check for errors and assign
+						// them to the dataloader result at for the current index. This will
+						// overwrite the result, so we'll only have the most recent error
+						// but its enough for us to know where in the stack we failed, and
+						// work up from there.
 						if err := rows.Close(); err != nil {
 							results[i] = &dataloader.Result[[]models.Agency]{
 								Error: err,
 							}
 						}
-						// Here we break instead of continue. This closes the db connection
-						// and considers this entire query set a failure.
+						// Here we break instead of continue. We've closed the db reader
+						// and consider the results of this query set a failure.
 						break
 					}
 					agencies = append(agencies, a)
 				}
 
+				// Once we've mapped each agency row into a `models.Agency`, we'll add
+				// the array of models to the datalaoder result for this index.
 				results[i] = &dataloader.Result[[]models.Agency]{
 					Data: agencies,
 				}
@@ -96,7 +217,9 @@ func newListAgenciesDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloade
 		})
 }
 
-func newReadAgencyDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloader.Loader[string, models.Agency] {
+// readAgencyDataloader is a request scoped data loader that is used to batch
+// agency read operations across multiple concurrent resolvers.
+func readAgencyDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.Loader[string, models.Agency] {
 	return dataloader.NewBatchedLoader(
 		func(ctx context.Context, keys []string) []*dataloader.Result[models.Agency] {
 			results := make([]*dataloader.Result[models.Agency], len(keys))
@@ -124,6 +247,8 @@ func newReadAgencyDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloader.
 						Error: err,
 					}
 				}
+
+				return results
 			}
 
 			// Next we'll perform a batched select query using the ID's that this user
@@ -231,6 +356,7 @@ func newReadAgencyDataLoader(authclient *authz.Client, db *sqlx.DB) *dataloader.
 		})
 }
 
+// AgencyService exposes all operations that can be performed on agencies.
 type AgencyService struct {
 	ctx                    context.Context
 	authclient             *authz.Client
@@ -241,6 +367,8 @@ type AgencyService struct {
 	readAgencyDataLoader   *dataloader.Loader[string, models.Agency]
 }
 
+// NewAgencyService creates a new AgencyService. A pointer to the service is
+// returned.
 func NewAgencyService(
 	ctx context.Context,
 	authz *authz.Client,
@@ -254,8 +382,8 @@ func NewAgencyService(
 		db:                     db,
 		logger:                 logger,
 		validate:               validate,
-		listAgenciesDataLoader: newListAgenciesDataLoader(authz, db),
-		readAgencyDataLoader:   newReadAgencyDataLoader(authz, db),
+		listAgenciesDataLoader: listAgenciesDataloader(authz, db),
+		readAgencyDataLoader:   readAgencyDataloader(authz, db),
 	}
 }
 

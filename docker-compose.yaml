@@ -15,7 +15,7 @@ services:
       - ./pg-init/pg_hba.conf:/docker-entrypoint-initdb.d/pg_hba.conf
       - pgdata:/var/lib/postgresql
     command:
-      ["postgres", "-c", "hba_file=/docker-entrypoint-initdb.d/pg_hba.conf"]
+      ["postgres", "-c", "hba_file=/docker-entrypoint-initdb.d/pg_hba.conf", "-c", "log_statement=all"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

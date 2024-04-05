@@ -72,7 +72,8 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		return err
 	}
 
-	graphqlSchema, err := graphql.ParseSchema(schema, &resolver.Root{})
+	schemaOpts := []graphql.SchemaOpt{graphql.UseStringDescriptions()}
+	graphqlSchema, err := graphql.ParseSchema(schema, &resolver.Root{}, schemaOpts...)
 	if err != nil {
 		return err
 	}

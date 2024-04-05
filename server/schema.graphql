@@ -26,13 +26,23 @@ type Agency {
   modifiedBy: String!
 }
 
-type Query {
-  userInfo: User!
-  agency(id: ID!): Agency
+enum AgenciesOrder {
+  CREATED_ASC
+  CREATED_DESC
+  MODIFIED_ASC
+  MODIFIED_DESC
+  NAME_ASC
+  NAME_DESC
 }
 
 input CreateAgencyInput {
   Name: String!
+}
+
+type Query {
+  userInfo: User!
+  agency(id: ID!): Agency
+  agencies(first: Int!, after: String, order: AgenciesOrder!): [Agency!]
 }
 
 type Mutation {
