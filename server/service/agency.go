@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"log/slog"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/graph-gophers/dataloader/v7"
 	"github.com/jmoiron/sqlx"
 	"github.com/jsmithdenverdev/pager/authz"
@@ -362,7 +361,6 @@ type AgencyService struct {
 	authclient             *authz.Client
 	db                     *sqlx.DB
 	logger                 *slog.Logger
-	validate               *validator.Validate
 	listAgenciesDataLoader *dataloader.Loader[AgenciesPagination, []models.Agency]
 	readAgencyDataLoader   *dataloader.Loader[string, models.Agency]
 }
@@ -374,14 +372,12 @@ func NewAgencyService(
 	authz *authz.Client,
 	db *sqlx.DB,
 	logger *slog.Logger,
-	validate *validator.Validate,
 ) *AgencyService {
 	return &AgencyService{
 		ctx:                    ctx,
 		authclient:             authz,
 		db:                     db,
 		logger:                 logger,
-		validate:               validate,
 		listAgenciesDataLoader: listAgenciesDataloader(authz, db),
 		readAgencyDataLoader:   readAgencyDataloader(authz, db),
 	}

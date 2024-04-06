@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,27 +12,21 @@ import (
 	"sync"
 	"time"
 
-	_ "embed"
-
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	jwtvalidator "github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/authzed/authzed-go/v1"
 	"github.com/authzed/grpcutil"
-	"github.com/go-playground/validator/v10"
-	"github.com/graph-gophers/graphql-go"
+	"github.com/graphql-go/handler"
 	"github.com/jmoiron/sqlx"
 	"github.com/jsmithdenverdev/pager/authz"
 	"github.com/jsmithdenverdev/pager/config"
 	"github.com/jsmithdenverdev/pager/middleware"
-	"github.com/jsmithdenverdev/pager/resolver"
+	"github.com/jsmithdenverdev/pager/schema"
 	"github.com/jsmithdenverdev/pager/service"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
-
-//go:embed schema.graphql
-var schema string
 
 func main() {
 	if err := run(context.Background(), os.Stdout, os.Getenv); err != nil {
@@ -56,8 +49,6 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		return err
 	}
 
-	validate := validator.New(validator.WithRequiredStructEnabled())
-
 	authzedClient, err := authzed.NewClient(
 		cfg.SpiceDBEndpoint,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -72,49 +63,33 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		return err
 	}
 
-	schemaOpts := []graphql.SchemaOpt{graphql.UseStringDescriptions()}
-	graphqlSchema, err := graphql.ParseSchema(schema, &resolver.Root{}, schemaOpts...)
+	schema, err := schema.New()
 	if err != nil {
 		return err
 	}
 
-	requestHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		claims := ctx.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
-
-		authz := authz.NewClient(ctx, authzedClient, logger, claims.RegisteredClaims.Subject)
-		userService := service.NewUserService(ctx, db, claims.RegisteredClaims.Subject)
-		agencyService := service.NewAgencyService(ctx, authz, db, logger, validate)
-
-		ctx = context.WithValue(ctx, service.ContextKeyUserService, userService)
-		ctx = context.WithValue(ctx, service.ContextKeyAgencyService, agencyService)
-
-		var params struct {
-			Query         string                 `json:"query"`
-			OperationName string                 `json:"operationName"`
-			Variables     map[string]interface{} `json:"variables"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		response := graphqlSchema.Exec(ctx, params.Query, params.OperationName, params.Variables)
-		responseJSON, err := json.Marshal(response)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(responseJSON)
+	handler := handler.New(&handler.Config{
+		Schema: &schema,
+		Pretty: true,
 	})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	mux.Handle("/graphql", middleware.EnsureValidToken(cfg, logger)(requestHandler))
+	mux.Handle("/graphql", middleware.EnsureValidToken(cfg, logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		claims := ctx.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
+
+		authz := authz.NewClient(ctx, authzedClient, logger, claims.RegisteredClaims.Subject)
+		userService := service.NewUserService(ctx, db, claims.RegisteredClaims.Subject)
+		agencyService := service.NewAgencyService(ctx, authz, db, logger)
+
+		ctx = context.WithValue(ctx, service.ContextKeyUserService, userService)
+		ctx = context.WithValue(ctx, service.ContextKeyAgencyService, agencyService)
+
+		handler.ContextHandler(ctx, w, r)
+	})))
 
 	httpServer := http.Server{
 		Addr:    net.JoinHostPort(cfg.Host, cfg.Port),

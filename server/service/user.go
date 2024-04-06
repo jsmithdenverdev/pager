@@ -21,7 +21,7 @@ func NewUserService(ctx context.Context, db *sqlx.DB, userId string) *UserServic
 	}
 }
 
-func (service *UserService) Info() (*models.User, error) {
+func (service *UserService) Info() (models.User, error) {
 	var user models.User
 	if err := service.db.QueryRowxContext(
 		service.ctx,
@@ -30,8 +30,8 @@ func (service *UserService) Info() (*models.User, error) {
 		 WHERE idp_id = $1`,
 		service.userId,
 	).StructScan(&user); err != nil {
-		return nil, err
+		return user, err
 	}
 
-	return &user, nil
+	return user, nil
 }
