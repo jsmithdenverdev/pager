@@ -6,6 +6,7 @@ import (
 	"github.com/jsmithdenverdev/pager/service"
 )
 
+// userStatusType is a graphql enum representing the status of a user.
 var userStatusType = graphql.NewEnum(graphql.EnumConfig{
 	Name: "UserStatus",
 	Values: graphql.EnumValueConfigMap{
@@ -21,6 +22,7 @@ var userStatusType = graphql.NewEnum(graphql.EnumConfig{
 	},
 })
 
+// userType is the object definition for a user.
 var userType = graphql.NewObject(graphql.ObjectConfig{
 	Name: "User",
 	Fields: graphql.Fields{

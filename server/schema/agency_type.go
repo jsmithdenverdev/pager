@@ -21,8 +21,7 @@ var agencyStatusType = graphql.NewEnum(graphql.EnumConfig{
 	},
 })
 
-// agencyType creates a new graphql object for an agency. The function accepts
-// any dependencies needed for field resolvers.
+// agencyType is the object definition for an agency.
 var agencyType = graphql.NewObject(graphql.ObjectConfig{
 	Name: "Agency",
 	Fields: graphql.Fields{

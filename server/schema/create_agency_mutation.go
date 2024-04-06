@@ -55,6 +55,7 @@ var createAgencyPayloadType = graphql.NewObject(graphql.ObjectConfig{
 	},
 })
 
+// createAgencyMutation is the field definition for the createAgency mutation.
 var createAgencyMutation = &graphql.Field{
 	Name: "createAgency",
 	Type: toResultType[createAgencyPayload](

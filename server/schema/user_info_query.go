@@ -5,6 +5,7 @@ import (
 	"github.com/jsmithdenverdev/pager/service"
 )
 
+// userInfoQuery is the field definition for the userInfo query.
 var userInfoQuery = &graphql.Field{
 	Name: "userInfo",
 	Type: userType,

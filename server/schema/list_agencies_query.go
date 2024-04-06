@@ -5,6 +5,7 @@ import (
 	"github.com/jsmithdenverdev/pager/service"
 )
 
+// listAgenciesQuery is the field definition for the agencies query.
 var listAgenciesQuery = &graphql.Field{
 	Name: "agencies",
 	Type: graphql.NewList(agencyType),

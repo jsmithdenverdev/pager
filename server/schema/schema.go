@@ -2,6 +2,7 @@ package schema
 
 import "github.com/graphql-go/graphql"
 
+// New builds a new graphql schema.
 func New() (graphql.Schema, error) {
 	schemaConfig := graphql.SchemaConfig{}
 	registerQueries(&schemaConfig)
@@ -9,6 +10,7 @@ func New() (graphql.Schema, error) {
 	return graphql.NewSchema(schemaConfig)
 }
 
+// registerQueries attaches all the query fields under the root query object.
 func registerQueries(schema *graphql.SchemaConfig) {
 	// Register queries here
 	queries := []*graphql.Field{
@@ -23,6 +25,8 @@ func registerQueries(schema *graphql.SchemaConfig) {
 	schema.Query = graphql.NewObject(rootQuery)
 }
 
+// registerMutations attaches all the mutation fields under the root mutation
+// object.
 func registerMutations(schema *graphql.SchemaConfig) {
 	// Register mutations here
 	mutations := []*graphql.Field{

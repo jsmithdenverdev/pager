@@ -6,6 +6,7 @@ import (
 	"github.com/jsmithdenverdev/pager/service"
 )
 
+// readAgencyQuery is the field definition for the agency query.
 var readAgencyQuery = &graphql.Field{
 	Name: "agency",
 	Type: toResultType[models.Agency](
