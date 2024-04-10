@@ -8,13 +8,13 @@ const (
 	AgencyStatusInactive AgencyStatus = "INACTIVE"
 )
 
-// agency is the core entity of pager.
+// Agency is the core entity of pager.
 //
-// An agency represents a real world agency (fire, police, ems, sar, etc.) that
+// An Agency represents a real world agency (fire, police, ems, sar, etc.) that
 // has a need to recieve pages via push notifications.
 //
-// Members of an agency are tracked as devices, to which notifications can be
-// pushed.
+// Members of an Agency are tracked as Users, which have Devices to which
+// notifications can be sent.
 type Agency struct {
 	Auditable
 	// ID is the UUID representing this agency in the pager system.
