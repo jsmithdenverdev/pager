@@ -10,7 +10,7 @@ import (
 
 // createAgencyInput represents the fields needed to create a new agency.
 type createAgencyInput struct {
-	Name string `json:"name" validate:""`
+	Name string `json:"name" validate:"min=1"`
 }
 
 // createAgencyInputType is the graphql input type for the createAgency
@@ -70,15 +70,15 @@ var createAgencyMutation = &graphql.Field{
 	},
 	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 		var payload createAgencyPayload
-		input, err := toCreateAgencyInput(p.Args)
+		input, err := toCreateAgencyInput(p.Args["input"].(map[string]interface{}))
 		if err != nil {
-			return payload, err
+			return err, nil
 		}
 		claims := p.Context.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
 		svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
 		agency, err := svc.Create(input.Name, claims.RegisteredClaims.Subject)
 		if err != nil {
-			return payload, err
+			return err, nil
 		}
 		payload.Agency = agency
 		return payload, nil
