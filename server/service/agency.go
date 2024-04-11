@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 
 	"github.com/graph-gophers/dataloader/v7"
@@ -95,29 +96,27 @@ func listAgenciesDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.L
 				// and do the sorting and filtering in memory which I'm guessing would
 				// be slower and more complicated than allowing postgres to do that.
 				if after == "" {
-					query, args, err = sqlx.Named(
+					// Create the initial query, ORDER BY clauses can't be parameterized so
+					// we must use regular ol' Sprintf statements to parameterize the ORDER
+					// BY clause.
+					query = fmt.Sprintf(
 						`SELECT id, name, status, created, created_by, modified, modified_by
-					 FROM agencies
-					 WHERE id IN (:ids)
-					 ORDER BY created desc
-					 LIMIT :limit`,
+					FROM agencies
+					WHERE id in (:ids)
+					ORDER BY %s
+					LIMIT :limit`,
+						order)
+
+					// Fill in parameterized portions of the query
+					query, args, err = sqlx.Named(query,
 						map[string]interface{}{
 							"ids":   ids,
-							"order": order,
 							"limit": first,
 						})
 
 					// If we failed to create the query, attach an error to the dataloader
 					// result for this index. Continue the loop to process the next key in
 					// the batch.
-					if err != nil {
-						results[i] = &dataloader.Result[[]models.Agency]{
-							Error: err,
-						}
-						continue
-					}
-
-					query, args, err = sqlx.In(query, args...)
 					if err != nil {
 						results[i] = &dataloader.Result[[]models.Agency]{
 							Error: err,
@@ -125,17 +124,20 @@ func listAgenciesDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.L
 						continue
 					}
 				} else {
-					query, args, err = sqlx.Named(
+					query = fmt.Sprintf(
 						`SELECT id, name, status, created, created_by, modified, modified_by
-					 FROM agencies
-					 WHERE id > :after
-					 AND id IN (:ids)
-					 ORDER BY :order
-					 LIMIT :limit`,
+					FROM agencies
+					WHERE id in (:ids)
+					AND id > :after
+					ORDER BY %s
+					LIMIT :limit`,
+						order)
+
+					// Fill in parameterized portions of the query
+					query, args, err = sqlx.Named(query,
 						map[string]interface{}{
-							"after": after,
 							"ids":   ids,
-							"order": order,
+							"after": after,
 							"limit": first,
 						})
 
@@ -148,14 +150,15 @@ func listAgenciesDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.L
 						}
 						continue
 					}
+				}
 
-					query, args, err = sqlx.In(query, args...)
-					if err != nil {
-						results[i] = &dataloader.Result[[]models.Agency]{
-							Error: err,
-						}
-						continue
+				// Fill the IN clause in the parameterized query
+				query, args, err = sqlx.In(query, args...)
+				if err != nil {
+					results[i] = &dataloader.Result[[]models.Agency]{
+						Error: err,
 					}
+					continue
 				}
 
 				query = db.Rebind(query)
