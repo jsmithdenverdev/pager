@@ -34,7 +34,7 @@ var agenciesSortType = graphql.NewEnum(graphql.EnumConfig{
 // listAgenciesQuery is the field definition for the agencies query.
 var listAgenciesQuery = &graphql.Field{
 	Name: "agencies",
-	Type: agencyType,
+	Type: graphql.NewList(agencyType),
 	Args: graphql.FieldConfigArgument{
 		"first": &graphql.ArgumentConfig{
 			Type:         graphql.Int,
