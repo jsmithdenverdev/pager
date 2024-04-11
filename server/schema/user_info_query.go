@@ -10,7 +10,9 @@ var userInfoQuery = &graphql.Field{
 	Name: "userInfo",
 	Type: userType,
 	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-		userService := p.Context.Value(service.ContextKeyUserService).(*service.UserService)
-		return userService.Info()
+		return func() (interface{}, error) {
+			userService := p.Context.Value(service.ContextKeyUserService).(*service.UserService)
+			return userService.Info()
+		}, nil
 	},
 }

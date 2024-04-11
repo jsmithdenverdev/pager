@@ -58,29 +58,27 @@ var createAgencyPayloadType = graphql.NewObject(graphql.ObjectConfig{
 // createAgencyMutation is the field definition for the createAgency mutation.
 var createAgencyMutation = &graphql.Field{
 	Name: "createAgency",
-	Type: toResultType[createAgencyPayload](
-		createAgencyPayloadType,
-		baseErrorType,
-		validationErrorType,
-		authzErrorType),
+	Type: createAgencyPayloadType,
 	Args: graphql.FieldConfigArgument{
 		"input": &graphql.ArgumentConfig{
 			Type: graphql.NewInputObject(createAgencyInputType),
 		},
 	},
 	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-		var payload createAgencyPayload
-		input, err := toCreateAgencyInput(p.Args["input"].(map[string]interface{}))
-		if err != nil {
-			return err, nil
-		}
-		claims := p.Context.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
-		svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
-		agency, err := svc.Create(input.Name, claims.RegisteredClaims.Subject)
-		if err != nil {
-			return err, nil
-		}
-		payload.Agency = agency
-		return payload, nil
+		return func() (interface{}, error) {
+			var payload createAgencyPayload
+			input, err := toCreateAgencyInput(p.Args["input"].(map[string]interface{}))
+			if err != nil {
+				return err, nil
+			}
+			claims := p.Context.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
+			svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
+			agency, err := svc.Create(input.Name, claims.RegisteredClaims.Subject)
+			if err != nil {
+				return payload, err
+			}
+			payload.Agency = agency
+			return payload, nil
+		}, nil
 	},
 }

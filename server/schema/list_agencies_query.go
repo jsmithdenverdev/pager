@@ -2,6 +2,7 @@ package schema
 
 import (
 	"github.com/graphql-go/graphql"
+	"github.com/jsmithdenverdev/pager/models"
 	"github.com/jsmithdenverdev/pager/service"
 )
 
@@ -33,7 +34,7 @@ var agenciesSortType = graphql.NewEnum(graphql.EnumConfig{
 // listAgenciesQuery is the field definition for the agencies query.
 var listAgenciesQuery = &graphql.Field{
 	Name: "agencies",
-	Type: graphql.NewList(agencyType),
+	Type: agencyType,
 	Args: graphql.FieldConfigArgument{
 		"first": &graphql.ArgumentConfig{
 			Type:         graphql.Int,
@@ -48,26 +49,43 @@ var listAgenciesQuery = &graphql.Field{
 		},
 	},
 	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-		svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
-		var (
-			argsFirst  = p.Args["first"]
-			argsAfter  = p.Args["after"]
-			argsOrder  = p.Args["sort"]
-			pagination service.AgenciesPagination
-		)
-
-		if argsFirst != nil {
-			pagination.First = argsFirst.(int)
+		type result struct {
+			data []models.Agency
+			err  error
 		}
 
-		if argsAfter != nil {
-			pagination.After = argsAfter.(string)
-		}
+		ch := make(chan result, 1)
 
-		if argsOrder != nil {
-			pagination.Order = argsOrder.(service.AgenciesOrder)
-		}
+		go func() {
+			svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
+			var (
+				argsFirst  = p.Args["first"]
+				argsAfter  = p.Args["after"]
+				argsOrder  = p.Args["sort"]
+				pagination service.AgenciesPagination
+			)
 
-		return svc.List(pagination)
+			if argsFirst != nil {
+				pagination.First = argsFirst.(int)
+			}
+
+			if argsAfter != nil {
+				pagination.After = argsAfter.(string)
+			}
+
+			if argsOrder != nil {
+				pagination.Order = argsOrder.(service.AgenciesOrder)
+			}
+
+			agencies, err := svc.List(pagination)
+			ch <- result{data: agencies, err: err}
+		}()
+
+		// Returning a thunk (a function with a result and error type) tells the
+		// graphql engine that this resolver should run concurrently.
+		return func() (interface{}, error) {
+			r := <-ch
+			return r.data, r.err
+		}, nil
 	},
 }
