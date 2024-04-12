@@ -67,7 +67,13 @@ export default function Root() {
           </div>
         </div>
       </nav>
-      {isLoading ? <></> : <Outlet />}
+      {isLoading ? (
+        <></>
+      ) : (
+        <div className="container p-3">
+          <Outlet />
+        </div>
+      )}
     </div>
   );
 }

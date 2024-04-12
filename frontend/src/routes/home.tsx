@@ -13,11 +13,14 @@ export default function Home() {
 
   return (
     <div>
-      <h1 className="text-lg">Home</h1>
-      <p>Signed in as {user?.name}</p>
+      <h1 className="text-lg">Home · {user?.name}</h1>
       <div>
-        <h3>Token</h3>
-        <code>{token}</code>
+        <button
+          className="bg-blue-500 text-white rounded p-3"
+          onClick={() => navigator.clipboard.writeText(token)}
+        >
+          Copy token to clipboard
+        </button>
       </div>
     </div>
   );
