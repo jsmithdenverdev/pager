@@ -64,6 +64,14 @@ func listAgenciesDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.L
 			// restrictive set of data for this user.
 			ids, err := authclient.List("read", authz.Resource{Type: "agency"})
 
+			// If we aren't authorized on any agencies return an empty result set
+			if len(ids) == 0 {
+				for i := range results {
+					results[i] = &dataloader.Result[[]models.Agency]{}
+				}
+				return results
+			}
+
 			// If List failed, we need to return an error to every caller of the
 			// loader.
 			if err != nil {
