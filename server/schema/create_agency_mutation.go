@@ -1,8 +1,6 @@
 package schema
 
 import (
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
-	jwtvalidator "github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/graphql-go/graphql"
 	"github.com/jsmithdenverdev/pager/models"
 	"github.com/jsmithdenverdev/pager/service"
@@ -71,9 +69,8 @@ var createAgencyMutation = &graphql.Field{
 			if err != nil {
 				return payload, err
 			}
-			claims := p.Context.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
 			svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
-			agency, err := svc.Create(input.Name, claims.RegisteredClaims.Subject)
+			agency, err := svc.Create(input.Name)
 			if err != nil {
 				return payload, err
 			}
