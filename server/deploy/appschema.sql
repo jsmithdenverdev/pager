@@ -77,7 +77,7 @@ VALUES ('PENDING'),
 CREATE TABLE IF NOT EXISTS devices (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   "status" varchar(256) NOT NULL REFERENCES device_status("status"),
-  "endpoint" varchar(256) NULL,
+  "endpoint" varchar(256) NOT NULL DEFAULT '',
   user_id uuid NOT NULL REFERENCES users(id),
   code varchar(256) NOT NULL,
   created timestamptz DEFAULT (now() AT TIME ZONE 'utc'::text) NOT NULL,
