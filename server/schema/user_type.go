@@ -65,11 +65,31 @@ var userType = graphql.NewObject(graphql.ObjectConfig{
 		"agencies": &graphql.Field{
 			Type: graphql.NewList(agencyType),
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
-				return svc.List(service.AgenciesPagination{
-					First: 10,
-					Order: service.AgenciesOrderCreatedAsc,
-				})
+				return func() (interface{}, error) {
+					svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
+					return svc.List(service.AgenciesPagination{
+						First: 10,
+						Order: service.AgenciesOrderCreatedAsc,
+					})
+				}, nil
+			},
+		},
+		"devices": &graphql.Field{
+			Type: graphql.NewList(deviceType),
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return func() (interface{}, error) {
+					svc := p.Context.Value(service.ContextKeyDeviceService).(*service.DeviceService)
+					return svc.ListDevices(service.DevicePagination{
+						First: 10,
+						Order: service.DeviceOrderCreatedAsc,
+						Filter: struct {
+							AgencyID string
+							UserID   string
+						}{
+							UserID: p.Source.(models.User).ID,
+						},
+					})
+				}, nil
 			},
 		},
 	},

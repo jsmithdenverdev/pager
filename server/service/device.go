@@ -4,22 +4,239 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math/rand"
 	"time"
 
+	"github.com/graph-gophers/dataloader/v7"
 	"github.com/jmoiron/sqlx"
 	"github.com/jsmithdenverdev/pager/authz"
 	"github.com/jsmithdenverdev/pager/models"
 )
 
+// DeviceOrder represents the sort order in a request to list devices.
+type DeviceOrder int
+
+const (
+	DeviceOrderCreatedAsc DeviceOrder = iota
+	DeviceOrderCreatedDesc
+	DeviceOrderModifiedAsc
+	DeviceOrderModifiedDesc
+	DeviceOrderNameAsc
+	DeviceOrderNameDesc
+)
+
+var (
+	deviceOrderNames = [...]string{
+		"CREATED_ASC",
+		"CREATED_DESC",
+		"MODIFIED_ASC",
+		"MODIFIED_DESC",
+		"NAME_ASC",
+		"NAME_DESC",
+	}
+	deviceOrderMap = map[DeviceOrder]string{
+		DeviceOrderCreatedAsc:   "created ASC",
+		DeviceOrderCreatedDesc:  "created DESC",
+		DeviceOrderModifiedAsc:  "modified ASC",
+		DeviceOrderModifiedDesc: "modified DESC",
+		DeviceOrderNameAsc:      "name ASC",
+		DeviceOrderNameDesc:     "name DESC",
+	}
+)
+
+func (order DeviceOrder) String() string {
+	return deviceOrderNames[order]
+}
+
+type DevicePagination struct {
+	First  int
+	Filter struct {
+		AgencyID string
+		UserID   string
+	}
+	After string
+	Order DeviceOrder
+}
+
+// listDevicesDataloader is a request scoped data loader that is used to batch
+// agency list operations across multiple concurrent resolvers.
+func listDevicesDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.Loader[DevicePagination, []models.Device] {
+	return dataloader.NewBatchedLoader(
+		func(ctx context.Context, keys []DevicePagination) []*dataloader.Result[[]models.Device] {
+			results := make([]*dataloader.Result[[]models.Device], len(keys))
+			// Fetch a list of IDs that this user has access to. This data comes from
+			// spice db, and we can use it to narrow down our query to the most
+			// restrictive set of data for this user.
+			ids, err := authclient.List("read", authz.Resource{Type: "device"})
+
+			// If we aren't authorized on any devices return an empty result set
+			if len(ids) == 0 {
+				for i := range results {
+					results[i] = &dataloader.Result[[]models.Device]{}
+				}
+				return results
+			}
+
+			// If List failed, we need to return an error to every caller of the
+			// loader.
+			if err != nil {
+				for i := range results {
+					results[i] = &dataloader.Result[[]models.Device]{
+						Error: err,
+					}
+				}
+
+				return results
+			}
+
+			for i := range keys {
+				var (
+					first  = keys[i].First
+					order  = deviceOrderMap[keys[i].Order]
+					after  = keys[i].After
+					filter = keys[i].Filter
+					query  string
+					args   []interface{}
+					err    error
+				)
+
+				// Create a query using the pagination key. In theory postgres doesn't
+				// have an upper limit to the number of values we supply to IN, and the
+				// number of agencies one user could possibly belong to is much lower
+				// than whatever upper bounds we'd see with postgres.
+				// In theory we'd have better performance by performing a single bulk db
+				// query but that would prevent each call to load from being able to
+				// define its own sort and filters, or we'd have to fetch all the data
+				// and do the sorting and filtering in memory which I'm guessing would
+				// be slower and more complicated than allowing postgres to do that.
+				// Filter on UserID
+				query =
+					`SELECT d.id, d.name, d.status, d.user_id, d.code, endpoint, d.created, d.created_by, d.modified, d.modified_by
+					 FROM devices d
+					`
+
+				// Joins
+				if filter.AgencyID != "" {
+					query += "JOIN agency_devices ad on ad.device_id = d.id\n"
+				}
+
+				// Wheres
+				query += "WHERE d.id IN (:ids)\n"
+
+				// Filters
+				if filter.UserID != "" {
+					query += "AND d.user_id = :userId\n"
+				}
+
+				if filter.AgencyID != "" {
+					query += "AND ad.agency_id = :agencyId\n"
+				}
+
+				// After
+				if after != "" {
+					query += "AND id > :after\n"
+				}
+				// Ordering
+				query += fmt.Sprintf("ORDER BY %s\n", order)
+				query += "LIMIT :limit"
+
+				// Fill in parameterized portions of the query
+				query, args, err = sqlx.Named(query,
+					map[string]interface{}{
+						"ids":      ids,
+						"userId":   filter.UserID,
+						"agencyId": filter.AgencyID,
+						"after":    after,
+						"limit":    first,
+					})
+
+				// If we failed to create the query, attach an error to the dataloader
+				// result for this index. Continue the loop to process the next key in
+				// the batch.
+				if err != nil {
+					results[i] = &dataloader.Result[[]models.Device]{
+						Error: err,
+					}
+					continue
+				}
+
+				// Fill the IN clause in the parameterized query
+				query, args, err = sqlx.In(query, args...)
+				if err != nil {
+					results[i] = &dataloader.Result[[]models.Device]{
+						Error: err,
+					}
+					continue
+				}
+
+				query = db.Rebind(query)
+
+				// Execute the query
+				rows, err := db.QueryxContext(
+					ctx,
+					query,
+					args...,
+				)
+
+				// If we failed to execute the query, attach an error to the dataloader
+				// result for this index. Continue the loop to process the next key in
+				// the batch.
+				if err != nil {
+					results[i] = &dataloader.Result[[]models.Device]{
+						Error: err,
+					}
+					continue
+				}
+
+				// Begin looping through the rows returned in the query. We'll map each
+				// row into a `models.Device`. If mapping the row fails, we close the
+				// reader to and attach an error to the dataloader result for this
+				// index. We break out of the inner for loop to prevent additional calls
+				// to the closed reader.
+				var devices []models.Device
+				for rows.Next() {
+					var d models.Device
+					if err := rows.StructScan(&d); err != nil {
+						results[i] = &dataloader.Result[[]models.Device]{
+							Error: err,
+						}
+						// As we continue operations we need to check for errors and assign
+						// them to the dataloader result at for the current index. This will
+						// overwrite the result, so we'll only have the most recent error
+						// but its enough for us to know where in the stack we failed, and
+						// work up from there.
+						if err := rows.Close(); err != nil {
+							results[i] = &dataloader.Result[[]models.Device]{
+								Error: err,
+							}
+						}
+						// Here we break instead of continue. We've closed the db reader
+						// and consider the results of this query set a failure.
+						break
+					}
+					devices = append(devices, d)
+				}
+
+				// Once we've mapped each agency row into a `models.Device`, we'll add
+				// the array of models to the datalaoder result for this index.
+				results[i] = &dataloader.Result[[]models.Device]{
+					Data: devices,
+				}
+			}
+			return results
+		})
+}
+
 // DeviceService exposes all operations that can be performed on or for devices.
 type DeviceService struct {
-	ctx        context.Context
-	user       string
-	authclient *authz.Client
-	db         *sqlx.DB
-	logger     *slog.Logger
+	ctx                   context.Context
+	user                  string
+	authclient            *authz.Client
+	db                    *sqlx.DB
+	logger                *slog.Logger
+	listDevicesDataloader *dataloader.Loader[DevicePagination, []models.Device]
 }
 
 // NewDeviceService creates a new DeviceService. A pointer to the service is
@@ -32,11 +249,12 @@ func NewDeviceService(
 	logger *slog.Logger,
 ) *DeviceService {
 	return &DeviceService{
-		ctx:        ctx,
-		user:       user,
-		authclient: authz,
-		db:         db,
-		logger:     logger,
+		ctx:                   ctx,
+		user:                  user,
+		authclient:            authz,
+		db:                    db,
+		logger:                logger,
+		listDevicesDataloader: listDevicesDataloader(authz, db),
 	}
 }
 
@@ -79,11 +297,18 @@ func (service *DeviceService) ProvisionDevice(agencyId, ownerId, name string) (m
 
 	var ownerIdpID string
 	if err := tx.QueryRowxContext(service.ctx,
-		`SELECT idp_id
-		 FROM users
-		 WHERE id = $1`,
+		`SELECT u.idp_id
+		 FROM users u
+		 INNER JOIN user_agencies ua on ua.user_id = u.id
+		 INNER JOIN agencies a on a.id = ua.agency_id
+		 WHERE u.id = $1
+		 AND a.id = $2`,
 		ownerId,
+		agencyId,
 	).Scan(&ownerIdpID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return device, errors.New("could not find user")
+		}
 		return device, err
 	}
 
@@ -267,6 +492,11 @@ func (service *DeviceService) DeactivateDevice(id string) (models.Device, error)
 	}
 
 	return device, nil
+}
+
+func (service *DeviceService) ListDevices(pagination DevicePagination) ([]models.Device, error) {
+	results, err := service.listDevicesDataloader.Load(service.ctx, pagination)()
+	return results, err
 }
 
 // deviceCodeCharacterSet represents the set of characters for generating a
