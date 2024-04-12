@@ -17,6 +17,7 @@ const (
 type Device struct {
 	Auditable
 	ID       string       `json:"id" db:"id"`
+	Name     string       `json:"name" db:"name"`
 	Status   DeviceStatus `json:"status" db:"status"`
 	Endpoint string       `json:"endpoint" db:"endpoint"`
 	UserID   string       `json:"userId" db:"user_id"`

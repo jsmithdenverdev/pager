@@ -69,7 +69,7 @@ var createAgencyMutation = &graphql.Field{
 			var payload createAgencyPayload
 			input, err := toCreateAgencyInput(p.Args["input"].(map[string]interface{}))
 			if err != nil {
-				return err, nil
+				return payload, err
 			}
 			claims := p.Context.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
 			svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)

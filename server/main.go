@@ -79,15 +79,17 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 	})
 	mux.Handle("/graphql", middleware.EnsureValidToken(cfg, logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		claims := ctx.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims)
-
-		authz := authz.NewClient(ctx, authzedClient, logger, claims.RegisteredClaims.Subject)
-		userService := service.NewUserService(ctx, db, claims.RegisteredClaims.Subject)
-		agencyService := service.NewAgencyService(ctx, authz, db, logger)
-
-		ctx = context.WithValue(ctx, service.ContextKeyUserService, userService)
-		ctx = context.WithValue(ctx, service.ContextKeyAgencyService, agencyService)
-
+		user := ctx.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims).RegisteredClaims.Subject
+		authz := authz.NewClient(ctx, authzedClient, logger, user)
+		ctx = context.WithValue(ctx,
+			service.ContextKeyUserService,
+			service.NewUserService(ctx, user, authz, db, logger))
+		ctx = context.WithValue(ctx,
+			service.ContextKeyAgencyService,
+			service.NewAgencyService(ctx, user, authz, db, logger))
+		ctx = context.WithValue(ctx,
+			service.ContextKeyDeviceService,
+			service.NewDeviceService(ctx, user, authz, db, logger))
 		handler.ContextHandler(ctx, w, r)
 	})))
 

@@ -2,6 +2,7 @@ package authz
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 
@@ -11,21 +12,22 @@ import (
 )
 
 func bulkCheckPermissionsDataloader(authz *authzed.Client) *dataloader.Loader[*v1.CheckBulkPermissionsRequest, *v1.CheckBulkPermissionsResponse] {
-	return dataloader.NewBatchedLoader(func(ctx context.Context, requests []*v1.CheckBulkPermissionsRequest) []*dataloader.Result[*v1.CheckBulkPermissionsResponse] {
-		results := make([]*dataloader.Result[*v1.CheckBulkPermissionsResponse], len(requests))
-		for i, request := range requests {
-			result, err := authz.CheckBulkPermissions(ctx, request)
-			results[i] = &dataloader.Result[*v1.CheckBulkPermissionsResponse]{
-				Data:  result,
-				Error: err,
+	return dataloader.NewBatchedLoader(
+		func(ctx context.Context, requests []*v1.CheckBulkPermissionsRequest) []*dataloader.Result[*v1.CheckBulkPermissionsResponse] {
+			results := make([]*dataloader.Result[*v1.CheckBulkPermissionsResponse], len(requests))
+			for i, request := range requests {
+				result, err := authz.CheckBulkPermissions(ctx, request)
+				results[i] = &dataloader.Result[*v1.CheckBulkPermissionsResponse]{
+					Data:  result,
+					Error: err,
+				}
 			}
-		}
-		return results
-	})
+			return results
+		})
 }
 
 func listDataloader(authz *authzed.Client) *dataloader.Loader[*v1.LookupResourcesRequest, []*v1.LookupResourcesResponse] {
-	return dataloader.NewBatchedLoader[*v1.LookupResourcesRequest, []*v1.LookupResourcesResponse](
+	return dataloader.NewBatchedLoader(
 		func(ctx context.Context, requests []*v1.LookupResourcesRequest) []*dataloader.Result[[]*v1.LookupResourcesResponse] {
 			var results []*dataloader.Result[[]*v1.LookupResourcesResponse]
 			for _, request := range requests {
@@ -78,7 +80,7 @@ func NewClient(ctx context.Context, authzed *authzed.Client, logger *slog.Logger
 	}
 }
 
-func (client *Client) Authorize(permission permission, resource Resource) (bool, error) {
+func (client *Client) Authorize(permission permission, resource Resource) Result {
 	result, err := client.bulkCheckPermissionsDataloader.Load(client.ctx, &v1.CheckBulkPermissionsRequest{
 		Items: []*v1.CheckBulkPermissionsRequestItem{
 			{
@@ -99,13 +101,26 @@ func (client *Client) Authorize(permission permission, resource Resource) (bool,
 
 	if err != nil {
 		client.logger.ErrorContext(client.ctx, "error: CheckPermission failed", "error", err)
-		return false, err
+		return Result{
+			Authorized: false,
+			Error:      err,
+		}
 	}
 
-	return result.Pairs[0].GetItem().Permissionship == v1.CheckPermissionResponse_PERMISSIONSHIP_HAS_PERMISSION, nil
+	if result.Pairs[0].GetError() != nil {
+		return Result{
+			Authorized: false,
+			Error:      err,
+		}
+	}
+
+	return Result{
+		Authorized: result.Pairs[0].GetItem().Permissionship == v1.CheckPermissionResponse_PERMISSIONSHIP_HAS_PERMISSION,
+		Error:      nil,
+	}
 }
 
-func (client *Client) BatchAuthorize(permission permission, resources []Resource) ([]bool, error) {
+func (client *Client) BatchAuthorize(permission permission, resources []Resource) ([]Result, error) {
 	items := make([]*v1.CheckBulkPermissionsRequestItem, len(resources))
 	for i, resource := range resources {
 		items[i] = &v1.CheckBulkPermissionsRequestItem{
@@ -123,7 +138,7 @@ func (client *Client) BatchAuthorize(permission permission, resources []Resource
 		}
 	}
 
-	permissions := make([]bool, len(resources))
+	permissions := make([]Result, len(resources))
 
 	results, err := client.bulkCheckPermissionsDataloader.Load(
 		client.ctx,
@@ -136,7 +151,21 @@ func (client *Client) BatchAuthorize(permission permission, resources []Resource
 	}
 
 	for i, result := range results.Pairs {
-		permissions[i] = result.GetItem().Permissionship == v1.CheckPermissionResponse_PERMISSIONSHIP_HAS_PERMISSION
+		// Permission checks from SpiceDB return a result type that can either be
+		// the permission or an error. If we have an error we'll fail the entire
+		// batch call and return it. This is a bit misleading, because the error may
+		// not apply to every item in the set, but I can't think of a better way to
+		// handle this for now.
+		if err := result.GetError(); err != nil {
+			permissions[i] = Result{
+				Error:      errors.New(err.Message),
+				Authorized: false,
+			}
+		}
+		permissions[i] = Result{
+			Error:      nil,
+			Authorized: result.GetItem().Permissionship == v1.CheckPermissionResponse_PERMISSIONSHIP_HAS_PERMISSION,
+		}
 	}
 
 	return permissions, nil

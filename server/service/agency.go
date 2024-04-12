@@ -269,7 +269,12 @@ func readAgencyDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.Loa
 			for i, authzResult := range authzResults {
 				// For the index i, if the user does not have permission, set the Result
 				// to a zero result.
-				if !authzResult {
+				if authzResult.Error != nil {
+					results[i] = &dataloader.Result[models.Agency]{
+						Error: authzResult.Error,
+					}
+				}
+				if !authzResult.Authorized {
 					results[i] = &dataloader.Result[models.Agency]{}
 				} else {
 					id := keys[i]
@@ -361,6 +366,7 @@ func readAgencyDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.Loa
 // AgencyService exposes all operations that can be performed on agencies.
 type AgencyService struct {
 	ctx                    context.Context
+	user                   string
 	authclient             *authz.Client
 	db                     *sqlx.DB
 	logger                 *slog.Logger
@@ -372,12 +378,14 @@ type AgencyService struct {
 // returned.
 func NewAgencyService(
 	ctx context.Context,
+	user string,
 	authz *authz.Client,
 	db *sqlx.DB,
 	logger *slog.Logger,
 ) *AgencyService {
 	return &AgencyService{
 		ctx:                    ctx,
+		user:                   user,
 		authclient:             authz,
 		db:                     db,
 		logger:                 logger,
@@ -386,31 +394,34 @@ func NewAgencyService(
 	}
 }
 
-func (a *AgencyService) List(pagination AgenciesPagination) ([]models.Agency, error) {
-	return a.listAgenciesDataLoader.Load(a.ctx, pagination)()
+// List allows a user to list agencies using a set of pagination options.
+// Listing is backed by a dataloader making this method safe to use in
+// resolvers.
+func (service *AgencyService) List(pagination AgenciesPagination) ([]models.Agency, error) {
+	return service.listAgenciesDataLoader.Load(service.ctx, pagination)()
 }
 
-func (a *AgencyService) Read(id string) (models.Agency, error) {
-	return a.readAgencyDataLoader.Load(a.ctx, id)()
+func (service *AgencyService) Read(id string) (models.Agency, error) {
+	return service.readAgencyDataLoader.Load(service.ctx, id)()
 }
 
-func (a *AgencyService) Create(name, userId string) (models.Agency, error) {
+func (service *AgencyService) Create(name, userId string) (models.Agency, error) {
 	var agency models.Agency
 
-	check, err := a.authclient.Authorize(
+	result := service.authclient.Authorize(
 		authz.PermissionCreateAgency,
 		authz.Resource{Type: "platform", ID: "platform"})
 
-	if err != nil {
-		return agency, err
+	if result.Error != nil {
+		return agency, result.Error
 	}
-	if !check {
+	if !result.Authorized {
 		return agency, authz.NewAuthzError(
 			authz.PermissionCreateAgency,
 			authz.Resource{Type: "platform", ID: "platform"})
 	}
 
-	tx, err := a.db.BeginTxx(a.ctx, &sql.TxOptions{
+	tx, err := service.db.BeginTxx(service.ctx, &sql.TxOptions{
 		Isolation: sql.LevelSerializable,
 	})
 	if err != nil {
@@ -418,19 +429,19 @@ func (a *AgencyService) Create(name, userId string) (models.Agency, error) {
 	}
 
 	if err := tx.QueryRowxContext(
-		a.ctx,
+		service.ctx,
 		`INSERT INTO agencies (name, status, created_by, modified_by)
 		 VALUES ($1, $2, $3, $4)
 		 RETURNING id, name, status, created, created_by, modified, modified_by;`,
 		name,
 		models.AgencyStatusPending,
-		userId,
-		userId,
+		service.user,
+		service.user,
 	).StructScan(&agency); err != nil {
 		return agency, err
 	}
 
-	if err = a.authclient.WritePermission(
+	if err = service.authclient.WritePermission(
 		"platform",
 		authz.Resource{Type: "agency", ID: agency.ID},
 		authz.Resource{Type: "platform", ID: "platform"}); err != nil {

@@ -17,7 +17,9 @@ definition agency {
 	permission delete = writer
 
 	// Creating child entities
-	permission create_device = writer
+	permission provision_device = writer
+	permission add_device = writer
+	permission remove_device = writer
 	permission create_page = writer
 	permission invite_user = writer + platform->super_admin
 
@@ -29,11 +31,15 @@ definition agency {
 
 definition device {
 	relation agency: agency
+  relation owner: user
 
 	// Device permissions
-	permission read = agency->reader + agency->writer
-	permission update = agency->writer
-	permission delete = agency->writer
+	permission read = agency->reader + agency->writer + owner
+  // Only the owner update/delete/activate/deactivate their device
+	permission update = owner
+	permission delete = owner
+  permission deactivate = owner
+  permission activate = owner
 }
 
 definition page {
