@@ -6,4 +6,5 @@ const (
 	ContextKeyAgencyService contextKey = "agency_service"
 	ContextKeyUserService   contextKey = "user_service"
 	ContextKeyDeviceService contextKey = "device_service"
+	ContextKeyPageService   contextKey = "page_service"
 )
