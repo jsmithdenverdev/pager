@@ -129,7 +129,7 @@ func NewPageService(
 	}
 }
 
-func (service *PageService) CreatePage(agencyId string, content string) (models.Page, error) {
+func (service *PageService) CreatePage(agencyId string, content string, deliver bool) (models.Page, error) {
 	var page models.Page
 	return page, nil
 }
