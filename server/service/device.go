@@ -229,6 +229,149 @@ func listDevicesDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.Lo
 		})
 }
 
+// readDeviceDataloader is a request scoped data loader that is used to batch
+// device read operations across multiple concurrent resolvers.
+func readDeviceDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.Loader[string, models.Device] {
+	return dataloader.NewBatchedLoader(
+		func(ctx context.Context, keys []string) []*dataloader.Result[models.Device] {
+			results := make([]*dataloader.Result[models.Device], len(keys))
+			var resources []authz.Resource
+
+			// Build up a collection of resources for a batch authorization check. We
+			// do this because this dataloader may be called multiple times to fully
+			// resolve a particular query. This allows us to coalesce the full set of
+			// IDs from all calls to `.Load` into a single authorization query.
+			for _, key := range keys {
+				resources = append(resources, authz.Resource{Type: "device", ID: key})
+			}
+
+			// BatchAuthorize returns a result set the same length as the input set.
+			// Each result in the set is a boolean that can be used to determine if
+			// the given permission was authorized on the resource at the matching
+			// index.
+			authzResults, err := authclient.BatchAuthorize("read", resources)
+
+			// If BatchAuthz failed, we need to return an error to every caller of the
+			// loader.
+			if err != nil {
+				for i := range results {
+					results[i] = &dataloader.Result[models.Device]{
+						Error: err,
+					}
+				}
+
+				return results
+			}
+
+			// Next we'll perform a batched select query using the ID's that this user
+			// did have authz for. But before we do that, we need a way to match a
+			// particular ID to its index in the keys array, otherwise the dataloader
+			// won't return the correct data to the correct caller of `.Load`.
+			var (
+				authorizedIds     []string
+				authorizedIndexes []int
+			)
+
+			// We'll loop through the results of the authz check and assign a zero
+			// value to any records the user did not have authz to read, and add an
+			// entry to our authorizedIndexes array to have the indexes of authorized
+			// results handy for the next couple steps.
+			for i, authzResult := range authzResults {
+				// For the index i, if the user does not have permission, set the Result
+				// to a zero result.
+				if authzResult.Error != nil {
+					results[i] = &dataloader.Result[models.Device]{
+						Error: authzResult.Error,
+					}
+				}
+				if !authzResult.Authorized {
+					results[i] = &dataloader.Result[models.Device]{}
+				} else {
+					id := keys[i]
+					authorizedIndexes = append(authorizedIndexes, i)
+					authorizedIds = append(authorizedIds, id)
+				}
+			}
+
+			// If the user isn't authorized to read any of these devices skip running
+			// the query.
+			if len(authorizedIds) == 0 {
+				return results
+			}
+
+			// Generate our database query, we aren't worried about sorting here
+			// because even though this is batching requests, we need to remember that
+			// the caller of this method is intending to get a single response.
+			query, args, err := sqlx.In(
+				`SELECT id, name, status, user_id, code, endpoint, created, created_by, modified, modified_by
+					 FROM devices
+					 WHERE id IN (?)`,
+				authorizedIds)
+
+			// If we failed to generate the query we need to add errors to the
+			// dataloader results. However, we need to ensure we only add errors for
+			// the items in the result set that would have been in the query (if a
+			// user wasn't authorized to read on a particular ID they shouldn't get
+			// a SQL error, they should get no result).
+			if err != nil {
+				// This is a little odd looking because we're not actually interested
+				// in the current index of the range call we're interested in the value
+				// at that position in the array. That value corresponds to an index in
+				// the result set that would be an authorized read.
+				for _, index := range authorizedIndexes {
+					results[index] = &dataloader.Result[models.Device]{
+						Error: err,
+					}
+				}
+			}
+
+			query = db.Rebind(query)
+
+			rows, err := db.QueryxContext(ctx, query, args...)
+
+			// Like above, if we failed to execute the query we need to add errors to
+			// the dataloader results. But we need to only add an error to the result
+			// that would have been from an authorized read.
+			if err != nil {
+				// Like above, this is a little odd looking because we're not actually
+				// interested in the current index of the range call we're interested in
+				// the value at that position in the array. That value corresponds to an
+				// index in the result set that would be an authorized read.
+				for _, index := range authorizedIndexes {
+					results[index] = &dataloader.Result[models.Device]{
+						Error: err,
+					}
+				}
+			}
+
+			// We'll loop through the rows returned from the query, and attempt to
+			// scan each row into a models.Device struct. If that scan fails, we need
+			// to add an error to dataloader result.
+			// Because all of our arrays are ordered the same, we can use the rowCount
+			// to get a value from authorizedIndexes. That value is the position of
+			// this record in the final results array. If we have an error we'll
+			// assign an error result to that position, otherwise we'll assign a data
+			// result to that position.
+			rowCount := 0
+			for rows.Next() {
+				resultIndex := authorizedIndexes[rowCount]
+				var device models.Device
+				if err := rows.StructScan(&device); err != nil {
+					results[resultIndex] = &dataloader.Result[models.Device]{
+						Error: err,
+					}
+				} else {
+					results[resultIndex] = &dataloader.Result[models.Device]{
+						Data: device,
+					}
+				}
+				rowCount++
+			}
+
+			return results
+		})
+}
+
 // DeviceService exposes all operations that can be performed on or for devices.
 type DeviceService struct {
 	ctx                   context.Context
@@ -237,6 +380,7 @@ type DeviceService struct {
 	db                    *sqlx.DB
 	logger                *slog.Logger
 	listDevicesDataloader *dataloader.Loader[DevicePagination, []models.Device]
+	readDeviceDataloader  *dataloader.Loader[string, models.Device]
 }
 
 // NewDeviceService creates a new DeviceService. A pointer to the service is
@@ -255,6 +399,7 @@ func NewDeviceService(
 		db:                    db,
 		logger:                logger,
 		listDevicesDataloader: listDevicesDataloader(authz, db),
+		readDeviceDataloader:  readDeviceDataloader(authz, db),
 	}
 }
 
@@ -497,6 +642,10 @@ func (service *DeviceService) DeactivateDevice(id string) (models.Device, error)
 func (service *DeviceService) ListDevices(pagination DevicePagination) ([]models.Device, error) {
 	results, err := service.listDevicesDataloader.Load(service.ctx, pagination)()
 	return results, err
+}
+
+func (service *DeviceService) ReadDevice(id string) (models.Device, error) {
+	return service.readDeviceDataloader.Load(service.ctx, id)()
 }
 
 // deviceCodeCharacterSet represents the set of characters for generating a
