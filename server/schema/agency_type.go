@@ -3,6 +3,7 @@ package schema
 import (
 	"github.com/graphql-go/graphql"
 	"github.com/jsmithdenverdev/pager/models"
+	"github.com/jsmithdenverdev/pager/service"
 )
 
 // agencyStatusType is a graphql enum representing the status of an agency.
@@ -56,6 +57,24 @@ var agencyType = graphql.NewObject(graphql.ObjectConfig{
 			Type: graphql.String,
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				return p.Source.(models.Agency).ModifiedBy, nil
+			},
+		},
+		"devices": &graphql.Field{
+			Type: graphql.NewList(deviceType),
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return func() (interface{}, error) {
+					svc := p.Context.Value(service.ContextKeyDeviceService).(*service.DeviceService)
+					return svc.ListDevices(service.DevicePagination{
+						First: 10,
+						Order: service.DeviceOrderCreatedAsc,
+						Filter: struct {
+							AgencyID string
+							UserID   string
+						}{
+							AgencyID: p.Source.(models.Agency).ID,
+						},
+					})
+				}, nil
 			},
 		},
 	},
