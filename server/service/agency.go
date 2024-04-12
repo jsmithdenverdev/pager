@@ -413,7 +413,7 @@ func (service *AgencyService) Read(id string) (models.Agency, error) {
 	return service.readAgencyDataLoader.Load(service.ctx, id)()
 }
 
-func (service *AgencyService) Create(name, userId string) (models.Agency, error) {
+func (service *AgencyService) Create(name string) (models.Agency, error) {
 	var agency models.Agency
 
 	result := service.authclient.Authorize(
