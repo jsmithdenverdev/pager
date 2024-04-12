@@ -200,7 +200,7 @@ func (service *DeviceService) ActivateDevice(code, endpoint string) (models.Devi
 			modified_by = $4
 		 WHERE id = $5
 		 AND code = $6
-		 AND status = 'PENDING'
+		 AND (status = 'PENDING' OR status = 'INACTIVE')
 		 RETURNING id, name, endpoint, user_id, status, code, created, created_by, modified, modified_by;`,
 		models.DeviceStatusActive,
 		endpoint,
@@ -208,6 +208,60 @@ func (service *DeviceService) ActivateDevice(code, endpoint string) (models.Devi
 		service.user,
 		deviceId,
 		code,
+	).StructScan(&device); err != nil {
+		return device, err
+	}
+
+	return device, nil
+}
+
+func (service *DeviceService) DeactivateDevice(id string) (models.Device, error) {
+	var device models.Device
+
+	var status string
+	if err := service.db.QueryRowxContext(service.ctx,
+		`SELECT status
+		 FROM devices
+		 WHERE id = $1`,
+		id,
+	).Scan(&status); err != nil {
+		return device, err
+	}
+
+	if status == string(models.DeviceStatusInactive) || status == string(models.DeviceStatusPending) {
+		return device, errors.New("device already inactive or pending")
+	}
+
+	result := service.authclient.Authorize(
+		authz.PermissionDeactivateDevice,
+		authz.Resource{Type: "device", ID: id},
+	)
+
+	if result.Error != nil {
+		return device, result.Error
+	}
+
+	if !result.Authorized {
+		return device, authz.NewAuthzError(
+			authz.PermissionDeactivateDevice,
+			authz.Resource{Type: "device", ID: id},
+		)
+	}
+
+	if err := service.db.QueryRowxContext(
+		service.ctx,
+		`UPDATE devices
+		 SET
+		 	status = $1,
+			modified = $2,
+			modified_by = $3
+		 WHERE id = $4
+		 AND status = 'ACTIVE'
+		 RETURNING id, name, endpoint, user_id, status, code, created, created_by, modified, modified_by;`,
+		models.DeviceStatusInactive,
+		time.Now(),
+		service.user,
+		id,
 	).StructScan(&device); err != nil {
 		return device, err
 	}

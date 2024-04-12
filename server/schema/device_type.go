@@ -28,6 +28,9 @@ var deviceType = graphql.NewObject(graphql.ObjectConfig{
 		"id": &graphql.Field{
 			Type: graphql.ID,
 		},
+		"name": &graphql.Field{
+			Type: graphql.String,
+		},
 		"status": &graphql.Field{
 			Type: deviceStatusType,
 		},

@@ -33,6 +33,7 @@ func registerMutations(schema *graphql.SchemaConfig) {
 		createAgencyMutation,
 		provisionDeviceMutation,
 		activateDeviceMutation,
+		deactivateDeviceMutation,
 	}
 	var rootMutation = graphql.ObjectConfig{
 		Name:   "Mutation",
