@@ -17,6 +17,7 @@ func registerQueries(schema *graphql.SchemaConfig) {
 		readAgencyQuery,
 		listAgenciesQuery,
 		userInfoQuery,
+		readDeviceQuery,
 	}
 	var rootQuery = graphql.ObjectConfig{
 		Name:   "Query",
