@@ -6,11 +6,22 @@ export ZED_ENDPOINT=localhost:50051
 export ZED_TOKEN=foobar 
 export ZED_INSECURE=true 
 
-# Assign pager-admin@pager.com as an adminstrator in the platform:platform
+# Platform admin
+# pager-admin@pager.com -> adminstrator -> platform:platform
 zed relationship create "platform:platform" administrator "user:auth0|6606e16332edd5a3975a6e9f" || true
-# Assign platform:platform as the platform for Sample SAR Agency
+
+# Agency -> Platform
+# platform:platform -> platform -> Sample SAR Agency
 zed relationship create "agency:8d282649-708b-4523-ab2a-122bd8739bd1" platform "platform:platform" || true
-# Assign platform:platform as the platform for Sample EMS Agency
+# platform:platform -> platform -> Sample EMS Agency
 zed relationship create "agency:78c95398-3b3d-4e82-a648-0787af58a945" platform "platform:platform" || true
-# Assign agency-admin@pager.com as a writer for Sample SAR Agency
-zed relationship create "agency:8d282649-708b-4523-ab2a-122bd8739bd1" writer "user:auth0|6606e29442d9ec8442da383c" || true
+
+# User -> Agency
+# sar-writer@pager.com -> writer -> Sample SAR Agency
+zed relationship create "agency:8d282649-708b-4523-ab2a-122bd8739bd1" writer "user:auth0|66199504eddfc16953adc92e" || true
+# sar-reader@pager.com -> reader -> Sample SAR Agency
+zed relationship create "agency:8d282649-708b-4523-ab2a-122bd8739bd1" reader "user:auth0|6619959f91e0011a88bfbcd2" || true
+# ems-writer@pager.com -> writer -> Sample EMS Agency
+zed relationship create "agency:78c95398-3b3d-4e82-a648-0787af58a945" writer "user:auth0|661995c5f2bd935c05de4298" || true
+# ems-reader@pager.com -> reader -> Sample EMS Agency
+zed relationship create "agency:78c95398-3b3d-4e82-a648-0787af58a945" reader "user:auth0|6619960ae8fb8f9f19f937c6" || true
