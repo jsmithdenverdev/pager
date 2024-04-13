@@ -8,7 +8,7 @@ import (
 
 // createPageInput represents the fields needed to create a new page.
 type createPageInput struct {
-	AgencyID string `json:"agencyId", validate:"required,uuid"`
+	AgencyID string `json:"agencyId" validate:"required,uuid"`
 	Content  string `json:"content" validate:"min=1"`
 	Deliver  bool   `json:"deliver"`
 }
