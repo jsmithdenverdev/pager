@@ -482,22 +482,18 @@ func (service *DeviceService) ProvisionDevice(agencyId, ownerId, name string) (m
 		return device, err
 	}
 
-	if err := service.authclient.WritePermission(
-		"agency",
-		authz.Resource{Type: "device", ID: device.ID},
-		authz.Resource{Type: "agency", ID: agencyId},
-	); err != nil {
-		if txerr := tx.Rollback(); txerr != nil {
-			return device, txerr
-		}
-		return device, err
-	}
-
-	if err := service.authclient.WritePermission(
-		"owner",
-		authz.Resource{Type: "device", ID: device.ID},
-		authz.Resource{Type: "user", ID: ownerIdpID},
-	); err != nil {
+	if err := service.authclient.WritePermissions([]authz.Permission{
+		{
+			Relationship: "agency",
+			Resource:     authz.Resource{Type: "device", ID: device.ID},
+			Subject:      authz.Resource{Type: "agency", ID: agencyId},
+		},
+		{
+			Relationship: "owner",
+			Resource:     authz.Resource{Type: "device", ID: device.ID},
+			Subject:      authz.Resource{Type: "user", ID: ownerIdpID},
+		},
+	}); err != nil {
 		if txerr := tx.Rollback(); txerr != nil {
 			return device, txerr
 		}

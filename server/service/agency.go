@@ -449,10 +449,13 @@ func (service *AgencyService) Create(name string) (models.Agency, error) {
 		return agency, err
 	}
 
-	if err = service.authclient.WritePermission(
-		"platform",
-		authz.Resource{Type: "agency", ID: agency.ID},
-		authz.Resource{Type: "platform", ID: "platform"}); err != nil {
+	if err = service.authclient.WritePermissions([]authz.Permission{
+		{
+			Relationship: "platform",
+			Resource:     authz.Resource{Type: "agency", ID: agency.ID},
+			Subject:      authz.Resource{Type: "platform", ID: "platform"},
+		},
+	}); err != nil {
 		if txerr := tx.Rollback(); txerr != nil {
 			return agency, txerr
 		}

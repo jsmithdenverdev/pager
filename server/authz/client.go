@@ -195,26 +195,29 @@ func (client *Client) List(permission permission, resource Resource) ([]string, 
 	return resourceIds, nil
 }
 
-func (client *Client) WritePermission(relationship string, resource Resource, subject Resource) error {
-	_, err := client.authzed.WriteRelationships(client.ctx, &v1.WriteRelationshipsRequest{
-		Updates: []*v1.RelationshipUpdate{
-			{
-				Operation: v1.RelationshipUpdate_OPERATION_CREATE,
-				Relationship: &v1.Relationship{
-					Resource: &v1.ObjectReference{
-						ObjectType: resource.Type,
-						ObjectId:   resource.ID,
-					},
-					Subject: &v1.SubjectReference{
-						Object: &v1.ObjectReference{
-							ObjectType: subject.Type,
-							ObjectId:   subject.ID,
-						},
-					},
-					Relation: relationship,
+func (client *Client) WritePermissions(permissions []Permission) error {
+	var updates []*v1.RelationshipUpdate
+	for _, permission := range permissions {
+		updates = append(updates, &v1.RelationshipUpdate{
+			Operation: v1.RelationshipUpdate_OPERATION_CREATE,
+			Relationship: &v1.Relationship{
+				Resource: &v1.ObjectReference{
+					ObjectType: permission.Resource.Type,
+					ObjectId:   permission.Resource.ID,
 				},
+				Subject: &v1.SubjectReference{
+					Object: &v1.ObjectReference{
+						ObjectType: permission.Subject.Type,
+						ObjectId:   permission.Subject.ID,
+					},
+				},
+				Relation: permission.Relationship,
 			},
-		},
+		})
+	}
+
+	_, err := client.authzed.WriteRelationships(client.ctx, &v1.WriteRelationshipsRequest{
+		Updates: updates,
 	})
 
 	return err
