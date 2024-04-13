@@ -15,9 +15,12 @@ func registerQueries(schema *graphql.SchemaConfig) {
 	// Register queries here
 	queries := []*graphql.Field{
 		readAgencyQuery,
-		listAgenciesQuery,
-		userInfoQuery,
 		readDeviceQuery,
+		readPageQuery,
+		readPageDeliveryQuery,
+		listAgenciesQuery,
+		listPagesQuery,
+		userInfoQuery,
 	}
 	var rootQuery = graphql.ObjectConfig{
 		Name:   "Query",
@@ -35,6 +38,8 @@ func registerMutations(schema *graphql.SchemaConfig) {
 		provisionDeviceMutation,
 		activateDeviceMutation,
 		deactivateDeviceMutation,
+		createPageMutation,
+		deliverPageMutation,
 	}
 	var rootMutation = graphql.ObjectConfig{
 		Name:   "Mutation",
