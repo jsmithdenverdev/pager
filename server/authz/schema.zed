@@ -51,6 +51,15 @@ definition page {
 	permission delete = agency->writer
 }
 
+definition page_delivery {
+	relation page: page
+
+	// Page permissions
+	permission read = page->read
+	permission update = page->update
+	permission delete = page->delete
+}
+
 definition user {
 	relation agency: agency
 
