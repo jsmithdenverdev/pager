@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 
@@ -748,6 +749,120 @@ func NewPageService(
 
 func (service *PageService) CreatePage(agencyId string, content string, deliver bool) (models.Page, error) {
 	var page models.Page
+
+	authzResult := service.authclient.Authorize(
+		authz.PermissionCreatePage,
+		authz.Resource{Type: "agency", ID: agencyId},
+	)
+	if authzResult.Error != nil {
+		return page, authzResult.Error
+	}
+	if !authzResult.Authorized {
+		return page, authz.NewAuthzError(
+			authz.PermissionCreatePage,
+			authz.Resource{Type: "agency", ID: agencyId})
+	}
+
+	tx, err := service.db.BeginTxx(service.ctx, &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+	})
+	if err != nil {
+		return page, err
+	}
+
+	if err := tx.QueryRowxContext(
+		service.ctx,
+		`INSERT INTO pages (agency_id, content, created_by, modified_by)
+		 VALUES ($1, $2, $3, $4)
+		 RETURNING id, agency_id, content, created, created_by, modified, modified_by;`,
+		agencyId,
+		content,
+		service.user,
+		service.user,
+	).StructScan(&page); err != nil {
+		return page, err
+	}
+
+	var permissions []authz.Permission
+
+	if deliver {
+		var deliveries []models.PageDelivery
+		rows, err := tx.QueryxContext(
+			service.ctx,
+			`SELECT d.id
+			FROM devices d
+			INNER JOIN agency_devices ad on ad.device_id = d.id
+			WHERE ad.agency_id = $1`,
+			agencyId,
+		)
+
+		if err != nil {
+			return page, err
+		}
+
+		for rows.Next() {
+			var deviceId string
+			if err := rows.Scan(&deviceId); err != nil {
+				return page, err
+			}
+			deliveries = append(deliveries, models.PageDelivery{
+				PageID:   page.ID,
+				DeviceID: deviceId,
+				Status:   models.PageDeliveryStatusPending,
+				Auditable: models.Auditable{
+					CreatedBy:  service.user,
+					ModifiedBy: service.user,
+				},
+			})
+		}
+
+		query, args, err := sqlx.Named(
+			`INSERT INTO page_deliveries (page_id, device_id, status, created_by, modified_by)
+			 VALUES (:page_id, :device_id, :status, :created_by, :modified_by)
+			 RETURNING id`,
+			deliveries)
+
+		if err != nil {
+			return page, err
+		}
+
+		rows, err = tx.QueryxContext(service.ctx, query, args...)
+
+		if err != nil {
+			return page, err
+		}
+
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				return page, err
+			}
+			permissions = append(permissions, authz.Permission{
+				Relationship: "page",
+				Resource:     authz.Resource{Type: "page_delivery", ID: id},
+				Subject:      authz.Resource{Type: "page", ID: page.ID},
+			})
+		}
+	}
+
+	permissions = append(permissions, authz.Permission{
+		Relationship: "agency",
+		Resource:     authz.Resource{Type: "page", ID: page.ID},
+		Subject:      authz.Resource{Type: "agency", ID: agencyId},
+	})
+
+	if err = service.authclient.WritePermissions(permissions); err != nil {
+		if txerr := tx.Rollback(); txerr != nil {
+			return page, txerr
+		}
+
+		return page, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return page, err
+	}
+
 	return page, nil
 }
 
@@ -768,8 +883,113 @@ func (service *PageService) DeletePage(id string) error {
 	return nil
 }
 
-func (service *PageService) DeliverPage(pageId string) error {
-	return nil
+func (service *PageService) DeliverPage(agencyId, pageId string) (models.Page, error) {
+	var deliveries []models.PageDelivery
+	var page models.Page
+	authzResult := service.authclient.Authorize(
+		// We don't have a specific permission for page deliveries, if a user can
+		// create a page its implied they can create a delivery.
+		authz.PermissionCreatePage,
+		authz.Resource{Type: "agency", ID: agencyId},
+	)
+	if authzResult.Error != nil {
+		return page, authzResult.Error
+	}
+	if !authzResult.Authorized {
+		return page, authz.NewAuthzError(
+			authz.PermissionCreatePage,
+			authz.Resource{Type: "agency", ID: agencyId})
+	}
+
+	tx, err := service.db.BeginTxx(service.ctx, &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+	})
+	if err != nil {
+		return page, err
+	}
+
+	if err := tx.QueryRowxContext(
+		service.ctx,
+		`SELECT id, agency_id, content, created, created_by, modified, modified_by
+		FROM pages
+		WHERE id = $1`,
+		pageId,
+	).StructScan(&page); err != nil {
+		return page, err
+	}
+
+	var permissions []authz.Permission
+
+	rows, err := tx.QueryxContext(
+		service.ctx,
+		`SELECT d.id
+			FROM devices d
+			INNER JOIN agency_devices ad on ad.device_id = d.id
+			WHERE ad.agency_id = $1`,
+		agencyId,
+	)
+
+	if err != nil {
+		return page, err
+	}
+
+	for rows.Next() {
+		var deviceId string
+		if err := rows.Scan(&deviceId); err != nil {
+			return page, err
+		}
+		deliveries = append(deliveries, models.PageDelivery{
+			PageID:   pageId,
+			DeviceID: deviceId,
+			Status:   models.PageDeliveryStatusPending,
+			Auditable: models.Auditable{
+				CreatedBy:  service.user,
+				ModifiedBy: service.user,
+			},
+		})
+	}
+
+	query, args, err := sqlx.Named(
+		`INSERT INTO page_deliveries (page_id, device_id, status, created_by, modified_by)
+			 VALUES (:page_id, :device_id, :status, :created_by, :modified_by)
+			 RETURNING id`,
+		deliveries)
+
+	if err != nil {
+		return page, err
+	}
+
+	rows, err = tx.QueryxContext(service.ctx, query, args...)
+
+	if err != nil {
+		return page, err
+	}
+
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return page, err
+		}
+		permissions = append(permissions, authz.Permission{
+			Relationship: "page",
+			Resource:     authz.Resource{Type: "page_delivery", ID: id},
+			Subject:      authz.Resource{Type: "page", ID: pageId},
+		})
+	}
+
+	if err = service.authclient.WritePermissions(permissions); err != nil {
+		if txerr := tx.Rollback(); txerr != nil {
+			return page, txerr
+		}
+
+		return page, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return page, err
+	}
+
+	return page, nil
 }
 
 func (service *PageService) ReadDelivery(id string) (models.PageDelivery, error) {
