@@ -23,6 +23,7 @@ import (
 	"github.com/jsmithdenverdev/pager/middleware"
 	"github.com/jsmithdenverdev/pager/schema"
 	"github.com/jsmithdenverdev/pager/service"
+	"github.com/jsmithdenverdev/pager/worker"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -90,6 +91,9 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		ctx = context.WithValue(ctx,
 			service.ContextKeyDeviceService,
 			service.NewDeviceService(ctx, user, authz, db, logger))
+		ctx = context.WithValue(ctx,
+			service.ContextKeyPageService,
+			service.NewPageService(ctx, user, authz, db, logger))
 		handler.ContextHandler(ctx, w, r)
 	})))
 
@@ -98,12 +102,18 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		Handler: mux,
 	}
 
+	// Start http server
 	go func() {
 		logger.InfoContext(ctx, fmt.Sprintf("listening for connections on %s", httpServer.Addr))
 		if err := httpServer.ListenAndServe(); err != nil {
 			logger.ErrorContext(ctx, fmt.Sprintf("error listening and serving %s", err.Error()))
 		}
 	}()
+
+	// Create and start workers. Workers are simple background processes that run
+	// in a goroutine.
+	go worker.NewPageDeliverer(ctx, 30, db, logger).Start()
+	go worker.NewUserProvisioner(ctx, 30, db, logger).Start()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
