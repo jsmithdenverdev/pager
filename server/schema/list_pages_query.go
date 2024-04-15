@@ -6,35 +6,10 @@ import (
 	"github.com/jsmithdenverdev/pager/service"
 )
 
-// pagesSortType is a graphql enum representing the sort order for pages.
-var pagesSortType = graphql.NewEnum(graphql.EnumConfig{
-	Name: "PagesSort",
-	Values: graphql.EnumValueConfigMap{
-		"CREATED_ASC": &graphql.EnumValueConfig{
-			Value: service.PageOrderCreatedAsc,
-		},
-		"CREATED_DESC": &graphql.EnumValueConfig{
-			Value: service.PageOrderCreatedDesc,
-		},
-		"MODIFIED_ASC": &graphql.EnumValueConfig{
-			Value: service.PageOrderModifiedAsc,
-		},
-		"MODIFIED_DESC": &graphql.EnumValueConfig{
-			Value: service.PageOrderModifiedDesc,
-		},
-		"NAME_ASC": &graphql.EnumValueConfig{
-			Value: service.PageOrderNameAsc,
-		},
-		"NAME_DESC": &graphql.EnumValueConfig{
-			Value: service.PageOrderNameDesc,
-		},
-	},
-})
-
 // listPagesQuery is the field definition for the pages query.
 var listPagesQuery = &graphql.Field{
 	Name: "pages",
-	Type: graphql.NewList(agencyType),
+	Type: pageConnectionType,
 	Args: graphql.FieldConfigArgument{
 		"first": &graphql.ArgumentConfig{
 			Type:         graphql.Int,
@@ -44,13 +19,13 @@ var listPagesQuery = &graphql.Field{
 			Type: graphql.String,
 		},
 		"sort": &graphql.ArgumentConfig{
-			Type:         pagesSortType,
+			Type:         pageSortType,
 			DefaultValue: service.PageOrderCreatedAsc,
 		},
 	},
 	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 		type result struct {
-			data []models.Page
+			data connection[models.Page]
 			err  error
 		}
 
@@ -78,7 +53,7 @@ var listPagesQuery = &graphql.Field{
 			}
 
 			pages, err := svc.ListPages(pagination)
-			ch <- result{data: pages, err: err}
+			ch <- result{data: toConnection(pagination.First, pages), err: err}
 		}()
 
 		// Returning a thunk (a function with a result and error type) tells the

@@ -3,6 +3,7 @@ package schema
 import (
 	"github.com/graphql-go/graphql"
 	"github.com/jsmithdenverdev/pager/models"
+	"github.com/jsmithdenverdev/pager/service"
 )
 
 // deviceStatusType  is a graphql enum representing the status of a device.
@@ -21,12 +22,40 @@ var deviceStatusType = graphql.NewEnum(graphql.EnumConfig{
 	},
 })
 
+// deviceSortType is a graphql enum representing the sort order for devices.
+var deviceSortType = graphql.NewEnum(graphql.EnumConfig{
+	Name: "DeviceSort",
+	Values: graphql.EnumValueConfigMap{
+		"CREATED_ASC": &graphql.EnumValueConfig{
+			Value: service.DeviceOrderCreatedAsc,
+		},
+		"CREATED_DESC": &graphql.EnumValueConfig{
+			Value: service.DeviceOrderCreatedDesc,
+		},
+		"MODIFIED_ASC": &graphql.EnumValueConfig{
+			Value: service.DeviceOrderModifiedAsc,
+		},
+		"MODIFIED_DESC": &graphql.EnumValueConfig{
+			Value: service.DeviceOrderModifiedDesc,
+		},
+		"NAME_ASC": &graphql.EnumValueConfig{
+			Value: service.DeviceOrderNameAsc,
+		},
+		"NAME_DESC": &graphql.EnumValueConfig{
+			Value: service.DeviceOrderNameDesc,
+		},
+	},
+})
+
 // deviceType is the object definition for a device.
 var deviceType = graphql.NewObject(graphql.ObjectConfig{
 	Name: "Device",
 	Fields: graphql.Fields{
 		"id": &graphql.Field{
 			Type: graphql.ID,
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return p.Source.(models.Device).ID, nil
+			},
 		},
 		"name": &graphql.Field{
 			Type: graphql.String,
@@ -69,3 +98,7 @@ var deviceType = graphql.NewObject(graphql.ObjectConfig{
 		},
 	},
 })
+
+// deviceConnectionType represents a relay compliant connection type for
+// devices.
+var deviceConnectionType = toConnectionType(deviceType)

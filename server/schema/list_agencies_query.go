@@ -6,35 +6,10 @@ import (
 	"github.com/jsmithdenverdev/pager/service"
 )
 
-// agenciesSortType is a graphql enum representing the sort order for agencies.
-var agenciesSortType = graphql.NewEnum(graphql.EnumConfig{
-	Name: "AgenciesSort",
-	Values: graphql.EnumValueConfigMap{
-		"CREATED_ASC": &graphql.EnumValueConfig{
-			Value: service.AgenciesOrderCreatedAsc,
-		},
-		"CREATED_DESC": &graphql.EnumValueConfig{
-			Value: service.AgenciesOrderCreatedDesc,
-		},
-		"MODIFIED_ASC": &graphql.EnumValueConfig{
-			Value: service.AgenciesOrderModifiedAsc,
-		},
-		"MODIFIED_DESC": &graphql.EnumValueConfig{
-			Value: service.AgenciesOrderModifiedDesc,
-		},
-		"NAME_ASC": &graphql.EnumValueConfig{
-			Value: service.AgenciesOrderNameAsc,
-		},
-		"NAME_DESC": &graphql.EnumValueConfig{
-			Value: service.AgenciesOrderNameDesc,
-		},
-	},
-})
-
 // listAgenciesQuery is the field definition for the agencies query.
 var listAgenciesQuery = &graphql.Field{
 	Name: "agencies",
-	Type: graphql.NewList(agencyType),
+	Type: agencyConnectionType,
 	Args: graphql.FieldConfigArgument{
 		"first": &graphql.ArgumentConfig{
 			Type:         graphql.Int,
@@ -44,13 +19,13 @@ var listAgenciesQuery = &graphql.Field{
 			Type: graphql.String,
 		},
 		"sort": &graphql.ArgumentConfig{
-			Type:         agenciesSortType,
+			Type:         agencySortType,
 			DefaultValue: service.AgenciesOrderCreatedAsc,
 		},
 	},
 	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 		type result struct {
-			data []models.Agency
+			data connection[models.Agency]
 			err  error
 		}
 
@@ -78,7 +53,7 @@ var listAgenciesQuery = &graphql.Field{
 			}
 
 			agencies, err := svc.List(pagination)
-			ch <- result{data: agencies, err: err}
+			ch <- result{data: toConnection(pagination.First, agencies), err: err}
 		}()
 
 		// Returning a thunk (a function with a result and error type) tells the

@@ -27,7 +27,10 @@ var userType = graphql.NewObject(graphql.ObjectConfig{
 	Name: "User",
 	Fields: graphql.Fields{
 		"id": &graphql.Field{
-			Type: graphql.String,
+			Type: graphql.ID,
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return p.Source.(models.User).ID, nil
+			},
 		},
 		"email": &graphql.Field{
 			Type: graphql.String,
@@ -63,34 +66,108 @@ var userType = graphql.NewObject(graphql.ObjectConfig{
 			},
 		},
 		"agencies": &graphql.Field{
-			Type: graphql.NewList(agencyType),
+			Type: agencyConnectionType,
+			Args: graphql.FieldConfigArgument{
+				"first": &graphql.ArgumentConfig{
+					Type:         graphql.Int,
+					DefaultValue: 10,
+				},
+				"after": &graphql.ArgumentConfig{
+					Type: graphql.String,
+				},
+				"sort": &graphql.ArgumentConfig{
+					Type:         agencySortType,
+					DefaultValue: service.AgenciesOrderCreatedAsc,
+				},
+			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return func() (interface{}, error) {
+				type result struct {
+					data connection[models.Agency]
+					err  error
+				}
+
+				ch := make(chan result, 1)
+
+				go func() {
 					svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
-					return svc.List(service.AgenciesPagination{
-						First: 10,
-						Order: service.AgenciesOrderCreatedAsc,
-					})
+					var (
+						argsFirst  = p.Args["first"]
+						argsAfter  = p.Args["after"]
+						argsOrder  = p.Args["sort"]
+						pagination service.AgenciesPagination
+					)
+
+					if argsFirst != nil {
+						pagination.First = argsFirst.(int)
+					}
+
+					if argsAfter != nil {
+						pagination.After = argsAfter.(string)
+					}
+
+					if argsOrder != nil {
+						pagination.Order = argsOrder.(service.AgenciesOrder)
+					}
+
+					agencies, err := svc.List(pagination)
+					ch <- result{data: toConnection(pagination.First, agencies), err: err}
+				}()
+
+				// Returning a thunk (a function with a result and error type) tells the
+				// graphql engine that this resolver should run concurrently.
+				return func() (interface{}, error) {
+					r := <-ch
+					return r.data, r.err
 				}, nil
 			},
 		},
 		"devices": &graphql.Field{
-			Type: graphql.NewList(deviceType),
+			Type: deviceConnectionType,
+			Args: graphql.FieldConfigArgument{
+				"first": &graphql.ArgumentConfig{
+					Type:         graphql.Int,
+					DefaultValue: 10,
+				},
+				"after": &graphql.ArgumentConfig{
+					Type: graphql.String,
+				},
+				"sort": &graphql.ArgumentConfig{
+					Type:         deviceSortType,
+					DefaultValue: service.DeviceOrderCreatedAsc,
+				},
+			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				return func() (interface{}, error) {
 					svc := p.Context.Value(service.ContextKeyDeviceService).(*service.DeviceService)
-					return svc.ListDevices(service.DevicePagination{
-						First: 10,
-						Order: service.DeviceOrderCreatedAsc,
-						Filter: struct {
-							AgencyID string
-							UserID   string
-						}{
-							UserID: p.Source.(models.User).ID,
-						},
-					})
+					var (
+						argsFirst  = p.Args["first"]
+						argsAfter  = p.Args["after"]
+						argsOrder  = p.Args["sort"]
+						pagination service.DevicePagination
+					)
+
+					if argsFirst != nil {
+						pagination.First = argsFirst.(int)
+					}
+
+					if argsAfter != nil {
+						pagination.After = argsAfter.(string)
+					}
+
+					if argsOrder != nil {
+						pagination.Order = argsOrder.(service.DeviceOrder)
+					}
+
+					pagination.Filter.UserID = p.Source.(models.User).ID
+
+					devices, err := svc.ListDevices(pagination)
+					return toConnection(pagination.First, devices), err
 				}, nil
 			},
 		},
 	},
 })
+
+// userConnectionType represents a relay compliant connection type for
+// users.
+var userConnectionType = toConnectionType(userType)
