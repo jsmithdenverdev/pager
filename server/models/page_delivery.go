@@ -15,7 +15,6 @@ const (
 // status denoting if the page has actually been delivered.
 type PageDelivery struct {
 	Auditable
-	ID       string             `json:"id" db:"id"`
 	PageID   string             `json:"pageId" db:"page_id"`
 	DeviceID string             `json:"deviceId" db:"device_id"`
 	Status   PageDeliveryStatus `json:"status" db:"status"`

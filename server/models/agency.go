@@ -17,8 +17,6 @@ const (
 // notifications can be sent.
 type Agency struct {
 	Auditable
-	// ID is the UUID representing this agency in the pager system.
-	ID string `json:"id" db:"id"`
 	// Name is the name of the agency.
 	Name   string       `json:"name" db:"name"`
 	Status AgencyStatus `json:"status" db:"status"`
