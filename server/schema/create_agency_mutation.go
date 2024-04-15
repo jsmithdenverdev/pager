@@ -70,7 +70,7 @@ var createAgencyMutation = &graphql.Field{
 				return payload, err
 			}
 			svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
-			agency, err := svc.Create(input.Name)
+			agency, err := svc.CreateAgency(input.Name)
 			if err != nil {
 				return payload, err
 			}

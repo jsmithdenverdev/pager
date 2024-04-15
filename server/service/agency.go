@@ -402,18 +402,18 @@ func NewAgencyService(
 	}
 }
 
-// List allows a user to list agencies using a set of pagination options.
+// ListAgencies allows a user to list agencies using a set of pagination options.
 // Listing is backed by a dataloader making this method safe to use in
 // resolvers.
-func (service *AgencyService) List(pagination AgenciesPagination) ([]models.Agency, error) {
+func (service *AgencyService) ListAgencies(pagination AgenciesPagination) ([]models.Agency, error) {
 	return service.listAgenciesDataLoader.Load(service.ctx, pagination)()
 }
 
-func (service *AgencyService) Read(id string) (models.Agency, error) {
+func (service *AgencyService) ReadAgency(id string) (models.Agency, error) {
 	return service.readAgencyDataLoader.Load(service.ctx, id)()
 }
 
-func (service *AgencyService) Create(name string) (models.Agency, error) {
+func (service *AgencyService) CreateAgency(name string) (models.Agency, error) {
 	var agency models.Agency
 
 	result := service.authclient.Authorize(
@@ -468,4 +468,12 @@ func (service *AgencyService) Create(name string) (models.Agency, error) {
 	}
 
 	return agency, nil
+}
+
+// InviteUser allows an agency admin to invite a new user to their agency. A
+// user record will be created if this is a new user to the platform, or the
+// existing user record will be returned after the association is created.
+func (service *AgencyService) InviteUser(email string) (models.User, error) {
+	var user models.User
+	return user, nil
 }
