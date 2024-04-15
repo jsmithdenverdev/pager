@@ -46,7 +46,7 @@ definition page {
 	relation agency: agency
 
 	// Page permissions
-	permission read = agency->reader
+	permission read = agency->writer + agency->reader
 	permission update = agency->writer
 	permission delete = agency->writer
 }
