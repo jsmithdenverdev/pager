@@ -822,6 +822,8 @@ func (service *PageService) CreatePage(agencyId string, content string, deliver 
 			 RETURNING id`,
 			deliveries)
 
+		query = service.db.Rebind(query)
+
 		if err != nil {
 			return page, err
 		}
