@@ -18,7 +18,7 @@ var readAgencyQuery = &graphql.Field{
 		return func() (interface{}, error) {
 			id := p.Args["id"].(string)
 			svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
-			return svc.Read(id)
+			return svc.ReadAgency(id)
 		}, nil
 	},
 }

@@ -52,7 +52,7 @@ var listAgenciesQuery = &graphql.Field{
 				pagination.Order = argsOrder.(service.AgenciesOrder)
 			}
 
-			agencies, err := svc.List(pagination)
+			agencies, err := svc.ListAgencies(pagination)
 			ch <- result{data: toConnection(pagination.First, agencies), err: err}
 		}()
 
