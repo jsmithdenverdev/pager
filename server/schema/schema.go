@@ -40,6 +40,7 @@ func registerMutations(schema *graphql.SchemaConfig) {
 		deactivateDeviceMutation,
 		createPageMutation,
 		deliverPageMutation,
+		inviteUserMutation,
 	}
 	var rootMutation = graphql.ObjectConfig{
 		Name:   "Mutation",
