@@ -5,3 +5,4 @@
 appschema 2024-03-16T23:45:09Z Jake Smith <jsmithdenverdev@gmail.com> # Initial pager schema
 device_name 2024-04-12T17:27:11Z Jake Smith <jsmithdenverdev@gmail.com> # Add name column to devices table
 agency_devices 2024-04-12T17:34:20Z Jake Smith <jsmithdenverdev@gmail.com> # Add agency_devices linking table
+pubsub 2024-04-16T22:52:40Z Jake Smith <jsmithdenverdev@gmail.com> # Add pubsub tables
