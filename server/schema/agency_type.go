@@ -87,6 +87,48 @@ var agencyType = graphql.NewObject(graphql.ObjectConfig{
 				return p.Source.(models.Agency).ModifiedBy, nil
 			},
 		},
+		"users": &graphql.Field{
+			Type: userConnectionType,
+			Args: graphql.FieldConfigArgument{
+				"first": &graphql.ArgumentConfig{
+					Type:         graphql.Int,
+					DefaultValue: 10,
+				},
+				"after": &graphql.ArgumentConfig{
+					Type: graphql.String,
+				},
+				"sort": &graphql.ArgumentConfig{
+					Type:         userSortType,
+					DefaultValue: service.UsersOrderCreatedAsc,
+				},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return func() (interface{}, error) {
+					svc := p.Context.Value(service.ContextKeyUserService).(*service.UserService)
+					var (
+						argsFirst  = p.Args["first"]
+						argsAfter  = p.Args["after"]
+						argsOrder  = p.Args["sort"]
+						pagination service.UsersPagination
+					)
+
+					if argsFirst != nil {
+						pagination.First = argsFirst.(int)
+					}
+
+					if argsAfter != nil {
+						pagination.After = argsAfter.(string)
+					}
+
+					if argsOrder != nil {
+						pagination.Order = argsOrder.(service.UsersOrder)
+					}
+
+					users, err := svc.ListUsers(pagination)
+					return toConnection(pagination.First, users), err
+				}, nil
+			},
+		},
 		"devices": &graphql.Field{
 			Type: deviceConnectionType,
 			Args: graphql.FieldConfigArgument{
@@ -172,6 +214,54 @@ var agencyType = graphql.NewObject(graphql.ObjectConfig{
 	},
 })
 
+// userAgencyType is the object definition for a stripped down agency that can
+// be returned as a field on a user.
+var userAgencyType = graphql.NewObject(graphql.ObjectConfig{
+	Name: "UserAgency",
+	Fields: graphql.Fields{
+		"id": &graphql.Field{
+			Type: graphql.ID,
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return p.Source.(models.Agency).ID, nil
+			},
+		},
+		"name": &graphql.Field{
+			Type: graphql.String,
+		},
+		"status": &graphql.Field{
+			Type: agencyStatusType,
+		},
+		"created": &graphql.Field{
+			Type: graphql.String,
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return p.Source.(models.Agency).Created, nil
+			},
+		},
+		"createdBy": &graphql.Field{
+			Type: graphql.String,
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return p.Source.(models.Agency).CreatedBy, nil
+			},
+		},
+		"modified": &graphql.Field{
+			Type: graphql.String,
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return p.Source.(models.Agency).Modified, nil
+			},
+		},
+		"modifiedBy": &graphql.Field{
+			Type: graphql.String,
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return p.Source.(models.Agency).ModifiedBy, nil
+			},
+		},
+	},
+})
+
 // agencyConnectionType represents a relay compliant connection type for
 // agencies.
 var agencyConnectionType = toConnectionType(agencyType)
+
+// userAgencyConnectionType represents a relay compliant connection type for
+// user agencies.
+var userAgencyConnectionType = toConnectionType(userAgencyType)
