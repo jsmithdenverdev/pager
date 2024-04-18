@@ -13,14 +13,16 @@ const (
 )
 
 type Config struct {
-	Environment     Environment
-	Host            string
-	Port            string
-	DBConn          string
-	Auth0Audience   string
-	Auth0Domain     string
-	SpiceDBEndpoint string
-	SpiceDBToken    string
+	Environment       Environment
+	Host              string
+	Port              string
+	DBConn            string
+	Auth0Audience     string
+	Auth0Domain       string
+	Auth0ClientID     string
+	Auth0ClientSecret string
+	SpiceDBEndpoint   string
+	SpiceDBToken      string
 }
 
 func LoadFromEnv(getenv func(string) string) (Config, error) {
@@ -55,6 +57,16 @@ func LoadFromEnv(getenv func(string) string) (Config, error) {
 		missing = append(missing, "AUTH0_DOMAIN")
 	}
 
+	auth0ClientId := getenv("AUTH0_CLIENT_ID")
+	if auth0ClientId == "" {
+		missing = append(missing, "AUTH0_CLIENT_ID")
+	}
+
+	auth0ClientSecret := getenv("AUTH0_CLIENT_SECRET")
+	if auth0ClientSecret == "" {
+		missing = append(missing, "AUTH0_CLIENT_SECRET")
+	}
+
 	spiceDBEndpoint := getenv("SPICEDB_ENDPOINT")
 	if spiceDBEndpoint == "" {
 		missing = append(missing, "SPICEDB_ENDPOINT")
@@ -70,13 +82,15 @@ func LoadFromEnv(getenv func(string) string) (Config, error) {
 	}
 
 	return Config{
-		Environment:     Environment(env),
-		Host:            host,
-		Port:            port,
-		DBConn:          dbConn,
-		Auth0Audience:   auth0Audience,
-		Auth0Domain:     auth0Domain,
-		SpiceDBEndpoint: spiceDBEndpoint,
-		SpiceDBToken:    spiceDBToken,
+		Environment:       Environment(env),
+		Host:              host,
+		Port:              port,
+		DBConn:            dbConn,
+		Auth0Audience:     auth0Audience,
+		Auth0Domain:       auth0Domain,
+		Auth0ClientID:     auth0ClientId,
+		Auth0ClientSecret: auth0ClientSecret,
+		SpiceDBEndpoint:   spiceDBEndpoint,
+		SpiceDBToken:      spiceDBToken,
 	}, nil
 }
