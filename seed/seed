@@ -25,3 +25,13 @@ zed relationship create "agency:8d282649-708b-4523-ab2a-122bd8739bd1" reader "us
 zed relationship create "agency:78c95398-3b3d-4e82-a648-0787af58a945" writer "user:auth0|661995c5f2bd935c05de4298" || true
 # ems-reader@pager.com -> reader -> Sample EMS Agency
 zed relationship create "agency:78c95398-3b3d-4e82-a648-0787af58a945" reader "user:auth0|6619960ae8fb8f9f19f937c6" || true
+
+# Agency -> User
+# Sample SAR Agency -> agency -> sar-writer@pager.com 
+zed relationship create "user:auth0|66199504eddfc16953adc92e" agency "agency:8d282649-708b-4523-ab2a-122bd8739bd1" || true
+# Sample SAR Agency -> agency -> sar-reader@pager.com
+zed relationship create "user:auth0|6619959f91e0011a88bfbcd2" agency "agency:8d282649-708b-4523-ab2a-122bd8739bd1" || true
+# Sample EMS Agency -> agency -> ems-writer@pager.com
+zed relationship create "user:auth0|661995c5f2bd935c05de4298" agency "agency:78c95398-3b3d-4e82-a648-0787af58a945" || true
+# Sample EMS Agency -> agency -> ems-reader@pager.com
+zed relationship create "user:auth0|6619960ae8fb8f9f19f937c6" agency "agency:78c95398-3b3d-4e82-a648-0787af58a945" || true

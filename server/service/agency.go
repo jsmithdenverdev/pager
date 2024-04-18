@@ -483,7 +483,7 @@ func (service *AgencyService) CreateAgency(name string) (models.Agency, error) {
 // InviteUser allows an agency admin to invite a new user to their agency. A
 // user record will be created if this is a new user to the platform, or the
 // existing user record will be returned after the association is created.
-func (service *AgencyService) InviteUser(email string, agencyId string) (models.User, error) {
+func (service *AgencyService) InviteUser(email string, agencyId string, role models.Role) (models.User, error) {
 	var (
 		user models.User
 	)
@@ -552,7 +552,11 @@ func (service *AgencyService) InviteUser(email string, agencyId string) (models.
 	if user.IdpID == "" {
 		// Create a payload and marshal it into json. The payload column of the
 		// messages table is jsonb.
-		payload, err := json.Marshal(pubsub.MessageProvisionUser{Email: email})
+		payload, err := json.Marshal(pubsub.PayloadProvisionUser{
+			Email:    email,
+			AgencyID: agencyId,
+			Role:     role,
+		})
 		if err != nil {
 			return user, err
 		}
@@ -601,6 +605,41 @@ func (service *AgencyService) InviteUser(email string, agencyId string) (models.
 			agencyId,
 		); err != nil {
 			return user, err
+		}
+		// Insert a record into the user_roles table.
+		if _, err := tx.ExecContext(
+			service.ctx,
+			`INSERT INTO user_roles (role, user_id, agency_id)
+		VALUES ($1, $2, $3)
+		ON CONFLICT DO NOTHING`,
+			role,
+			user.ID,
+			agencyId,
+		); err != nil {
+			return user, err
+		}
+
+		if user.IdpID != "" {
+			if err = service.authclient.WritePermissions([]authz.Permission{
+				{
+					Relationship: map[models.Role]string{
+						models.RoleReader: "reader",
+						models.RoleWriter: "writer",
+					}[role],
+					Resource: authz.Resource{Type: "agency", ID: agencyId},
+					Subject:  authz.Resource{Type: "user", ID: user.IdpID},
+				},
+				{
+					Relationship: "agency",
+					Resource:     authz.Resource{Type: "user", ID: user.IdpID},
+					Subject:      authz.Resource{Type: "agency", ID: agencyId},
+				},
+			}); err != nil {
+				if txerr := tx.Rollback(); txerr != nil {
+					return user, txerr
+				}
+				return user, err
+			}
 		}
 	} else {
 		return user, errors.New("user already member of agency")

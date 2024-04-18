@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -9,32 +10,39 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/jmoiron/sqlx"
+	"github.com/jsmithdenverdev/pager/authz"
+	"github.com/jsmithdenverdev/pager/models"
 	"github.com/jsmithdenverdev/pager/pubsub"
 )
 
 type ProvisionUserHandler struct {
-	ctx    context.Context
-	db     *sqlx.DB
-	auth0  *management.Management
-	logger *slog.Logger
+	ctx        context.Context
+	db         *sqlx.DB
+	authclient *authz.Client
+	auth0      *management.Management
+	logger     *slog.Logger
 }
 
 func NewProvisionUserHandler(
 	ctx context.Context,
 	db *sqlx.DB,
+	authclient *authz.Client,
 	auth0 *management.Management,
 	logger *slog.Logger) *ProvisionUserHandler {
 	return &ProvisionUserHandler{
-		ctx:    ctx,
-		db:     db,
-		auth0:  auth0,
-		logger: logger,
+		ctx:        ctx,
+		db:         db,
+		authclient: authclient,
+		auth0:      auth0,
+		logger:     logger,
 	}
 }
 
 func (handler *ProvisionUserHandler) Handle(message pubsub.Message) error {
 	var (
 		email               = message.Payload["email"].(string)
+		agencyID            = message.Payload["agencyId"].(string)
+		role                = message.Payload["role"].(models.Role)
 		allAuth0Users       []*management.User
 		pagerAuth0Users     []*management.User
 		pagerAuth0User      *management.User
@@ -92,7 +100,14 @@ func (handler *ProvisionUserHandler) Handle(message pubsub.Message) error {
 		}
 	}
 
-	if _, err := handler.db.ExecContext(
+	tx, err := handler.db.BeginTxx(handler.ctx, &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+	})
+
+	if err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(
 		handler.ctx,
 		`UPDATE users
 	SET idp_id = $1, modified = $2, modified_by = $3
@@ -101,6 +116,31 @@ func (handler *ProvisionUserHandler) Handle(message pubsub.Message) error {
 		time.Now().UTC(),
 		"SYSTEM",
 		email); err != nil {
+		return err
+	}
+
+	if err = handler.authclient.WritePermissions([]authz.Permission{
+		{
+			Relationship: map[models.Role]string{
+				models.RoleReader: "reader",
+				models.RoleWriter: "writer",
+			}[role],
+			Resource: authz.Resource{Type: "agency", ID: agencyID},
+			Subject:  authz.Resource{Type: "user", ID: *pagerAuth0User.ID},
+		},
+		{
+			Relationship: "agency",
+			Resource:     authz.Resource{Type: "user", ID: *pagerAuth0User.ID},
+			Subject:      authz.Resource{Type: "agency", ID: agencyID},
+		},
+	}); err != nil {
+		if txerr := tx.Rollback(); txerr != nil {
+			return txerr
+		}
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
 		return err
 	}
 

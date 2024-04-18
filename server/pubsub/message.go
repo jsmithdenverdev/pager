@@ -30,6 +30,14 @@ type Message struct {
 	Retries int     `json:"retries" db:"retries"`
 }
 
-type MessageProvisionUser struct {
-	Email string `json:"email"`
+type PayloadProvisionUser struct {
+	AgencyID string      `json:"agencyId"`
+	Email    string      `json:"email"`
+	Role     models.Role `json:"role"`
+}
+
+type PayloadSendPage struct {
+	DeviceID       string `json:"deviceId"`
+	PageID         string `json:"pageId"`
+	PageDeliveryID string `json:"pageDeliveryId"`
 }

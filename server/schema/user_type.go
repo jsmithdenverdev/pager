@@ -22,6 +22,31 @@ var userStatusType = graphql.NewEnum(graphql.EnumConfig{
 	},
 })
 
+// userSortType is a graphql enum representing the sort order for users.
+var userSortType = graphql.NewEnum(graphql.EnumConfig{
+	Name: "UserSort",
+	Values: graphql.EnumValueConfigMap{
+		"CREATED_ASC": &graphql.EnumValueConfig{
+			Value: service.UsersOrderCreatedAsc,
+		},
+		"CREATED_DESC": &graphql.EnumValueConfig{
+			Value: service.UsersOrderCreatedDesc,
+		},
+		"MODIFIED_ASC": &graphql.EnumValueConfig{
+			Value: service.UsersOrderModifiedAsc,
+		},
+		"MODIFIED_DESC": &graphql.EnumValueConfig{
+			Value: service.UsersOrderModifiedDesc,
+		},
+		"NAME_ASC": &graphql.EnumValueConfig{
+			Value: service.UsersOrderNameAsc,
+		},
+		"NAME_DESC": &graphql.EnumValueConfig{
+			Value: service.UsersOrderNameDesc,
+		},
+	},
+})
+
 // userType is the object definition for a user.
 var userType = graphql.NewObject(graphql.ObjectConfig{
 	Name: "User",
@@ -66,7 +91,10 @@ var userType = graphql.NewObject(graphql.ObjectConfig{
 			},
 		},
 		"agencies": &graphql.Field{
-			Type: agencyConnectionType,
+			// We're defining a new type instead of using the agencyConnectionType,
+			// this prevents an cyclic initialization error that would arrise when
+			// agencyType depends on userType which depends on agencyType.
+			Type: userAgencyConnectionType,
 			Args: graphql.FieldConfigArgument{
 				"first": &graphql.ArgumentConfig{
 					Type:         graphql.Int,
@@ -162,6 +190,15 @@ var userType = graphql.NewObject(graphql.ObjectConfig{
 
 					devices, err := svc.ListDevices(pagination)
 					return toConnection(pagination.First, devices), err
+				}, nil
+			},
+		},
+		"roles": &graphql.Field{
+			Type: graphql.NewList(userRoleType),
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return func() (interface{}, error) {
+					svc := p.Context.Value(service.ContextKeyUserService).(*service.UserService)
+					return svc.Roles()
 				}, nil
 			},
 		},

@@ -148,7 +148,19 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 	if err := pubsub.Subscribe(
 		pubsubClient,
 		pubsub.TopicProvisionUser,
-		worker.NewProvisionUserHandler(ctx, db, auth0, logger)); err != nil {
+		worker.NewProvisionUserHandler(
+			ctx,
+			db,
+			// ProvisionUser only uses WritePermissions which does not need a user id
+			authz.NewClient(ctx, authzedClient, logger, ""),
+			auth0,
+			logger)); err != nil {
+		return err
+	}
+	if err := pubsub.Subscribe(
+		pubsubClient,
+		pubsub.TopicSendPage,
+		worker.NewSendPageHandler(ctx, db, logger)); err != nil {
 		return err
 	}
 

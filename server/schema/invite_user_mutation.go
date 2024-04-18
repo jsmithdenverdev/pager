@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"errors"
+
 	"github.com/graphql-go/graphql"
 	"github.com/jsmithdenverdev/pager/models"
 	"github.com/jsmithdenverdev/pager/service"
@@ -8,8 +10,9 @@ import (
 
 // inviteUserInput represents the fields needed to invite a user.
 type inviteUserInput struct {
-	Email     string `json:"email" validate:"min=1,email"`
-	AccountID string `json:"agencyId" validate:"required,uuid"`
+	Email     string      `json:"email" validate:"min=1,email"`
+	AccountID string      `json:"agencyId" validate:"required,uuid"`
+	Role      models.Role `json:"role" validate:"required"`
 }
 
 // inviteUserInputType  is the graphql input type for the inviteUser
@@ -22,6 +25,9 @@ var inviteUserInputType = graphql.InputObjectConfig{
 		},
 		"agencyId": &graphql.InputObjectFieldConfig{
 			Type: graphql.ID,
+		},
+		"role": &graphql.InputObjectFieldConfig{
+			Type: roleType,
 		},
 	},
 }
@@ -41,6 +47,11 @@ func toInviteUserInput(args map[string]interface{}) (inviteUserInput, error) {
 		agencyId = ""
 	}
 	input.AccountID = agencyId
+	role, ok := args["role"].(models.Role)
+	if !ok {
+		role = ""
+	}
+	input.Role = role
 	return input, validator.Struct(input)
 }
 
@@ -77,8 +88,11 @@ var inviteUserMutation = &graphql.Field{
 			if err != nil {
 				return payload, err
 			}
+			if input.Role == models.RolePlatformAdmin {
+				return payload, errors.New("cannot invite platform_admins")
+			}
 			svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
-			user, err := svc.InviteUser(input.Email, input.AccountID)
+			user, err := svc.InviteUser(input.Email, input.AccountID, input.Role)
 			if err != nil {
 				return payload, err
 			}
