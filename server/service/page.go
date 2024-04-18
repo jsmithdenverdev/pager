@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/jsmithdenverdev/pager/authz"
 	"github.com/jsmithdenverdev/pager/models"
+	"github.com/jsmithdenverdev/pager/pubsub"
 )
 
 // PageOrder  represents the sort order in a request to list pages.
@@ -786,7 +788,11 @@ func (service *PageService) CreatePage(agencyId string, content string, deliver 
 	var permissions []authz.Permission
 
 	if deliver {
-		var deliveries []models.PageDelivery
+		var (
+			deliveries       = make(map[string]models.PageDelivery)
+			sendPagePayloads = make(map[string]pubsub.PayloadSendPage)
+		)
+
 		rows, err := tx.QueryxContext(
 			service.ctx,
 			`SELECT d.id
@@ -805,7 +811,7 @@ func (service *PageService) CreatePage(agencyId string, content string, deliver 
 			if err := rows.Scan(&deviceId); err != nil {
 				return page, err
 			}
-			deliveries = append(deliveries, models.PageDelivery{
+			deliveries[deviceId] = models.PageDelivery{
 				PageID:   page.ID,
 				DeviceID: deviceId,
 				Status:   models.PageDeliveryStatusPending,
@@ -813,13 +819,16 @@ func (service *PageService) CreatePage(agencyId string, content string, deliver 
 					CreatedBy:  service.user,
 					ModifiedBy: service.user,
 				},
-			})
+			}
+			sendPagePayloads[deviceId] = pubsub.PayloadSendPage{
+				DeviceID: deviceId,
+			}
 		}
 
 		query, args, err := sqlx.Named(
 			`INSERT INTO page_deliveries (page_id, device_id, status, created_by, modified_by)
 			 VALUES (:page_id, :device_id, :status, :created_by, :modified_by)
-			 RETURNING id`,
+			 RETURNING id, device_id`,
 			deliveries)
 
 		query = service.db.Rebind(query)
@@ -835,15 +844,55 @@ func (service *PageService) CreatePage(agencyId string, content string, deliver 
 		}
 
 		for rows.Next() {
-			var id string
+			var (
+				id       string
+				deviceID string
+			)
+
 			if err := rows.Scan(&id); err != nil {
 				return page, err
 			}
+
+			if err := rows.Scan(&deviceID); err != nil {
+				return page, err
+			}
+
 			permissions = append(permissions, authz.Permission{
 				Relationship: "page",
 				Resource:     authz.Resource{Type: "page_delivery", ID: id},
 				Subject:      authz.Resource{Type: "page", ID: page.ID},
 			})
+
+			sendPagePayload, ok := sendPagePayloads[deviceID]
+			if ok {
+				sendPagePayload.DeviceID = id
+				sendPagePayload.PageID = page.ID
+			}
+		}
+
+		var messages []map[string]interface{}
+		for _, payload := range sendPagePayloads {
+			payloadB, err := json.Marshal(payload)
+			if err != nil {
+				return page, err
+			}
+
+			messages = append(messages, map[string]interface{}{
+				"topic":       pubsub.TopicSendPage,
+				"payload":     payloadB,
+				"created_by":  service.user,
+				"modified_by": service.user,
+			})
+		}
+
+		if len(messages) > 0 {
+			if _, err := tx.NamedExecContext(
+				service.ctx,
+				`INSERT INTO messages (topic, payload, created_by, modified_by)
+		VALUES (:topic, :payload, :created_by, :modified_by)`,
+				messages); err != nil {
+				return page, err
+			}
 		}
 	}
 
