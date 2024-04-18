@@ -8,7 +8,8 @@ import (
 
 // inviteUserInput represents the fields needed to invite a user.
 type inviteUserInput struct {
-	Email string `json:"email" validate:"min=1,email"`
+	Email     string `json:"email" validate:"min=1,email"`
+	AccountID string `json:"agencyId" validate:"required,uuid"`
 }
 
 // inviteUserInputType  is the graphql input type for the inviteUser
@@ -18,6 +19,9 @@ var inviteUserInputType = graphql.InputObjectConfig{
 	Fields: graphql.InputObjectConfigFieldMap{
 		"email": &graphql.InputObjectFieldConfig{
 			Type: graphql.String,
+		},
+		"agencyId": &graphql.InputObjectFieldConfig{
+			Type: graphql.ID,
 		},
 	},
 }
@@ -32,6 +36,11 @@ func toInviteUserInput(args map[string]interface{}) (inviteUserInput, error) {
 		email = ""
 	}
 	input.Email = email
+	agencyId, ok := args["agencyId"].(string)
+	if !ok {
+		agencyId = ""
+	}
+	input.AccountID = agencyId
 	return input, validator.Struct(input)
 }
 
@@ -69,7 +78,7 @@ var inviteUserMutation = &graphql.Field{
 				return payload, err
 			}
 			svc := p.Context.Value(service.ContextKeyAgencyService).(*service.AgencyService)
-			user, err := svc.InviteUser(input.Email)
+			user, err := svc.InviteUser(input.Email, input.AccountID)
 			if err != nil {
 				return payload, err
 			}

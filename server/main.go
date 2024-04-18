@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/auth0/go-auth0/management"
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	jwtvalidator "github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/authzed/authzed-go/v1"
@@ -21,10 +22,11 @@ import (
 	"github.com/jsmithdenverdev/pager/authz"
 	"github.com/jsmithdenverdev/pager/config"
 	"github.com/jsmithdenverdev/pager/middleware"
+	"github.com/jsmithdenverdev/pager/pubsub"
 	"github.com/jsmithdenverdev/pager/schema"
 	"github.com/jsmithdenverdev/pager/service"
 	"github.com/jsmithdenverdev/pager/worker"
-	_ "github.com/lib/pq"
+	pq "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -54,12 +56,40 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		cfg.SpiceDBEndpoint,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpcutil.WithInsecureBearerToken(cfg.SpiceDBToken))
-
 	if err != nil {
 		return err
 	}
 
 	db, err := sqlx.Connect("postgres", cfg.DBConn)
+	if err != nil {
+		return err
+	}
+
+	ln := pq.NewListener(
+		cfg.DBConn,
+		time.Duration(5)*time.Second,
+		time.Duration(30)*time.Second,
+		func(event pq.ListenerEventType, err error) {
+			if err != nil {
+				logger.ErrorContext(
+					ctx,
+					"pq listener event callback error",
+					"event", event,
+					"error", err)
+			}
+			logger.InfoContext(
+				ctx,
+				"pq listener event callback",
+				"event", event)
+		})
+
+	auth0, err := management.New(
+		cfg.Auth0Domain,
+		management.WithClientCredentials(
+			ctx,
+			cfg.Auth0ClientID,
+			cfg.Auth0ClientSecret,
+		))
 	if err != nil {
 		return err
 	}
@@ -74,6 +104,8 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		Pretty: true,
 	})
 
+	pubsubClient := pubsub.NewClient(ctx, db, ln, logger)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -87,7 +119,7 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 			service.NewUserService(ctx, user, authz, db, logger))
 		ctx = context.WithValue(ctx,
 			service.ContextKeyAgencyService,
-			service.NewAgencyService(ctx, user, authz, db, logger))
+			service.NewAgencyService(ctx, user, authz, db, auth0, pubsubClient, logger))
 		ctx = context.WithValue(ctx,
 			service.ContextKeyDeviceService,
 			service.NewDeviceService(ctx, user, authz, db, logger))
@@ -110,10 +142,17 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		}
 	}()
 
-	// Create and start workers. Workers are simple background processes that run
-	// in a goroutine.
-	go worker.NewPageDeliverer(ctx, 30, db, logger).Start()
-	go worker.NewUserProvisioner(ctx, 30, db, logger).Start()
+	// Subscribe to topics. We publish to a topic by writing to a table. This
+	// enables us to treat pubsub transactionally and only publish a message
+	// once we've succesfully written data to a table.
+	if err := pubsub.Subscribe(
+		pubsubClient,
+		pubsub.TopicProvisionUser,
+		worker.NewProvisionUserHandler(ctx, db, auth0, logger)); err != nil {
+		return err
+	}
+
+	go pubsubClient.Start(ctx)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

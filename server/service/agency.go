@@ -3,13 +3,17 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 
+	"github.com/auth0/go-auth0/management"
 	"github.com/graph-gophers/dataloader/v7"
 	"github.com/jmoiron/sqlx"
 	"github.com/jsmithdenverdev/pager/authz"
 	"github.com/jsmithdenverdev/pager/models"
+	"github.com/jsmithdenverdev/pager/pubsub"
 )
 
 // AgenciesOrder represents the sort order in a request to list agencies.
@@ -377,6 +381,8 @@ type AgencyService struct {
 	user                   string
 	authclient             *authz.Client
 	db                     *sqlx.DB
+	auth0                  *management.Management
+	pubsub                 *pubsub.Client
 	logger                 *slog.Logger
 	listAgenciesDataLoader *dataloader.Loader[AgenciesPagination, []models.Agency]
 	readAgencyDataLoader   *dataloader.Loader[string, models.Agency]
@@ -389,6 +395,8 @@ func NewAgencyService(
 	user string,
 	authz *authz.Client,
 	db *sqlx.DB,
+	auth0 *management.Management,
+	pubsub *pubsub.Client,
 	logger *slog.Logger,
 ) *AgencyService {
 	return &AgencyService{
@@ -396,6 +404,8 @@ func NewAgencyService(
 		user:                   user,
 		authclient:             authz,
 		db:                     db,
+		auth0:                  auth0,
+		pubsub:                 pubsub,
 		logger:                 logger,
 		listAgenciesDataLoader: listAgenciesDataloader(authz, db),
 		readAgencyDataLoader:   readAgencyDataloader(authz, db),
@@ -473,7 +483,134 @@ func (service *AgencyService) CreateAgency(name string) (models.Agency, error) {
 // InviteUser allows an agency admin to invite a new user to their agency. A
 // user record will be created if this is a new user to the platform, or the
 // existing user record will be returned after the association is created.
-func (service *AgencyService) InviteUser(email string) (models.User, error) {
-	var user models.User
+func (service *AgencyService) InviteUser(email string, agencyId string) (models.User, error) {
+	var (
+		user models.User
+	)
+
+	authzResult := service.authclient.Authorize(authz.PermissionInviteUser, authz.Resource{
+		Type: "agency",
+		ID:   agencyId,
+	})
+
+	if authzResult.Error != nil {
+		return user, authzResult.Error
+	}
+
+	if !authzResult.Authorized {
+		return user, authz.NewAuthzError(authz.PermissionInviteUser, authz.Resource{
+			Type: "agency",
+			ID:   agencyId,
+		})
+	}
+
+	if err := service.db.QueryRowxContext(
+		service.ctx,
+		`SELECT id, email, idp_id, status, created, created_by, modified, modified_by
+	 	 FROM users
+		 WHERE email = $1`,
+		email).StructScan(&user); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return user, err
+		}
+	}
+
+	tx, err := service.db.BeginTxx(service.ctx, &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+	})
+
+	if err != nil {
+		return user, err
+	}
+
+	// No ID on the user, indicating no record found above. We'll need to create
+	// a new User record.
+	if user.ID == "" {
+		if err := tx.QueryRowxContext(
+			service.ctx,
+			`INSERT INTO users (email, idp_id, status, created_by, modified_by)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, email, idp_id, status, created, created_by, modified, modified_by`,
+			email,
+			"",
+			models.UserStatusPending,
+			service.user,
+			service.user,
+		).StructScan(&user); err != nil {
+			return user, err
+		}
+	}
+
+	// No IdpId found on the user. This can happen 1 of two ways.
+	// 1. This is a new user record and we just created a new row above.
+	// 2. We successfully created all the records, but the ProvisionUserHandler
+	//    fails to provision the user.
+	// In either case, we write a new provision user message for our handler to
+	// consume.
+	// In the event the handler failed, we also need to check the messages_dl
+	// table and system logs for relevant details.
+	if user.IdpID == "" {
+		// Create a payload and marshal it into json. The payload column of the
+		// messages table is jsonb.
+		payload, err := json.Marshal(pubsub.MessageProvisionUser{Email: email})
+		if err != nil {
+			return user, err
+		}
+
+		message := map[string]interface{}{
+			"topic":       pubsub.TopicProvisionUser,
+			"payload":     payload,
+			"created_by":  service.user,
+			"modified_by": service.user,
+		}
+
+		if _, err := tx.NamedExecContext(
+			service.ctx,
+			`INSERT INTO messages (topic, payload, created_by, modified_by)
+		VALUES (:topic, :payload, :created_by, :modified_by)`,
+			message); err != nil {
+			return user, err
+		}
+	}
+
+	// Check for an existing User to Agency association. If this year is not yet
+	// associated to the inviting agency, we'll create the association. Otherwise
+	// we'll return an error stating that the user is already a member.
+	var userAgencyUserId string
+	if err := tx.QueryRowxContext(service.ctx,
+		`SELECT user_id
+	FROM user_agencies
+	WHERE user_id = $1
+	AND agency_id = $2`,
+		user.ID,
+		agencyId).Scan(&userAgencyUserId); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return user, err
+		}
+	}
+
+	if userAgencyUserId == "" {
+		// Insert a record into the user_agencies table. If the user is already added
+		// return a new error so the caller doesn't keep trying to add the user.
+		if _, err := tx.ExecContext(
+			service.ctx,
+			`INSERT INTO user_agencies (user_id, agency_id)
+		VALUES ($1, $2)
+		ON CONFLICT DO NOTHING`,
+			user.ID,
+			agencyId,
+		); err != nil {
+			return user, err
+		}
+	} else {
+		return user, errors.New("user already member of agency")
+	}
+
+	// Commit all of our changes. The write to the messages table will also
+	// a function that calls pg_notify using the topic name and message payload.
+	if err := tx.Commit(); err != nil {
+		return user, err
+	}
+
 	return user, nil
 }

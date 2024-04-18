@@ -65,6 +65,8 @@ services:
       DB_CONN: postgresql://postgres:postgres@db:5432/pager?sslmode=disable
       AUTH0_DOMAIN: ${AUTH0_DOMAIN}
       AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
       SPICEDB_ENDPOINT: spicedb:50051
       SPICEDB_TOKEN: foobar
     depends_on:
