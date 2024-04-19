@@ -1,33 +1,34 @@
 package pubsub
 
 import (
-	"database/sql/driver"
 	"encoding/json"
-	"errors"
 
 	"github.com/jsmithdenverdev/pager/models"
 )
 
-type Payload map[string]interface{}
-
-func (p Payload) Value() (driver.Value, error) {
-	return json.Marshal(p)
-}
-
-func (p *Payload) Scan(value interface{}) error {
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
-	}
-
-	return json.Unmarshal(b, &p)
-}
-
 type Message struct {
 	models.Auditable
-	Topic   Topic   `json:"topic" db:"topic"`
-	Payload Payload `json:"payload" db:"payload"`
-	Retries int     `json:"retries" db:"retries"`
+	Topic   Topic  `json:"topic" db:"topic"`
+	payload []byte `json:"payload" db:"payload"`
+	Retries int    `json:"retries" db:"retries"`
+}
+
+func NewMessage[P any](topic Topic, payload P) (Message, error) {
+	var message Message
+	message.Topic = topic
+	payloadB, err := json.Marshal(payload)
+	if err != nil {
+		return message, err
+	}
+	message.payload = payloadB
+	return message, nil
+}
+
+func Unmarshal[T any](message Message, out *T) error {
+	if err := json.Unmarshal(message.payload, out); err != nil {
+		return err
+	}
+	return nil
 }
 
 type PayloadProvisionUser struct {
@@ -37,7 +38,5 @@ type PayloadProvisionUser struct {
 }
 
 type PayloadSendPage struct {
-	DeviceID       string `json:"deviceId"`
-	PageID         string `json:"pageId"`
 	PageDeliveryID string `json:"pageDeliveryId"`
 }

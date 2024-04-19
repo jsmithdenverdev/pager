@@ -133,23 +133,13 @@ func (client *Client) Start(ctx context.Context) error {
 	}
 }
 
-func (client *Client) Publish(topic Topic, m any) error {
-	mb, err := json.Marshal(m)
-	if err != nil {
-		return err
-	}
-	message := map[string]interface{}{
-		"topic":       topic,
-		"payload":     mb,
-		"created_by":  "SYSTEM",
-		"modified_by": "SYSTEM",
-	}
+func (client *Client) Publish(tx *sqlx.Tx, messages []Message) error {
 
-	if _, err := client.db.NamedExecContext(
+	if _, err := tx.NamedExecContext(
 		client.ctx,
 		`INSERT INTO messages (topic, payload, created_by, modified_by)
 		VALUES (:topic, :payload, :created_by, :modified_by)`,
-		message); err != nil {
+		messages); err != nil {
 		return err
 	}
 

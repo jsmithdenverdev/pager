@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -154,7 +153,7 @@ func listPagesDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.Load
 				// be slower and more complicated than allowing postgres to do that.
 				// Filter on UserID
 				query =
-					`SELECT id, agency_id, content, created, created_by, modified, modified_by
+					`SELECT id, agency_id, title, content, created, created_by, modified, modified_by
 					 FROM pages
 					`
 
@@ -333,7 +332,7 @@ func readPageDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.Loade
 			// because even though this is batching requests, we need to remember that
 			// the caller of this method is intending to get a single response.
 			query, args, err := sqlx.In(
-				`SELECT id, agency_id, content, created, created_by, modified, modified_by
+				`SELECT id, agency_id, title, content, created, created_by, modified, modified_by
 					 FROM pages
 					 WHERE id IN (?)`,
 				authorizedIds)
@@ -718,8 +717,9 @@ func readDeliveryDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader.L
 type PageService struct {
 	ctx                      context.Context
 	user                     string
-	authclient               *authz.Client
+	authC                    *authz.Client
 	db                       *sqlx.DB
+	pubsubC                  *pubsub.Client
 	logger                   *slog.Logger
 	listPagesDataloader      *dataloader.Loader[PagePagination, []models.Page]
 	readPageDataloader       *dataloader.Loader[string, models.Page]
@@ -739,7 +739,7 @@ func NewPageService(
 	return &PageService{
 		ctx:                      ctx,
 		user:                     user,
-		authclient:               authz,
+		authC:                    authz,
 		db:                       db,
 		logger:                   logger,
 		listPagesDataloader:      listPagesDataloader(authz, db),
@@ -749,35 +749,40 @@ func NewPageService(
 	}
 }
 
-func (service *PageService) CreatePage(agencyId string, content string, deliver bool) (models.Page, error) {
+func (service *PageService) CreatePage(agencyId string, title string, content string, deliverImmediate bool) (models.Page, error) {
 	var page models.Page
 
-	authzResult := service.authclient.Authorize(
-		authz.PermissionCreatePage,
-		authz.Resource{Type: "agency", ID: agencyId},
-	)
+	authzResult := service.authC.Authorize(authz.PermissionCreatePage, authz.Resource{
+		Type: "agency",
+		ID:   agencyId,
+	})
+
 	if authzResult.Error != nil {
 		return page, authzResult.Error
 	}
+
 	if !authzResult.Authorized {
-		return page, authz.NewAuthzError(
-			authz.PermissionCreatePage,
-			authz.Resource{Type: "agency", ID: agencyId})
+		return page, authz.NewAuthzError(authz.PermissionCreatePage, authz.Resource{
+			Type: "agency",
+			ID:   agencyId,
+		})
 	}
 
 	tx, err := service.db.BeginTxx(service.ctx, &sql.TxOptions{
 		Isolation: sql.LevelSerializable,
 	})
+
 	if err != nil {
 		return page, err
 	}
 
 	if err := tx.QueryRowxContext(
 		service.ctx,
-		`INSERT INTO pages (agency_id, content, created_by, modified_by)
-		 VALUES ($1, $2, $3, $4)
+		`INSERT INTO pages (agency_id, title, content, created_by, modified_by)
+		 VALUES ($1, $2, $3, $4, $5)
 		 RETURNING id, agency_id, content, created, created_by, modified, modified_by;`,
 		agencyId,
+		title,
 		content,
 		service.user,
 		service.user,
@@ -785,133 +790,23 @@ func (service *PageService) CreatePage(agencyId string, content string, deliver 
 		return page, err
 	}
 
-	var permissions []authz.Permission
-
-	if deliver {
-		var (
-			deliveries       = make(map[string]models.PageDelivery)
-			sendPagePayloads = make(map[string]pubsub.PayloadSendPage)
-		)
-
-		rows, err := tx.QueryxContext(
-			service.ctx,
-			`SELECT d.id
-			FROM devices d
-			INNER JOIN agency_devices ad on ad.device_id = d.id
-			WHERE ad.agency_id = $1`,
-			agencyId,
-		)
-
-		if err != nil {
-			return page, err
-		}
-
-		for rows.Next() {
-			var deviceId string
-			if err := rows.Scan(&deviceId); err != nil {
-				return page, err
-			}
-			deliveries[deviceId] = models.PageDelivery{
-				PageID:   page.ID,
-				DeviceID: deviceId,
-				Status:   models.PageDeliveryStatusPending,
-				Auditable: models.Auditable{
-					CreatedBy:  service.user,
-					ModifiedBy: service.user,
-				},
-			}
-			sendPagePayloads[deviceId] = pubsub.PayloadSendPage{
-				DeviceID: deviceId,
-			}
-		}
-
-		query, args, err := sqlx.Named(
-			`INSERT INTO page_deliveries (page_id, device_id, status, created_by, modified_by)
-			 VALUES (:page_id, :device_id, :status, :created_by, :modified_by)
-			 RETURNING id, device_id`,
-			deliveries)
-
-		query = service.db.Rebind(query)
-
-		if err != nil {
-			return page, err
-		}
-
-		rows, err = tx.QueryxContext(service.ctx, query, args...)
-
-		if err != nil {
-			return page, err
-		}
-
-		for rows.Next() {
-			var (
-				id       string
-				deviceID string
-			)
-
-			if err := rows.Scan(&id); err != nil {
-				return page, err
-			}
-
-			if err := rows.Scan(&deviceID); err != nil {
-				return page, err
-			}
-
-			permissions = append(permissions, authz.Permission{
-				Relationship: "page",
-				Resource:     authz.Resource{Type: "page_delivery", ID: id},
-				Subject:      authz.Resource{Type: "page", ID: page.ID},
-			})
-
-			sendPagePayload, ok := sendPagePayloads[deviceID]
-			if ok {
-				sendPagePayload.DeviceID = id
-				sendPagePayload.PageID = page.ID
-			}
-		}
-
-		var messages []map[string]interface{}
-		for _, payload := range sendPagePayloads {
-			payloadB, err := json.Marshal(payload)
-			if err != nil {
-				return page, err
-			}
-
-			messages = append(messages, map[string]interface{}{
-				"topic":       pubsub.TopicSendPage,
-				"payload":     payloadB,
-				"created_by":  service.user,
-				"modified_by": service.user,
-			})
-		}
-
-		if len(messages) > 0 {
-			if _, err := tx.NamedExecContext(
-				service.ctx,
-				`INSERT INTO messages (topic, payload, created_by, modified_by)
-		VALUES (:topic, :payload, :created_by, :modified_by)`,
-				messages); err != nil {
-				return page, err
-			}
-		}
-	}
-
-	permissions = append(permissions, authz.Permission{
+	if err := service.authC.WritePermissions([]authz.Permission{{
 		Relationship: "agency",
 		Resource:     authz.Resource{Type: "page", ID: page.ID},
 		Subject:      authz.Resource{Type: "agency", ID: agencyId},
-	})
-
-	if err = service.authclient.WritePermissions(permissions); err != nil {
-		if txerr := tx.Rollback(); txerr != nil {
-			return page, txerr
+	}}); err != nil {
+		if err := tx.Rollback(); err != nil {
+			return page, err
 		}
-
 		return page, err
 	}
 
 	if err := tx.Commit(); err != nil {
 		return page, err
+	}
+
+	if deliverImmediate {
+		return service.DeliverPage(agencyId, page.ID)
 	}
 
 	return page, nil
@@ -935,17 +830,24 @@ func (service *PageService) DeletePage(id string) error {
 }
 
 func (service *PageService) DeliverPage(agencyId, pageId string) (models.Page, error) {
-	var deliveries []models.PageDelivery
-	var page models.Page
-	authzResult := service.authclient.Authorize(
+	var (
+		page             models.Page
+		permissions      []authz.Permission
+		deliveries       []models.PageDelivery
+		sendPageMessages []pubsub.Message
+	)
+
+	authzResult := service.authC.Authorize(
 		// We don't have a specific permission for page deliveries, if a user can
 		// create a page its implied they can create a delivery.
 		authz.PermissionCreatePage,
 		authz.Resource{Type: "agency", ID: agencyId},
 	)
+
 	if authzResult.Error != nil {
 		return page, authzResult.Error
 	}
+
 	if !authzResult.Authorized {
 		return page, authz.NewAuthzError(
 			authz.PermissionCreatePage,
@@ -969,16 +871,13 @@ func (service *PageService) DeliverPage(agencyId, pageId string) (models.Page, e
 		return page, err
 	}
 
-	var permissions []authz.Permission
-
 	rows, err := tx.QueryxContext(
 		service.ctx,
 		`SELECT d.id
 			FROM devices d
 			INNER JOIN agency_devices ad on ad.device_id = d.id
 			WHERE ad.agency_id = $1`,
-		agencyId,
-	)
+		agencyId)
 
 	if err != nil {
 		return page, err
@@ -1026,9 +925,25 @@ func (service *PageService) DeliverPage(agencyId, pageId string) (models.Page, e
 			Resource:     authz.Resource{Type: "page_delivery", ID: id},
 			Subject:      authz.Resource{Type: "page", ID: pageId},
 		})
+
+		message, err := pubsub.NewMessage(pubsub.TopicSendPage, pubsub.PayloadSendPage{})
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				return page, err
+			}
+			return page, err
+		}
+		sendPageMessages = append(sendPageMessages, message)
 	}
 
-	if err = service.authclient.WritePermissions(permissions); err != nil {
+	if err := service.pubsubC.Publish(tx, sendPageMessages); err != nil {
+		if err := tx.Rollback(); err != nil {
+			return page, err
+		}
+		return page, err
+	}
+
+	if err = service.authC.WritePermissions(permissions); err != nil {
 		if txerr := tx.Rollback(); txerr != nil {
 			return page, txerr
 		}

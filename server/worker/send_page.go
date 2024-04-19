@@ -27,17 +27,18 @@ func NewSendPageHandler(
 
 func (handler *SendPageHandler) Handle(message pubsub.Message) error {
 	var (
-		deviceID   = message.Payload["deviceId"].(string)
-		pageID     = message.Payload["pageId"].(string)
-		deliveryID = message.Payload["deliveryId"].(string)
+		payload pubsub.PayloadSendPage
 	)
+
+	if err := pubsub.Unmarshal(message, &payload); err != nil {
+		return err
+	}
 
 	handler.logger.InfoContext(
 		handler.ctx,
 		"SendPageHander::Handle",
-		"deviceID", deviceID,
-		"pageID", pageID,
-		"deliveryID", deliveryID)
+		"deliveryID", payload.PageDeliveryID,
+	)
 
 	return nil
 }

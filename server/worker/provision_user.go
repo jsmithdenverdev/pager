@@ -40,19 +40,21 @@ func NewProvisionUserHandler(
 
 func (handler *ProvisionUserHandler) Handle(message pubsub.Message) error {
 	var (
-		email               = message.Payload["email"].(string)
-		agencyID            = message.Payload["agencyId"].(string)
-		role                = message.Payload["role"].(models.Role)
+		payload             pubsub.PayloadProvisionUser
 		allAuth0Users       []*management.User
 		pagerAuth0Users     []*management.User
 		pagerAuth0User      *management.User
 		pagerConnectionName = "Username-Password-Authentication"
 	)
 
+	if err := pubsub.Unmarshal(message, &payload); err != nil {
+		return err
+	}
+
 	// Search for the user in auth0 by their email. This method searches all
 	// auth connections for our account. To be on the safe side we'll filter
 	// down to just the users who belong to our pager auth0 database connection.
-	allAuth0Users, err := handler.auth0.User.ListByEmail(handler.ctx, email)
+	allAuth0Users, err := handler.auth0.User.ListByEmail(handler.ctx, payload.Email)
 	if err != nil {
 		return err
 	}
@@ -80,7 +82,7 @@ func (handler *ProvisionUserHandler) Handle(message pubsub.Message) error {
 		// Create the user
 		if err := handler.auth0.User.Create(handler.ctx, &management.User{
 			Connection:    &pagerConnectionName,
-			Email:         &email,
+			Email:         &payload.Email,
 			Password:      &tmpPassword,
 			EmailVerified: &emailVerified,
 		}); err != nil {
@@ -89,14 +91,14 @@ func (handler *ProvisionUserHandler) Handle(message pubsub.Message) error {
 
 		// Unfortunately the method above doesn't return the user, so we have to
 		// call ListByEmail once more to fetch the created user.
-		users, err := handler.auth0.User.ListByEmail(handler.ctx, email)
+		users, err := handler.auth0.User.ListByEmail(handler.ctx, payload.Email)
 		if err != nil {
 			return err
 		}
 		if len(users) > 0 {
 			pagerAuth0User = users[0]
 		} else {
-			return fmt.Errorf("failed to find user after creation: %s", email)
+			return fmt.Errorf("failed to find user after creation: %s", payload.Email)
 		}
 	}
 
@@ -115,7 +117,7 @@ func (handler *ProvisionUserHandler) Handle(message pubsub.Message) error {
 		*pagerAuth0User.ID,
 		time.Now().UTC(),
 		"SYSTEM",
-		email); err != nil {
+		payload.Email); err != nil {
 		return err
 	}
 
@@ -124,14 +126,14 @@ func (handler *ProvisionUserHandler) Handle(message pubsub.Message) error {
 			Relationship: map[models.Role]string{
 				models.RoleReader: "reader",
 				models.RoleWriter: "writer",
-			}[role],
-			Resource: authz.Resource{Type: "agency", ID: agencyID},
+			}[payload.Role],
+			Resource: authz.Resource{Type: "agency", ID: payload.AgencyID},
 			Subject:  authz.Resource{Type: "user", ID: *pagerAuth0User.ID},
 		},
 		{
 			Relationship: "agency",
 			Resource:     authz.Resource{Type: "user", ID: *pagerAuth0User.ID},
-			Subject:      authz.Resource{Type: "agency", ID: agencyID},
+			Subject:      authz.Resource{Type: "agency", ID: payload.AgencyID},
 		},
 	}); err != nil {
 		if txerr := tx.Rollback(); txerr != nil {
