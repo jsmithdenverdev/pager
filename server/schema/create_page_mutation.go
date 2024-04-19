@@ -9,6 +9,7 @@ import (
 // createPageInput represents the fields needed to create a new page.
 type createPageInput struct {
 	AgencyID string `json:"agencyId" validate:"required,uuid"`
+	Title    string `json:"title" validate:"min=1"`
 	Content  string `json:"content" validate:"min=1"`
 	Deliver  bool   `json:"deliver"`
 }
@@ -20,6 +21,9 @@ var createPageInputType = graphql.InputObjectConfig{
 	Fields: graphql.InputObjectConfigFieldMap{
 		"agencyId": &graphql.InputObjectFieldConfig{
 			Type: graphql.ID,
+		},
+		"title": &graphql.InputObjectFieldConfig{
+			Type: graphql.NewNonNull(graphql.String),
 		},
 		"content": &graphql.InputObjectFieldConfig{
 			Type: graphql.String,
@@ -35,6 +39,11 @@ var createPageInputType = graphql.InputObjectConfig{
 // errors.
 func toCreatePageInput(args map[string]interface{}) (createPageInput, error) {
 	var input createPageInput
+	title, ok := args["title"].(string)
+	if !ok {
+		title = ""
+	}
+	input.Title = title
 	content, ok := args["content"].(string)
 	if !ok {
 		content = ""
@@ -87,7 +96,7 @@ var createPageMutation = &graphql.Field{
 				return payload, err
 			}
 			svc := p.Context.Value(service.ContextKeyPageService).(*service.PageService)
-			page, err := svc.CreatePage(input.AgencyID, input.Content, input.Deliver)
+			page, err := svc.CreatePage(input.AgencyID, input.Content, input.Title, input.Deliver)
 			if err != nil {
 				return payload, err
 			}
