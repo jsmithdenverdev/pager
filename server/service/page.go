@@ -454,7 +454,7 @@ func listDeliveriesDataloader(authclient *authz.Client, db *sqlx.DB) *dataloader
 				// be slower and more complicated than allowing postgres to do that.
 				// Filter on UserID
 				query =
-					`SELECT pd.id, pd.agency_id, pd.content, pd.created, pd.created_by, pd.modified, pd.modified_by
+					`SELECT pd.id, pd.page_id, pd.device_id, pd.created, pd.created_by, pd.modified, pd.modified_by
 					 FROM page_deliveries pd
 					`
 
@@ -734,6 +734,7 @@ func NewPageService(
 	user string,
 	authz *authz.Client,
 	db *sqlx.DB,
+	pubsubC *pubsub.Client,
 	logger *slog.Logger,
 ) *PageService {
 	return &PageService{
@@ -741,6 +742,7 @@ func NewPageService(
 		user:                     user,
 		authC:                    authz,
 		db:                       db,
+		pubsubC:                  pubsubC,
 		logger:                   logger,
 		listPagesDataloader:      listPagesDataloader(authz, db),
 		readPageDataloader:       readPageDataloader(authz, db),
@@ -908,6 +910,8 @@ func (service *PageService) DeliverPage(agencyId, pageId string) (models.Page, e
 	if err != nil {
 		return page, err
 	}
+
+	query = service.db.Rebind(query)
 
 	rows, err = tx.QueryxContext(service.ctx, query, args...)
 
