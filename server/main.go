@@ -125,7 +125,7 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 			service.NewDeviceService(ctx, user, authz, db, logger))
 		ctx = context.WithValue(ctx,
 			service.ContextKeyPageService,
-			service.NewPageService(ctx, user, authz, db, logger))
+			service.NewPageService(ctx, user, authz, db, pubsubClient, logger))
 		handler.ContextHandler(ctx, w, r)
 	})))
 
