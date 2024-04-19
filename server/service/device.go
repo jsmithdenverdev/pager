@@ -461,7 +461,7 @@ func (service *DeviceService) ProvisionDevice(agencyId, ownerId, name string) (m
 		service.ctx,
 		`INSERT INTO devices (name, status, user_id, code, created_by, modified_by)
 		 VALUES ($1, $2, $3, $4, $5, $6)
-		 RETURNING id, name, status, code, created, created_by, modified, modified_by;`,
+		 RETURNING id, name, user_id, status, code, created, created_by, modified, modified_by;`,
 		name,
 		models.DeviceStatusPending,
 		ownerId,
