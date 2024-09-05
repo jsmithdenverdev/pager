@@ -1,37 +1,24 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/jsmithdenverdev/pager/authz"
-	"github.com/jsmithdenverdev/pager/models"
 	"github.com/jsmithdenverdev/pager/service"
 )
 
-type createAgencyRequest struct {
-	Name string `json:"name"`
-}
-
-func (r createAgencyRequest) Valid(ctx context.Context) []problem {
-	var problems []problem
-	if r.Name == "" {
-		problems = append(problems, problem{
-			Name:        "name",
-			Description: "Name must be at least 1 character",
-		})
-	}
-	return problems
-}
-
-func (r createAgencyRequest) MapTo() models.Agency {
-	var m models.Agency
-	m.Name = r.Name
-	return m
-}
-
+// CreateAgency is a handler to create a new agency. The user must have the
+// create_agency permission on the platform to call this endpoint.
+//
+// @Summary Create a new Pager Agency
+// @Description Creates a new Pager Agency. The calling user must have the create_agency permission on the platform to call this endpoint.
+// @Tags create,agency
+// @Accept json
+// @Produce json
+// @Success 200 {object} handlers.agencyResponse
+// @Router /health-check [GET]
 func CreateAgency(logger *slog.Logger) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		svc := r.Context().Value(service.ContextKeyAgencyService).(*service.AgencyService)
