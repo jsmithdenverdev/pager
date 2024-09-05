@@ -13,18 +13,14 @@ import (
 	"time"
 
 	"github.com/auth0/go-auth0/management"
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
-	jwtvalidator "github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/authzed/authzed-go/v1"
 	"github.com/authzed/grpcutil"
-	"github.com/graphql-go/handler"
+	"github.com/go-chi/chi"
 	"github.com/jmoiron/sqlx"
 	"github.com/jsmithdenverdev/pager/authz"
 	"github.com/jsmithdenverdev/pager/config"
-	"github.com/jsmithdenverdev/pager/middleware"
 	"github.com/jsmithdenverdev/pager/pubsub"
-	"github.com/jsmithdenverdev/pager/schema"
-	"github.com/jsmithdenverdev/pager/service"
+	"github.com/jsmithdenverdev/pager/routes"
 	"github.com/jsmithdenverdev/pager/worker"
 	pq "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -94,44 +90,23 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		return err
 	}
 
-	schema, err := schema.New()
-	if err != nil {
-		return err
-	}
-
-	handler := handler.New(&handler.Config{
-		Schema: &schema,
-		Pretty: true,
-	})
-
 	pubsubClient := pubsub.NewClient(ctx, db, ln, logger)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-	mux.Handle("/graphql", middleware.EnsureValidToken(cfg, logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		user := ctx.Value(jwtmiddleware.ContextKey{}).(*jwtvalidator.ValidatedClaims).RegisteredClaims.Subject
-		authz := authz.NewClient(ctx, authzedClient, logger, user)
-		ctx = context.WithValue(ctx,
-			service.ContextKeyUserService,
-			service.NewUserService(ctx, user, authz, db, logger))
-		ctx = context.WithValue(ctx,
-			service.ContextKeyAgencyService,
-			service.NewAgencyService(ctx, user, authz, db, auth0, pubsubClient, logger))
-		ctx = context.WithValue(ctx,
-			service.ContextKeyDeviceService,
-			service.NewDeviceService(ctx, user, authz, db, logger))
-		ctx = context.WithValue(ctx,
-			service.ContextKeyPageService,
-			service.NewPageService(ctx, user, authz, db, pubsubClient, logger))
-		handler.ContextHandler(ctx, w, r)
-	})))
+	router := chi.NewMux()
+	if err := routes.Register(
+		router,
+		logger,
+		cfg,
+		authzedClient,
+		db,
+		auth0,
+		pubsubClient); err != nil {
+		return fmt.Errorf("failed to register routes: %w", err)
+	}
 
 	httpServer := http.Server{
 		Addr:    net.JoinHostPort(cfg.Host, cfg.Port),
-		Handler: mux,
+		Handler: router,
 	}
 
 	// Start http server
@@ -164,7 +139,7 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		return err
 	}
 
-	go pubsubClient.Start(ctx)
+	// go pubsubClient.Start(ctx)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
