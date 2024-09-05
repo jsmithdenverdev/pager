@@ -36,7 +36,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 FROM base as development
 RUN --mount=type=cache,target=/root/.cache/go-build \
-  go install github.com/cosmtrek/air@latest 
+  go install github.com/air-verse/air@latest 
 RUN --mount=type=cache,target=/root/.cache/go-build \
   go install github.com/go-delve/delve/cmd/dlv@latest
 

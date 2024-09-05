@@ -75,6 +75,7 @@ func NewClient(ctx context.Context, authzed *authzed.Client, logger *slog.Logger
 		ctx:                            ctx,
 		userId:                         userId,
 		authzed:                        authzed,
+		logger:                         logger,
 		bulkCheckPermissionsDataloader: bulkCheckPermissionsDataloader(authzed),
 		listDataloader:                 listDataloader(authzed),
 	}

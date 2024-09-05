@@ -16,6 +16,8 @@ require (
 	google.golang.org/grpc v1.62.1
 )
 
+require github.com/go-chi/chi/v5 v5.0.10 // indirect
+
 require (
 	github.com/PuerkitoBio/rehttp v1.3.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
@@ -23,6 +25,8 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.4 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
+	github.com/go-chi/chi v1.5.5
+	github.com/go-chi/httplog/v2 v2.1.1
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
