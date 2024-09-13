@@ -89,7 +89,8 @@ func Register(
 func registerAgencyRoutes(router *chi.Mux, logger *slog.Logger) {
 	agencyRouter := chi.NewRouter()
 	router.Mount("/agencies", agencyRouter)
-	agencyRouter.Post("/", handlers.CreateAgency(logger))
+
+	agencyRouter.Post("/", handlers.CreateAgency(logger).(http.HandlerFunc))
 }
 
 // registerDeviceRoutes registers device routes on an instance of a chi.Mux.
@@ -102,6 +103,8 @@ func registerDeviceRoutes(router *chi.Mux, logger *slog.Logger) {
 func registerUserRoutes(router *chi.Mux, logger *slog.Logger) {
 	userRouter := chi.NewRouter()
 	router.Mount("/users", userRouter)
+
+	userRouter.Post("/invites", handlers.InviteUser(logger).(http.HandlerFunc))
 }
 
 // registerPageRoutes registers page routes on an instance of a chi.Mux.

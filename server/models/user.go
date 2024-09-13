@@ -13,9 +13,9 @@ const (
 // A User belongs to one or more Agencies.
 type User struct {
 	Auditable
-	Email string `json:"email" db:"email"`
+	Email string `db:"email"`
 	// IdpID is the ID of the user from their identity provider. Typically this
 	// comes in the form of a sub claim of an identity token.
-	IdpID  string     `json:"idpId" db:"idp_id"`
-	Status UserStatus `json:"status" db:"status"`
+	IdpID  string     `db:"idp_id"`
+	Status UserStatus `db:"status"`
 }
