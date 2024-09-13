@@ -61,14 +61,6 @@ func (r inviteUserRequest) Valid(ctx context.Context) []problem {
 
 // InviteUser is a handler to invite a new user. The user must have the
 // invite_user permission on the platform to call this endpoint.
-//
-// @Summary Invite a user to a Pager agency
-// @Description Invites user to a Pager Agency. If the user does not have an account in the system one will be created. The calling user must have the create_agency permission on the platform to call this endpoint.
-// @Tags invite,user
-// @Accept json
-// @Produce json
-// @Success 200 {object} handlers.userResponse
-// @Router /health-check [GET]
 func InviteUser(logger *slog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

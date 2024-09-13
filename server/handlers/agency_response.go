@@ -7,7 +7,7 @@ type agencyResponse struct {
 	Name string `json:"name"`
 }
 
-// toCreateAgencyResponse converts a models.Agency to a createAgencyResponse
+// toAgencyResponse converts a models.Agency to an agencyResponse.
 func toAgencyResponse(m models.Agency) agencyResponse {
 	return agencyResponse{
 		Name: m.Name,

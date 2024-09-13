@@ -38,14 +38,6 @@ func (r createAgencyRequest) MapTo() models.Agency {
 
 // CreateAgency is a handler to create a new agency. The user must have the
 // create_agency permission on the platform to call this endpoint.
-//
-// @Summary Create a new Pager Agency
-// @Description Creates a new Pager Agency. The calling user must have the create_agency permission on the platform to call this endpoint.
-// @Tags create,agency
-// @Accept json
-// @Produce json
-// @Success 200 {object} handlers.agencyResponse
-// @Router /health-check [GET]
 func CreateAgency(logger *slog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

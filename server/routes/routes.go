@@ -97,6 +97,8 @@ func registerAgencyRoutes(router *chi.Mux, logger *slog.Logger) {
 func registerDeviceRoutes(router *chi.Mux, logger *slog.Logger) {
 	deviceRouter := chi.NewRouter()
 	router.Mount("/devices", deviceRouter)
+
+	deviceRouter.Post("/", handlers.ProvisionDevice(logger).(http.HandlerFunc))
 }
 
 // registerUserRoutes registers user routes on an instance of a chi.Mux.
