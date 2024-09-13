@@ -26,15 +26,15 @@ COPY go.* .
 RUN go mod download
 COPY . .
 
-FROM base as build
+FROM base AS build
 RUN --mount=type=cache,target=/root/.cache/go-build \
   go build -o server
 
-FROM base as unit-test
+FROM base AS unit-test
 RUN --mount=type=cache,target=/root/.cache/go-build \
   go test -v
 
-FROM base as development
+FROM base AS development
 RUN --mount=type=cache,target=/root/.cache/go-build \
   go install github.com/air-verse/air@latest 
 RUN --mount=type=cache,target=/root/.cache/go-build \
@@ -54,7 +54,7 @@ CMD sqitch deploy ${SQITCH_CONN} && \
   zed schema write ./authz/schema.zed --endpoint $SPICEDB_ENDPOINT --insecure --token $SPICEDB_TOKEN && \
   air -c .air.toml
 
-FROM base as production
+FROM base AS production
 
 WORKDIR /
 COPY sqitch.conf sqitch.plan ./
