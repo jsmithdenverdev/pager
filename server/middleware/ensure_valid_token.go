@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -56,7 +57,21 @@ func EnsureValidToken(cfg config.Config, logger *slog.Logger) func(next http.Han
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message":"Failed to validate JWT."}`))
+		// I'm marshaling a problem details struct inline here. The handlers package
+		// has an implementation of problem details and detail encoders, but I don't
+		// want to make all of that functionality available outside the package.
+		b, _ := json.Marshal(struct {
+			Type   string `json:"type"`
+			Title  string `json:"title"`
+			Status int    `json:"status"`
+			Detail string `json:"detail"`
+		}{
+			Type:   "auth/authentication",
+			Title:  "Unauthenticated",
+			Status: http.StatusUnauthorized,
+			Detail: "JWT validation failed",
+		})
+		w.Write(b)
 	}
 
 	middleware := jwtmiddleware.New(
