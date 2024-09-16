@@ -29,6 +29,7 @@ build_and_zip_executable() {
   # Zip the handler into the dist directory
   echo "Zipping $EXECUTABLE..."
   (cd $OUTPUT_DIR && zip -r "../$EXECUTABLE.zip" handler)
+  rm -rf $OUTPUT_DIR
 
   # Check if the zip was successful
   if [ $? -ne 0 ]; then
