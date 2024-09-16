@@ -29,5 +29,5 @@ jobs:
 
       - name: Build Service
         if: contains(github.event.pull_request.changed_files, 'services/${{ matrix.service }}/')
-        working-directory: ./services/${{ matrix.service }}
+        working-directory: ${{ github.workspace }}/services/${{ matrix.service }}
         run: ./build.sh
