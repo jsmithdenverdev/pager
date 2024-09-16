@@ -1,0 +1,30 @@
+name: Services CI
+
+on:
+  pull_request:
+    paths:
+      - "services/**"
+
+jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+  build:
+    needs: checkout
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ["agency"]
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+
+      - name: Build Service
+        if: contains(github.event.pull_request.changed_files, 'services/${{ matrix.service }}/')
+        working-directory: services/${{ matrix.service }}
+        run: ./build.sh
