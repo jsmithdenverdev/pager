@@ -28,7 +28,8 @@ jobs:
         run: ./build.sh
 
       - name: Upload artifacts
+        if: contains(github.event.pull_request.changed_files, 'services/${{ matrix.service }}/')
         uses: actions/upload-artifact@v4
         with:
           name: artifacts
-          path: dist
+          path: services/${{ matrix.service }}/dist
