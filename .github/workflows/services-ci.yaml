@@ -25,9 +25,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.23"
+          go-version: "1.23.1"
 
       - name: Build Service
         if: contains(github.event.pull_request.changed_files, 'services/${{ matrix.service }}/')
-        working-directory: services/${{ matrix.service }}
+        working-directory: ./services/${{ matrix.service }}
         run: ./build.sh
