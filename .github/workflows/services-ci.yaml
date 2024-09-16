@@ -1,9 +1,12 @@
 name: Services CI
 
 on:
-  pull_request:
+  push:
     paths:
       - "services/**"
+  # pull_request:
+  #   paths:
+  #     - "services/**"
 
 jobs:
   checkout:
