@@ -9,19 +9,14 @@ on:
   #     - "services/**"
 
 jobs:
-  checkout:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
   build:
-    needs: checkout
     runs-on: ubuntu-latest
     strategy:
       matrix:
         service: ["agency"]
     steps:
+      - name: Checkout code # Each job must check out the code
+        uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
