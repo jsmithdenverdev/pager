@@ -31,5 +31,5 @@ jobs:
         if: contains(github.event.pull_request.changed_files, 'services/${{ matrix.service }}/')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.service }}/artifacts
+          name: ${{ matrix.service }}-artifacts
           path: services/${{ matrix.service }}/dist
