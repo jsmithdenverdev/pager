@@ -92,7 +92,7 @@ jobs:
           name: Release ${{ steps.set_version.outputs.NEW_TAG }}
           tag_name: ${{ steps.set_version.outputs.NEW_TAG }}
           body: |
-            Release of ${{ matrix.service }} version ${{ steps.set_version.outputs.NEW_TAG }}
+            Release of ${{ matrix.service }} service version ${{ steps.set_version.outputs.NEW_TAG }}
           draft: false
           prerelease: false
           files: services/${{matrix.service}}/dist

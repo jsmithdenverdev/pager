@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+)
 
-	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/jsmithdenverdev/pager/services/agency/internal/handlers"
+var (
+	Version string
 )
 
 func main() {
@@ -16,7 +17,7 @@ func main() {
 }
 
 func run() error {
-	lambda.StartWithOptions(handlers.CreateAgency())
-	// build
+	fmt.Fprintf(os.Stdout, "Version %s", Version)
+	// lambda.StartWithOptions(handlers.CreateAgency())
 	return nil
 }
