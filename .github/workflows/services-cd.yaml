@@ -1,0 +1,81 @@
+name: Build, Test, and Save Artifacts for Changed Services
+
+on:
+  push:
+    branches:
+      # - main
+      - "*"
+
+jobs:
+  build-and-save-artifact:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - agency
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Check if service has changed
+        id: check_changes
+        run: |
+          CHANGED_FILES=$(git diff --name-only origin/main)
+          if echo "$CHANGED_FILES" | grep -q "^services/${{ matrix.service }}/"; then
+            echo "Service ${{ matrix.service }} has changed."
+            echo "::set-output name=should_build::true"
+          else
+            echo "Service ${{ matrix.service }} has not changed."
+            echo "::set-output name=should_build::false"
+          fi
+
+      - name: Set version for the service
+        id: set_version
+        if: steps.check_changes.outputs.should_build == 'true'
+        run: |
+          # Define the tag prefix for the service
+          TAG_PREFIX="services/${{ matrix.service }}"
+
+          # Search for the latest tag for this specific service
+          LATEST_TAG=$(git tag --list "${TAG_PREFIX}/*" --sort=-v:refname | head -n 1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            # No tag exists, set initial version
+            NEW_TAG="${TAG_PREFIX}/v1.0.0"
+          else
+            # Increment the latest tag for the service
+            NEW_TAG=$(echo $LATEST_TAG | sed "s/^${TAG_PREFIX}\\///" | awk -F. '{$NF += 1; print "'${TAG_PREFIX}'/v"$1"."$2"."$3}')
+          fi
+
+          echo "::set-output name=new_tag::$NEW_TAG"
+          echo "New tag: $NEW_TAG"
+
+      - name: Create version tag
+        if: steps.check_changes.outputs.should_build == 'true'
+        run: |
+          git tag ${{ steps.set_version.outputs.new_tag }}
+          git push origin ${{ steps.set_version.outputs.new_tag }}
+
+      - name: Run tests
+        if: steps.check_changes.outputs.should_build == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: |
+          echo "Running tests for ${{ matrix.service }}"
+          go test ./...
+
+      - name: Run build script
+        if: steps.check_changes.outputs.should_build == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: |
+          echo "Running build script for ${{ matrix.service }} with version ${{ steps.set_version.outputs.new_tag }}"
+          chmod +x ./build.sh
+          ./build.sh ${{ steps.set_version.outputs.new_tag }}
+
+      - name: Save build artifact
+        if: steps.check_changes.outputs.should_build == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.service }}-${{ steps.set_version.outputs.new_tag }}
+          path: services/${{matrix.service}}/dist

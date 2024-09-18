@@ -17,5 +17,5 @@ func main() {
 
 func run() error {
 	lambda.StartWithOptions(handlers.CreateAgency())
-	return ni
+	return nil
 }
