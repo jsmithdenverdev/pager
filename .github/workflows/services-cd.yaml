@@ -79,7 +79,7 @@ jobs:
         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
         working-directory: services/${{ matrix.service }}
         run: |
-          ls -la
+          ls -la ./dist
       # - name: Save build artifact
       #   if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
       #   uses: actions/upload-artifact@v3
