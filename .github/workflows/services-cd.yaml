@@ -6,6 +6,9 @@ on:
       # - main
       - "**"
 
+permissions:
+  contents: write # Grant write permissions for tagging
+
 jobs:
   build-and-save-artifact:
     runs-on: ubuntu-latest
