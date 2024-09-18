@@ -75,27 +75,32 @@ jobs:
           chmod +x ./build.sh
           ./build.sh ${{ steps.set_version.outputs.VERSION }}
 
-      - name: Save build artifact
+      - name: List build dir
         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ matrix.service }}-${{ steps.set_version.outputs.VERSION }}
-          path: services/${{matrix.service}}/dist
-
-      - name: Create tag
-        if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
+        working-directory: services/${{ matrix.service }}
         run: |
-          git tag ${{ steps.set_version.outputs.TAG }}
-          git push origin ${{ steps.set_version.outputs.TAG }}
+          ls -la
+      # - name: Save build artifact
+      #   if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: ${{ matrix.service }}-${{ steps.set_version.outputs.VERSION }}
+      #     path: services/${{matrix.service}}/dist
 
-      - name: Create GitHub release
-        if: steps.check_changes.outputs.should_build == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Release ${{ steps.set_version.outputs.VERSION }}
-          tag_name: ${{ steps.set_version.outputs.TAG }}
-          body: |
-            Release of ${{ matrix.service }} service version ${{ steps.set_version.outputs.VERSION }}
-          draft: false
-          prerelease: false
-          files: services/${{matrix.service}}/dist
+      # - name: Create tag
+      #   if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
+      #   run: |
+      #     git tag ${{ steps.set_version.outputs.TAG }}
+      #     git push origin ${{ steps.set_version.outputs.TAG }}
+
+      # - name: Create GitHub release
+      #   if: steps.check_changes.outputs.should_build == 'true'
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     name: Release ${{ steps.set_version.outputs.VERSION }}
+      #     tag_name: ${{ steps.set_version.outputs.TAG }}
+      #     body: |
+      #       Release of ${{ matrix.service }} service version ${{ steps.set_version.outputs.VERSION }}
+      #     draft: false
+      #     prerelease: false
+      #     files: services/${{matrix.service}}/dist
