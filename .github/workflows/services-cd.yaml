@@ -48,14 +48,17 @@ jobs:
 
           if [ -z "$LATEST_TAG" ]; then
             # No tag exists, set initial version
-            NEW_TAG="${TAG_PREFIX}/v1.0.0"
+            TAG="${TAG_PREFIX}/v1.0.0"
           else
             # Increment the latest tag for the service
-            NEW_TAG=$(echo $LATEST_TAG | sed "s|^${TAG_PREFIX}/v||" | awk -F. '{$NF += 1; print "'${TAG_PREFIX}'/v"$1"."$2"."$3}')
+            TAG=$(echo $LATEST_TAG | sed "s|^${TAG_PREFIX}/v||" | awk -F. '{$NF += 1; print "'${TAG_PREFIX}'/v"$1"."$2"."$3}')
+            VERSION=$(echo $TAG | sed "s|^${TAG_PREFIX}/||")
           fi
 
-          echo "New tag: $NEW_TAG"
-          echo "NEW_TAG=$NEW_TAG" >> "$GITHUB_OUTPUT"
+          echo "New tag: $TAG"
+          echo "New version: $VERSION"
+          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Run tests
         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
@@ -68,31 +71,31 @@ jobs:
         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
         working-directory: services/${{ matrix.service }}
         run: |
-          echo "Running build script for ${{ matrix.service }} with version ${{ steps.set_version.outputs.NEW_TAG }}"
+          echo "Running build script for ${{ matrix.service }} with version ${{ steps.set_version.outputs.VERSION }}"
           chmod +x ./build.sh
-          ./build.sh ${{ steps.set_version.outputs.NEW_TAG }}
-
-      - name: Create version tag
-        if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
-        run: |
-          git tag ${{ steps.set_version.outputs.NEW_TAG }}
-          git push origin ${{ steps.set_version.outputs.NEW_TAG }}
+          ./build.sh ${{ steps.set_version.outputs.VERSION }}
 
       - name: Save build artifact
         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.service }}-${{ steps.set_version.outputs.NEW_TAG }}
+          name: ${{ matrix.service }}-${{ steps.set_version.outputs.VERSION }}
           path: services/${{matrix.service}}/dist
+
+      - name: Create tag
+        if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
+        run: |
+          git tag ${{ steps.set_version.outputs.TAG }}
+          git push origin ${{ steps.set_version.outputs.TAG }}
 
       - name: Create GitHub release
         if: steps.check_changes.outputs.should_build == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ steps.set_version.outputs.NEW_TAG }}
-          tag_name: ${{ steps.set_version.outputs.NEW_TAG }}
+          name: Release ${{ steps.set_version.outputs.VERSION }}
+          tag_name: ${{ steps.set_version.outputs.TAG }}
           body: |
-            Release of ${{ matrix.service }} service version ${{ steps.set_version.outputs.NEW_TAG }}
+            Release of ${{ matrix.service }} service version ${{ steps.set_version.outputs.VERSION }}
           draft: false
           prerelease: false
           files: services/${{matrix.service}}/dist
