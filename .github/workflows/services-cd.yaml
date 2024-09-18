@@ -51,7 +51,7 @@ jobs:
             NEW_TAG="${TAG_PREFIX}/v1.0.0"
           else
             # Increment the latest tag for the service
-            NEW_TAG=$(echo $LATEST_TAG | sed "s|^${TAG_PREFIX}/v||" | awk -F. '{$NF += 1; print "'${TAG_PREFIX}'/v"$1"."$2"."$3}')
+            NEW_TAG=$(echo $LATEST_TAG | sed "s|^${TAG_PREFIX}/||" | awk -F. '{$NF += 1; print "'${TAG_PREFIX}'/"$1"."$2"."$3}')
           fi
 
           echo "New tag: $NEW_TAG"
