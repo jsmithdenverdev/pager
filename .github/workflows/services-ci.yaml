@@ -1,9 +1,9 @@
 name: Services CI
 
-on:
-  push:
-    paths:
-      - "services/**"
+# on:
+#   push:
+#     paths:
+#       - "services/**"
   # pull_request:
   #   paths:
   #     - "services/**"
