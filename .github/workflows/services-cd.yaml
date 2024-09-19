@@ -93,7 +93,7 @@ jobs:
         if: steps.check_changes.outputs.should_build == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ steps.set_version.outputs.VERSION }}
+          name: ${{matrix.service}} Release ${{ steps.set_version.outputs.VERSION }}
           tag_name: ${{ steps.set_version.outputs.TAG }}
           body: |
             Release of ${{ matrix.service }} service version ${{ steps.set_version.outputs.VERSION }}
