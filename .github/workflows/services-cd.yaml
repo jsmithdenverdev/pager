@@ -3,8 +3,9 @@ name: Build, Test, and Save Artifacts for Changed Services
 on:
   push:
     branches:
-      # - main
-      - "**"
+      - main
+    paths:
+      - "services/**"
 
 permissions:
   contents: write # Grant write permissions for tagging
@@ -75,11 +76,6 @@ jobs:
           chmod +x ./build.sh
           ./build.sh ${{ steps.set_version.outputs.VERSION }}
 
-      - name: List build dir
-        if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
-        working-directory: services/${{ matrix.service }}
-        run: |
-          ls -la ./dist
       - name: Save build artifact
         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
         uses: actions/upload-artifact@v3
