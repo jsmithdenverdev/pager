@@ -1,41 +1,48 @@
-name: Services CI
+name: Build and Test Changed Services
 
 on:
   push:
     paths:
       - "services/**"
-  # pull_request:
-  #   paths:
-  #     - "services/**"
 
 jobs:
-  build:
+  build-and-save-artifact:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: ["agency"]
+        service:
+          - agency
+      fail-fast: false
+
     steps:
-      - name: Checkout code # Each job must check out the code
-        uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - name: Checkout code
+        uses: actions/checkout@v2
         with:
-          go-version: "1.23.1"
+          fetch-depth: 0 # Fetch all history so origin/main is available
 
-      - name: Build
-        if: contains(github.event.pull_request.changed_files, 'services/${{ matrix.service }}/')
+      - name: Check if service has changed
+        id: check_changes
+        run: |
+          CHANGED_FILES=$(git diff --name-only origin/main)
+          if echo "$CHANGED_FILES" | grep -q "^services/${{ matrix.service }}/"; then
+            echo "Service ${{ matrix.service }} has changed."
+            echo "SHOULD_BUILD=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Service ${{ matrix.service }} has not changed."
+            echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run tests
+        if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
         working-directory: services/${{ matrix.service }}
-        run: ./build.sh
+        run: |
+          echo "Running tests for ${{ matrix.service }}"
+          go test ./...
 
-      - name: Test
-        if: contains(github.event.pull_request.changed_files, 'services/${{ matrix.service }}/')
+      - name: Run build script
+        if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
         working-directory: services/${{ matrix.service }}
-        run: go test ./...
-
-      # TODO: Move to a separate action
-      # - name: Upload Service Artifacts
-      #   if: contains(github.event.pull_request.changed_files, 'services/${{ matrix.service }}/')
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ${{ matrix.service }}-artifacts
-      #     path: services/${{ matrix.service }}/dist
+        run: |
+          echo "Running build script for ${{ matrix.service }} with version ${{ steps.set_version.outputs.VERSION }}"
+          chmod +x ./build.sh
+          ./build.sh ${{ steps.set_version.outputs.VERSION }}
