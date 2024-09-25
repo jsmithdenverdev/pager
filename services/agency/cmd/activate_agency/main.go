@@ -21,6 +21,6 @@ func main() {
 
 func run() error {
 	fmt.Fprintf(os.Stdout, "Version %s", Version)
-	lambda.StartWithOptions(handlers.CreateAgency())
+	lambda.StartWithOptions(handlers.ActivateAgency())
 	return nil
 }
