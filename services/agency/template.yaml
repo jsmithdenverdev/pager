@@ -28,7 +28,7 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /health
+            Path: /
             Method: GET
             RestApiId: !Ref AgencyApi
 
