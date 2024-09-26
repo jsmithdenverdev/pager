@@ -3,17 +3,17 @@ Transform: "AWS::Serverless-2016-10-31"
 Description: AWS SAM template for the Pager application.
 
 Resources:
-  ###############################################
+  ##########################################################
   # SERVICES
-  ###############################################
+  ##########################################################
   AgencyService:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/agency/template.yaml
 
-  ###############################################
+  ##########################################################
   # API
-  ###############################################
+  ##########################################################
   RootApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
@@ -32,16 +32,16 @@ Resources:
         Issuer: "https://jsmith-dev.auth0.com/"
         Audience:
           - "https://pager"
-  # ApiStage:
-  #   Type: AWS::ApiGatewayV2::Stage
-  #   Properties:
-  #     ApiId: !Ref RootApi
-  #     StageName: prod
-  #     AutoDeploy: true
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref RootApi
+      StageName: prod
+      AutoDeploy: true
 
-  ###############################################
+  ##########################################################
   # ROUTES
-  ###############################################
+  ##########################################################
   AgencyServiceRootRoute:
     Type: AWS::ApiGatewayV2::Route
     DependsOn: ApiAuthorizer
@@ -67,9 +67,9 @@ Resources:
         - - integrations
           - !Ref AgencyServiceWildCardIntegration
 
-  ###############################################
+  ##########################################################
   # ROUTE INTEGRATIONS
-  ###############################################
+  ##########################################################
   AgencyServiceRootIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -91,9 +91,10 @@ Resources:
       RequestParameters:
         "overwrite:path": "prod/${request.path.proxy}"
 
-  ###############################################
+  ##########################################################
   # COGNITO
-  ###############################################
+  # Disabled for the time being in favor of Auth0
+  ##########################################################
   # UserPool:
   #   Type: AWS::Cognito::UserPool
   #   Properties:
