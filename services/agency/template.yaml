@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+Description: AWS SAM template for the Pager Agency service.
+
+Resources:
+  ###############################################
+  # API
+  ###############################################
+  AgencyApi:
+    Type: "AWS::Serverless::Api"
+    Properties:
+      Name: "agency-api"
+      Description: "Agency Microservice API"
+      StageName: prod
+  ###############################################
+  # FUNCTIONS
+  ###############################################
+  CreateAgencyFunction:
+    Type: "AWS::Serverless::Function"
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: "create-agency"
+      Handler: bootstrap
+      Runtime: provided.al2
+      CodeUri: cmd/create_agency
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+            RestApiId: !Ref AgencyApi
+
+###############################################
+# OUTPUTS
+###############################################
+Outputs:
+  ApiId:
+    Description: "API Gateway ID for Agency API"
+    Value: !Ref AgencyApi

@@ -194,3 +194,5 @@ build
 
 # Live reaload files
 tmp
+
+.aws-sam

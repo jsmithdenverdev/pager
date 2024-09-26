@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+Description: AWS SAM template for the Pager application.
+
+Resources:
+  AgencyService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./services/agency/template.yaml
+  RootApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: "pager-federated-api"
+      Description: "Pager Federated API"
+      StageName: prod
+  AgencyServiceIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref RootApi
+      Description: "Agency API proxy integration"
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub "https://${AgencyService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/"
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        "overwrite:path": "prod/${request.path.proxy}"
+  AgencyServiceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RootApi
+      RouteKey: "ANY /agency/{proxy+}"
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref AgencyServiceIntegration
+
+Outputs:
+  RootApiUrl:
+    Description: "Root API Gateway URL"
+    Value: !Sub "https://${RootApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
