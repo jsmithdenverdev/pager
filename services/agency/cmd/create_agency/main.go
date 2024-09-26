@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -13,14 +15,17 @@ var (
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "run failed: %s", err.Error())
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	fmt.Fprintf(os.Stdout, "Version %s", Version)
-	lambda.StartWithOptions(handlers.CreateAgency())
+func run(stdout io.Writer) error {
+	fmt.Fprintf(stdout, "Version %s", Version)
+
+	logger := slog.New(slog.NewJSONHandler(stdout, nil))
+
+	lambda.StartWithOptions(handlers.CreateAgency(logger))
 	return nil
 }
