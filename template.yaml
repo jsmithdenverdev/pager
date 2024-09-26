@@ -13,18 +13,36 @@ Resources:
       Name: "pager-federated-api"
       Description: "Pager Federated API"
       StageName: prod
-  AgencyServiceIntegration:
+  AgencyServiceRootIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref RootApi
-      Description: "Agency API proxy integration"
+      Description: "Agency API root proxy integration"
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub "https://${AgencyService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/prod"
+      PayloadFormatVersion: "1.0"
+  AgencyServiceWildCardIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref RootApi
+      Description: "Agency API wild card proxy integration"
       IntegrationType: HTTP_PROXY
       IntegrationMethod: ANY
       IntegrationUri: !Sub "https://${AgencyService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/"
       PayloadFormatVersion: "1.0"
       RequestParameters:
         "overwrite:path": "prod/${request.path.proxy}"
-  AgencyServiceRoute:
+  AgencyServiceRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RootApi
+      RouteKey: "ANY /agency"
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref AgencyServiceRootIntegration
+  AgencyServiceWildCardRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref RootApi
@@ -32,7 +50,7 @@ Resources:
       Target: !Join
         - /
         - - integrations
-          - !Ref AgencyServiceIntegration
+          - !Ref AgencyServiceWildCardIntegration
 
 Outputs:
   RootApiUrl:
