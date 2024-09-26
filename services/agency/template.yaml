@@ -9,7 +9,7 @@ Resources:
   AgencyApi:
     Type: "AWS::Serverless::Api"
     Properties:
-      Name: "agency-api"
+      Name: "pager-agency-api"
       Description: "Agency Microservice API"
       StageName: prod
   ###############################################
