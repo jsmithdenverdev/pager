@@ -79,6 +79,8 @@ Resources:
       IntegrationMethod: ANY
       IntegrationUri: !Sub "https://${AgencyService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/prod"
       PayloadFormatVersion: "1.0"
+      RequestParameters:
+        "append:header.x-pager-userid": "$context.authorizer.claims.sub"
   AgencyServiceWildCardIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -90,6 +92,7 @@ Resources:
       PayloadFormatVersion: "1.0"
       RequestParameters:
         "overwrite:path": "prod/${request.path.proxy}"
+        "append:header.x-pager-userid": "$context.authorizer.claims.sub"
 
   ##########################################################
   # COGNITO
