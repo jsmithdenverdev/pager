@@ -3,16 +3,73 @@ Transform: "AWS::Serverless-2016-10-31"
 Description: AWS SAM template for the Pager application.
 
 Resources:
+  ###############################################
+  # SERVICES
+  ###############################################
   AgencyService:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/agency/template.yaml
+
+  ###############################################
+  # API
+  ###############################################
   RootApi:
-    Type: AWS::Serverless::HttpApi
+    Type: AWS::ApiGatewayV2::Api
     Properties:
       Name: "pager-federated-api"
       Description: "Pager Federated API"
-      StageName: prod
+      ProtocolType: "HTTP"
+  ApiAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref RootApi
+      AuthorizerType: JWT
+      IdentitySource:
+        - "$request.header.Authorization"
+      Name: pager-api-authorizer
+      JwtConfiguration:
+        Issuer: "https://jsmith-dev.auth0.com/"
+        Audience:
+          - "https://pager"
+  # ApiStage:
+  #   Type: AWS::ApiGatewayV2::Stage
+  #   Properties:
+  #     ApiId: !Ref RootApi
+  #     StageName: prod
+  #     AutoDeploy: true
+
+  ###############################################
+  # ROUTES
+  ###############################################
+  AgencyServiceRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    DependsOn: ApiAuthorizer
+    Properties:
+      ApiId: !Ref RootApi
+      AuthorizationType: "JWT"
+      AuthorizerId: !Ref ApiAuthorizer
+      RouteKey: "ANY /agency"
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref AgencyServiceRootIntegration
+  AgencyServiceWildCardRoute:
+    Type: AWS::ApiGatewayV2::Route
+    DependsOn: ApiAuthorizer
+    Properties:
+      ApiId: !Ref RootApi
+      AuthorizationType: "JWT"
+      AuthorizerId: !Ref ApiAuthorizer
+      RouteKey: "ANY /agency/{proxy+}"
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref AgencyServiceWildCardIntegration
+
+  ###############################################
+  # ROUTE INTEGRATIONS
+  ###############################################
   AgencyServiceRootIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -33,25 +90,55 @@ Resources:
       PayloadFormatVersion: "1.0"
       RequestParameters:
         "overwrite:path": "prod/${request.path.proxy}"
-  AgencyServiceRootRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref RootApi
-      RouteKey: "ANY /agency"
-      Target: !Join
-        - /
-        - - integrations
-          - !Ref AgencyServiceRootIntegration
-  AgencyServiceWildCardRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref RootApi
-      RouteKey: "ANY /agency/{proxy+}"
-      Target: !Join
-        - /
-        - - integrations
-          - !Ref AgencyServiceWildCardIntegration
 
+  ###############################################
+  # COGNITO
+  ###############################################
+  # UserPool:
+  #   Type: AWS::Cognito::UserPool
+  #   Properties:
+  #     UserPoolName: pager-api-user-pool
+  #     AutoVerifiedAttributes:
+  #       - email
+  #     Schema:
+  #       - Name: name
+  #         AttributeDataType: String
+  #         Mutable: true
+  #         Required: true
+  #       - Name: email
+  #         AttributeDataType: String
+  #         Mutable: false
+  #         Required: true
+  # AuthAppClient:
+  #   Type: AWS::Cognito::UserPoolClient
+  #   Properties:
+  #     AllowedOAuthFlows:
+  #       - implicit
+  #     AllowedOAuthScopes:
+  #       - aws.cognito.signin.user.admin
+  #       - email
+  #       - openid
+  #       - profile
+  #     AllowedOAuthFlowsUserPoolClient: true
+  #     ClientName: pager-api-app-client
+  #     CallbackURLs:
+  #       - "https://your-app-url/callback" # Set your callback URL here.
+  #     LogoutURLs:
+  #       - "https://your-app-url/logout" # Set your logout URL here.
+  #     ExplicitAuthFlows:
+  #       - ALLOW_USER_PASSWORD_AUTH
+  #       - ALLOW_REFRESH_TOKEN_AUTH
+  #     UserPoolId: !Ref UserPool
+  #     SupportedIdentityProviders:
+  #       - COGNITO
+  # AuthHostedUI:
+  #   Type: AWS::Cognito::UserPoolDomain
+  #   Properties:
+  #     Domain: !Join
+  #       - "-"
+  #       - - !Ref RootApi
+  #         - !Ref AuthAppClient
+  #     UserPoolId: !Ref UserPool
 Outputs:
   RootApiUrl:
     Description: "Root API Gateway URL"
