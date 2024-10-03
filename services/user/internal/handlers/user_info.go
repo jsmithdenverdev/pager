@@ -1,0 +1,83 @@
+package handlers
+
+import (
+	"context"
+	"encoding/json"
+	"log/slog"
+	"net/http"
+
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/jsmithdenverdev/pager/services/user/internal/config"
+	"github.com/jsmithdenverdev/pager/services/user/internal/models"
+)
+
+func UserInfo(config config.Config, logger *slog.Logger, client *dynamodb.Client) func(context.Context, events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	type userInfoResponse struct {
+		ID     string `json:"id"`
+		Email  string `json:"email"`
+		IDPID  string `json:"idpId"`
+		Status string `json:"status"`
+	}
+
+	return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+		logger.InfoContext(ctx, "user-info", slog.Any("headers", event.Headers))
+		userId, ok := event.Headers["x-pager-userid"]
+		if !ok {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusOK,
+				Body:       "",
+			}, nil
+		}
+
+		row, err := client.GetItem(ctx, &dynamodb.GetItemInput{
+			TableName: aws.String(config.TableName),
+			Key: map[string]types.AttributeValue{
+				"id": &types.AttributeValueMemberS{
+					Value: userId,
+				},
+			},
+		})
+
+		if err != nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusInternalServerError,
+				Body:       "internal server error",
+			}, err
+		}
+
+		var user models.User
+
+		if err := attributevalue.UnmarshalMap(row.Item, &user); err != nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusInternalServerError,
+				Body:       "internal server error",
+			}, err
+		}
+
+		resp, err := json.Marshal(userInfoResponse{
+			ID:     user.ID,
+			Email:  user.Email,
+			IDPID:  user.IDPID,
+			Status: user.Status,
+		})
+
+		if err != nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusInternalServerError,
+				Body:       "internal server error",
+			}, err
+		}
+
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusOK,
+			Body:       string(resp),
+			Headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+		}, nil
+	}
+}
