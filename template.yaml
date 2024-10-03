@@ -115,8 +115,8 @@ Resources:
       IntegrationUri: !Sub "https://${UserService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/prod"
       PayloadFormatVersion: "1.0"
       RequestParameters:
-        "append:header.x-pager-userid": "$context.userid"
-        "append:header.x-pager-userinfo": "$context.userinfo"
+        "append:header.x-pager-userid": "$context.authorizer.userid"
+        "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
   UserServiceWildCardIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -128,8 +128,8 @@ Resources:
       PayloadFormatVersion: "1.0"
       RequestParameters:
         "overwrite:path": "prod/${request.path.proxy}"
-        "append:header.x-pager-userid": "$context.userid"
-        "append:header.x-pager-userinfo": "$context.userinfo"
+        "append:header.x-pager-userid": "$context.authorizer.userid"
+        "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
   AgencyServiceRootIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -140,8 +140,8 @@ Resources:
       IntegrationUri: !Sub "https://${AgencyService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/prod"
       PayloadFormatVersion: "1.0"
       RequestParameters:
-        "append:header.x-pager-userid": "$context.userid"
-        "append:header.x-pager-userinfo": "$context.userinfo"
+        "append:header.x-pager-userid": "$context.authorizer.userid"
+        "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
   AgencyServiceWildCardIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -153,8 +153,8 @@ Resources:
       PayloadFormatVersion: "1.0"
       RequestParameters:
         "overwrite:path": "prod/${request.path.proxy}"
-        "append:header.x-pager-userid": "$context.userid"
-        "append:header.x-pager-userinfo": "$context.userinfo"
+        "append:header.x-pager-userid": "$context.authorizer.userid"
+        "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
 
   ##########################################################
   # COGNITO
