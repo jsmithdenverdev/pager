@@ -6,6 +6,16 @@ Resources:
   ##########################################################
   # SERVICES
   ##########################################################
+  UserService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./services/user/template.yaml
+  AuthService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./services/auth/template.yaml
+      Parameters:
+        UserTableName: !GetAtt UserService.Outputs.TableName
   AgencyService:
     Type: AWS::Serverless::Application
     Properties:
@@ -24,14 +34,19 @@ Resources:
     Type: AWS::ApiGatewayV2::Authorizer
     Properties:
       ApiId: !Ref RootApi
-      AuthorizerType: JWT
+      AuthorizerType: REQUEST
       IdentitySource:
         - "$request.header.Authorization"
       Name: pager-api-authorizer
-      JwtConfiguration:
-        Issuer: "https://jsmith-dev.auth0.com/"
-        Audience:
-          - "https://pager"
+      AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthService.Outputs.AuthorizerLambdaArn}/invocations"
+      AuthorizerPayloadFormatVersion: "2.0"
+  ApiGatewayAuthorizerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt AuthService.Outputs.AuthorizerLambdaArn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RootApi}/authorizers/${ApiAuthorizer}
   ApiStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
@@ -42,12 +57,33 @@ Resources:
   ##########################################################
   # ROUTES
   ##########################################################
-  AgencyServiceRootRoute:
+  UserServiceRootRoute:
     Type: AWS::ApiGatewayV2::Route
-    DependsOn: ApiAuthorizer
     Properties:
       ApiId: !Ref RootApi
-      AuthorizationType: "JWT"
+      AuthorizationType: "CUSTOM"
+      AuthorizerId: !Ref ApiAuthorizer
+      RouteKey: "ANY /user"
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref UserServiceRootIntegration
+  UserServiceWildCardRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RootApi
+      AuthorizationType: "CUSTOM"
+      AuthorizerId: !Ref ApiAuthorizer
+      RouteKey: "ANY /user/{proxy+}"
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref UserServiceWildCardIntegration
+  AgencyServiceRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RootApi
+      AuthorizationType: "CUSTOM"
       AuthorizerId: !Ref ApiAuthorizer
       RouteKey: "ANY /agency"
       Target: !Join
@@ -56,10 +92,9 @@ Resources:
           - !Ref AgencyServiceRootIntegration
   AgencyServiceWildCardRoute:
     Type: AWS::ApiGatewayV2::Route
-    DependsOn: ApiAuthorizer
     Properties:
       ApiId: !Ref RootApi
-      AuthorizationType: "JWT"
+      AuthorizationType: "CUSTOM"
       AuthorizerId: !Ref ApiAuthorizer
       RouteKey: "ANY /agency/{proxy+}"
       Target: !Join
@@ -70,6 +105,31 @@ Resources:
   ##########################################################
   # ROUTE INTEGRATIONS
   ##########################################################
+  UserServiceRootIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref RootApi
+      Description: "User API root proxy integration"
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub "https://${UserService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/prod"
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        "append:header.x-pager-userid": "$context.userid"
+        "append:header.x-pager-userinfo": "$context.userinfo"
+  UserServiceWildCardIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref RootApi
+      Description: "User API wild card proxy integration"
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub "https://${UserService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/"
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        "overwrite:path": "prod/${request.path.proxy}"
+        "append:header.x-pager-userid": "$context.userid"
+        "append:header.x-pager-userinfo": "$context.userinfo"
   AgencyServiceRootIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -80,7 +140,8 @@ Resources:
       IntegrationUri: !Sub "https://${AgencyService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/prod"
       PayloadFormatVersion: "1.0"
       RequestParameters:
-        "append:header.x-pager-userid": "$context.authorizer.claims.sub"
+        "append:header.x-pager-userid": "$context.userid"
+        "append:header.x-pager-userinfo": "$context.userinfo"
   AgencyServiceWildCardIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -92,7 +153,8 @@ Resources:
       PayloadFormatVersion: "1.0"
       RequestParameters:
         "overwrite:path": "prod/${request.path.proxy}"
-        "append:header.x-pager-userid": "$context.authorizer.claims.sub"
+        "append:header.x-pager-userid": "$context.userid"
+        "append:header.x-pager-userinfo": "$context.userinfo"
 
   ##########################################################
   # COGNITO

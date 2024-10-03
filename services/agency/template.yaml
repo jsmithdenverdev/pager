@@ -31,6 +31,9 @@ Resources:
             Path: /
             Method: POST
             RestApiId: !Ref AgencyApi
+      Environment:
+        Variables:
+          POLICY_STORE_ID: "Nhunw9Q4KevxMv9ZbqWK1k"
 
 ###############################################
 # OUTPUTS
