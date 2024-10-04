@@ -1,9 +1,9 @@
 # name: Build, Test, and Save Artifacts for Changed Services
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    types:
+      - closed
 #     paths:
 #       - "services/**"
 
@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   version_increment:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       # Step 1: Checkout the repository
