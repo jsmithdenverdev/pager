@@ -1,102 +1,39 @@
 # name: Build, Test, and Save Artifacts for Changed Services
 
-# on:
-#   push:
-#     branches:
-#       - main
+on:
+  push:
+    branches:
+      - main
 #     paths:
 #       - "services/**"
 
-# permissions:
-#   contents: write # Grant write permissions for tagging
+permissions:
+  contents: write # Grant write permissions for tagging
 
-# jobs:
-#   build-and-save-artifact:
-#     runs-on: ubuntu-latest
-#     strategy:
-#       matrix:
-#         service:
-#           - agency
-#       fail-fast: false
+jobs:
+  version_increment:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v2
-#         with:
-#           fetch-depth: 0 # Fetch all history so origin/main is available
+      # Step 2: Get merged branch name from the commit message
+      - name: Get merged branch name
+        id: get_branch
+        run: |
+          # Extract the branch name from the commit message
+          merged_branch=$(git log -1 --pretty=%s | sed -n 's/^Merge branch "\(.*\)".*/\1/p')
+          echo "Merged branch: $merged_branch"
+          echo "merged_branch=$merged_branch" >> $GITHUB_ENV
 
-#       - name: Check if service has changed
-#         id: check_changes
-#         run: |
-#           CHANGED_FILES=$(git diff --name-only origin/main)
-#           if echo "$CHANGED_FILES" | grep -q "^services/${{ matrix.service }}/"; then
-#             echo "Service ${{ matrix.service }} has changed."
-#             echo "SHOULD_BUILD=true" >> "$GITHUB_OUTPUT"
-#           else
-#             echo "Service ${{ matrix.service }} has not changed."
-#             echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
-#           fi
+      # Step 3: Run the version increment script
+      - name: Run version increment script
+        run: |
+          # Pass the merged branch name as an argument to the shell script
+          bash ./scripts/branch_version.sh $merged_branch
 
-#       - name: Set version for the service
-#         id: set_version
-#         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
-#         run: |
-#           # Define the tag prefix for the service
-#           TAG_PREFIX="services/${{ matrix.service }}"
-
-#           # Search for the latest tag for this specific service
-#           LATEST_TAG=$(git tag --list "${TAG_PREFIX}/*" --sort=-v:refname | head -n 1)
-
-#           if [ -z "$LATEST_TAG" ]; then
-#             # No tag exists, set initial version
-#             TAG="${TAG_PREFIX}/v1.0.0"
-#           else
-#             # Increment the latest tag for the service
-#             TAG=$(echo $LATEST_TAG | sed "s|^${TAG_PREFIX}/v||" | awk -F. '{$NF += 1; print "'${TAG_PREFIX}'/v"$1"."$2"."$3}')
-#             VERSION=$(echo $TAG | sed "s|^${TAG_PREFIX}/||")
-#           fi
-
-#           echo "New tag: $TAG"
-#           echo "New version: $VERSION"
-#           echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
-#           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
-
-#       - name: Run tests
-#         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
-#         working-directory: services/${{ matrix.service }}
-#         run: |
-#           echo "Running tests for ${{ matrix.service }}"
-#           go test ./...
-
-#       - name: Run build script
-#         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
-#         working-directory: services/${{ matrix.service }}
-#         run: |
-#           echo "Running build script for ${{ matrix.service }} with version ${{ steps.set_version.outputs.VERSION }}"
-#           chmod +x ./build.sh
-#           ./build.sh ${{ steps.set_version.outputs.VERSION }}
-
-#       - name: Save build artifact
-#         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
-#         uses: actions/upload-artifact@v3
-#         with:
-#           name: ${{ matrix.service }}-${{ steps.set_version.outputs.VERSION }}
-#           path: services/${{matrix.service}}/dist
-
-#       - name: Create tag
-#         if: steps.check_changes.outputs.SHOULD_BUILD == 'true'
-#         run: |
-#           git tag ${{ steps.set_version.outputs.TAG }}
-#           git push origin ${{ steps.set_version.outputs.TAG }}
-
-#       - name: Create GitHub release
-#         if: steps.check_changes.outputs.should_build == 'true'
-#         uses: softprops/action-gh-release@v2
-#         with:
-#           name: ${{matrix.service}} Release ${{ steps.set_version.outputs.VERSION }}
-#           tag_name: ${{ steps.set_version.outputs.TAG }}
-#           body: |
-#             Release of ${{ matrix.service }} service version ${{ steps.set_version.outputs.VERSION }}
-#           draft: false
-#           prerelease: false
-#           files: services/${{matrix.service}}/dist/*
+      # Step 4: Output the version increment
+      - name: Output version increment
+        run: |
+          echo "Version Increment: $version_increment"
