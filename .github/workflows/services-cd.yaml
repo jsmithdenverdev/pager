@@ -18,22 +18,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Get merged branch name from the commit message
-      - name: Get merged branch name
-        id: get_branch
-        run: |
-          # Extract the branch name from the commit message
-          merged_branch=$(git log -1 --pretty=%s | sed -n 's/^Merge branch "\(.*\)".*/\1/p')
-          echo "Merged branch: $merged_branch"
-          echo "merged_branch=$merged_branch" >> $GITHUB_ENV
-
-      # Step 3: Run the version increment script
-      - name: Run version increment script
+      # Step 2: Run the version increment script
+      - name: Run version increment script using merged branch name
+        env:
+          merged_branch: ${{ github.event.pull_request.head.ref }}
         run: |
           # Pass the merged branch name as an argument to the shell script
-          bash ./scripts/branch_version.sh $merged_branch
+          ./scripts/branch_version.sh $merged_branch
 
-      # Step 4: Output the version increment
+      # Step 3: Output the version increment
       - name: Output version increment
         run: |
           echo "Version Increment: $version_increment"
