@@ -11,9 +11,9 @@ type Config struct {
 
 func LoadFromEnv(getenv func(string) string) (Config, error) {
 	missing := make([]string, 0)
-	PolicyStoreID := getenv("POLICY_STORE_ID ")
+	PolicyStoreID := getenv("POLICY_STORE_ID")
 	if PolicyStoreID == "" {
-		missing = append(missing, "POLICY_STORE_ID ")
+		missing = append(missing, "POLICY_STORE_ID")
 	}
 
 	if len(missing) > 0 {

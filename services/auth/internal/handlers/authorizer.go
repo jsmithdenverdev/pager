@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/golang-jwt/jwt/v5"
@@ -18,76 +19,62 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
+type userInfo struct {
+	ID           string   `dynamodbav:"id" json:"id"`
+	Email        string   `dynamodbav:"email" json:"email"`
+	IDPID        string   `dynamodbav:"idpId" json:"idpId"`
+	Status       string   `dynamodbav:"status" json:"status"`
+	Entitlements []string `dynamodbav:"entitlements" json:"entitlements"`
+	Agencies     []struct {
+		Roles []string `dynamodbav:"roles" json:"roles"`
+	} `dynamodbav:"agencies" json:"agencies"`
+}
+
 func Authorizer(config config.Config, logger *slog.Logger, client *dynamodb.Client) func(context.Context, events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
-	type userInfoResponse struct {
-		ID     string `json:"id"`
-		Email  string `json:"email"`
-		IDPID  string `json:"idpId"`
-		Status string `json:"status"`
-	}
-
 	return func(ctx context.Context, event events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
-		logger.InfoContext(ctx, "request for authorization", slog.Any("event", event))
+		// Create a deny response by default. If auth succeeds we modify the
+		// response to an Approve and add the userid and userinfo to context.
+		response := events.APIGatewayCustomAuthorizerResponse{
+			PrincipalID: "Anonymous",
+			PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
+				Version: "2012-10-17",
+				Statement: []events.IAMPolicyStatement{
+					{
+						Action:   []string{"execute-api:Invoke"},
+						Effect:   "Deny",
+						Resource: []string{"*"},
+					},
+				},
+			},
+		}
 
+		// Fetch token from header
 		tokenString := getTokenFromHeader(event.Headers["authorization"])
 		if tokenString == "" {
 			logger.ErrorContext(ctx, "authorization failed", slog.String("error", "no token in header"))
-			return events.APIGatewayCustomAuthorizerResponse{
-				PrincipalID: "Anonymous",
-				PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
-					Version: "2012-10-17",
-					Statement: []events.IAMPolicyStatement{
-						{
-							Action:   []string{"execute-api:Invoke"},
-							Effect:   "Deny",
-							Resource: []string{"*"},
-						},
-					},
-				},
-			}, nil
+			return response, nil
 		}
 
 		// Fetch the JWKS from Auth0
 		jwks, err := jwk.Fetch(ctx, fmt.Sprintf("https://%s/.well-known/jwks.json", config.Auth0Domain))
 		if err != nil {
 			logger.ErrorContext(ctx, "authorization failed", slog.String("error", err.Error()))
-			return events.APIGatewayCustomAuthorizerResponse{
-				PrincipalID: "Anonymous",
-				PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
-					Version: "2012-10-17",
-					Statement: []events.IAMPolicyStatement{
-						{
-							Action:   []string{"execute-api:Invoke"},
-							Effect:   "Deny",
-							Resource: []string{"*"},
-						},
-					},
-				},
-			}, nil
+			return response, nil
 		}
 
 		// Parse and validate the JWT
 		claims, err := verifyToken(tokenString, config.Auth0Audience, config.Auth0Domain, jwks)
 		if err != nil {
 			logger.ErrorContext(ctx, "authorization failed", slog.String("error", err.Error()))
-			return events.APIGatewayCustomAuthorizerResponse{
-				PrincipalID: "Anonymous",
-				PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
-					Version: "2012-10-17",
-					Statement: []events.IAMPolicyStatement{
-						{
-							Action:   []string{"execute-api:Invoke"},
-							Effect:   "Deny",
-							Resource: []string{"*"},
-						},
-					},
-				},
-			}, nil
+			return response, nil
 		}
 
-		// Ensure audience matches
+		// Fetch sub (user id) from token claims
 		sub := claims["sub"].(string)
+		// Add the sub as the principal ID in the response policy
+		response.PrincipalID = sub
 
+		// Using the sub, fetch the user details for this user.
 		row, err := client.GetItem(ctx, &dynamodb.GetItemInput{
 			TableName: aws.String(config.TableName),
 			Key: map[string]types.AttributeValue{
@@ -99,59 +86,35 @@ func Authorizer(config config.Config, logger *slog.Logger, client *dynamodb.Clie
 
 		if err != nil {
 			logger.ErrorContext(ctx, "authorization failed", slog.String("error", err.Error()))
-			return events.APIGatewayCustomAuthorizerResponse{
-				PrincipalID: "Anonymous",
-				PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
-					Version: "2012-10-17",
-					Statement: []events.IAMPolicyStatement{
-						{
-							Action:   []string{"execute-api:Invoke"},
-							Effect:   "Deny",
-							Resource: []string{"*"},
-						},
-					},
-				},
-			}, nil
+			return response, nil
 		}
 
-		userJSON, err := json.Marshal(row.Item)
+		// Unmarshal the user dynamodb record into a userInfo struct
+		var userInfo userInfo
+		err = attributevalue.UnmarshalMap(row.Item, &userInfo)
 
 		if err != nil {
 			logger.ErrorContext(ctx, "authorization failed", slog.String("error", err.Error()))
-			return events.APIGatewayCustomAuthorizerResponse{
-				PrincipalID: "Anonymous",
-				PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
-					Version: "2012-10-17",
-					Statement: []events.IAMPolicyStatement{
-						{
-							Action:   []string{"execute-api:Invoke"},
-							Effect:   "Deny",
-							Resource: []string{"*"},
-						},
-					},
-				},
-			}, nil
+			return response, nil
 		}
 
-		return events.APIGatewayCustomAuthorizerResponse{
-			PrincipalID: sub,
-			PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
-				Version: "2012-10-17",
-				Statement: []events.IAMPolicyStatement{
-					{
-						Action: []string{"execute-api:Invoke"},
-						Effect: "Allow",
-						// TODO: Find out why method arn is not propagating
-						Resource: []string{event.MethodArn, "*"},
-					},
-				},
-			},
-			Context: map[string]interface{}{
-				"userid":   sub,
-				"userinfo": string(userJSON),
-			},
-		}, nil
+		// marhsal userInfo into json
+		userJSON, err := json.Marshal(userInfo)
 
+		if err != nil {
+			logger.ErrorContext(ctx, "authorization failed", slog.String("error", err.Error()))
+			return response, nil
+		}
+
+		// We've succesfully validated the token and fetched the user, convert the
+		// policy effect to ALlow, add userid and userinfo to the response context.
+		response.PolicyDocument.Statement[0].Effect = "Allow"
+		response.Context = map[string]interface{}{
+			"userid":   sub,
+			"userinfo": string(userJSON),
+		}
+
+		return response, nil
 	}
 }
 
