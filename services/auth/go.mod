@@ -6,11 +6,12 @@ require (
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/aws-sdk-go-v2 v1.31.0
 	github.com/aws/aws-sdk-go-v2/config v1.27.39
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.35.3
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.35.4
 	github.com/lestrrat-go/jwx v1.2.30
 )
 
 require (
+	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.23.4 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
@@ -24,6 +25,7 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.37 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.15.9
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.14 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.18 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.18 // indirect

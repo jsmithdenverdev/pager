@@ -20,6 +20,8 @@ Resources:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/agency/template.yaml
+      Parameters:
+        PolicyStoreId: Nhunw9Q4KevxMv9ZbqWK1k
 
   ##########################################################
   # API

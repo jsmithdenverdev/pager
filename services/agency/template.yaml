@@ -2,6 +2,11 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: "AWS::Serverless-2016-10-31"
 Description: AWS SAM template for the Pager Agency service.
 
+Parameters:
+  PolicyStoreId:
+    Type: String
+    Description: "Amazon Verified Permissions Policy Store ID"
+
 Resources:
   ###############################################
   # API
@@ -33,7 +38,14 @@ Resources:
             RestApiId: !Ref AgencyApi
       Environment:
         Variables:
-          POLICY_STORE_ID: "Nhunw9Q4KevxMv9ZbqWK1k"
+          POLICY_STORE_ID: !Ref PolicyStoreId
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - verifiedpermissions:IsAuthorized
+              Resource: !Sub arn:aws:verifiedpermissions::${AWS::AccountId}:policy-store/${PolicyStoreId}
 
 ###############################################
 # OUTPUTS
