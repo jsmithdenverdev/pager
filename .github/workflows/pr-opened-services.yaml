@@ -1,0 +1,16 @@
+name: PR Opened - Services
+
+on:
+  pull_request:
+    types: [opened]
+    paths:
+      - "services/**"
+jobs:
+  print-pr-info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print PR Opened Info
+        run: |
+          echo "Pull request opened!"
+          echo "Source branch: ${{ github.event.pull_request.head.ref }}"
+          echo "Target branch: ${{ github.event.pull_request.base.ref }}"

@@ -4,8 +4,8 @@ on:
   pull_request:
     types:
       - closed
-#     paths:
-#       - "services/**"
+    paths:
+      - "pkg/**"
 
 permissions:
   contents: write # Grant write permissions for tagging

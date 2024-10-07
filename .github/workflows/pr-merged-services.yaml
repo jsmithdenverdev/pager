@@ -1,0 +1,17 @@
+name: PR Merged - Services
+
+on:
+  pull_request:
+    types: [closed]
+    paths:
+      - "services/**"
+jobs:
+  print-merge-info:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print PR Merged Info
+        run: |
+          echo "Pull request merged!"
+          echo "Source branch: ${{ github.event.pull_request.head.ref }}"
+          echo "Target branch: ${{ github.event.pull_request.base.ref }}"

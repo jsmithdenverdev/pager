@@ -1,0 +1,17 @@
+name: PR Commit - Pkg
+
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - "pkg/**"
+jobs:
+  print-commit-info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print Commit Info
+        run: |
+          echo "New commit to the pull request!"
+          echo "Source branch: ${{ github.event.pull_request.head.ref }}"
+          echo "Target branch: ${{ github.event.pull_request.base.ref }}"
+          echo "Commit hash: ${{ github.event.after }}"
