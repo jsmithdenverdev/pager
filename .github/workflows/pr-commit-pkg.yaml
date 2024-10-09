@@ -1,17 +1,68 @@
-name: PR Commit - Pkg
+name: Package CI on PR Commit
 
 on:
   pull_request:
-    types: [synchronize]
+    types: [opened, synchronize]
     paths:
       - "pkg/**"
+
 jobs:
-  print-commit-info:
+  determine-changes:
     runs-on: ubuntu-latest
     steps:
-      - name: Print Commit Info
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Determine changed packages
+        id: changed_packages
         run: |
-          echo "New commit to the pull request!"
-          echo "Source branch: ${{ github.event.pull_request.head.ref }}"
-          echo "Target branch: ${{ github.event.pull_request.base.ref }}"
-          echo "Commit hash: ${{ github.event.after }}"
+          CHANGED_DIRS=$(git diff --name-only origin/main...HEAD | grep '^pkg/' | cut -d'/' -f1-2 | sort -u)
+          if [ -z "$CHANGED_DIRS" ]; then
+            echo "No changes detected in pkg/ directories"
+          else
+            echo "Changed directories: $CHANGED_DIRS"
+            echo "dirs=$CHANGED_DIRS" >> $GITHUB_ENV
+          fi
+
+  build-and-test:
+    needs: determine-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory: ${{ fromJson(env.dirs) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23.1"
+
+      - name: Build package
+        run: |
+          cd ${{ matrix.directory }}
+          go build ./...
+
+      - name: Test package
+        run: |
+          cd ${{ matrix.directory }}
+          go test ./...
+
+      - name: Get latest semantic version
+        id: get_version
+        run: |
+          TAG=$(git tag -l "${{ matrix.directory }}/*" --sort=-v:refname | head -n 1)
+          if [ -z "$TAG" ]; then
+            echo "latest_version=1.0.0" >> $GITHUB_ENV
+          else
+            VERSION=$(echo $TAG | cut -d '/' -f 2)
+            echo "latest_version=$VERSION" >> $GITHUB_ENV
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ matrix.directory }}/${{ env.latest_version }}.${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
