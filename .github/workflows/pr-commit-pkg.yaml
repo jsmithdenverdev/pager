@@ -67,6 +67,14 @@ jobs:
           echo "Latest version: $latest_version"
           echo "latest_version=$latest_version" >> $GITHUB_ENV
 
+      - name: Normalize branch name
+        id: branch_name
+        run: |
+          branch_name="$GITHUB_HEAD_REF"
+          normalized_branch_name="${branch_name//\//-}"
+          echo "Normalized branch name: $normalized_branch_name"
+          echo "normalized_branch_name=$normalized_branch_name" >> $GITHUB_ENV
+
       - name: Set short git commit SHA
         id: short_sha
         run: |
@@ -77,6 +85,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ matrix.directory }}/${{ env.latest_version }}.${{ env.commit_short_sha }}
+          tag_name: ${{ matrix.directory }}/${{ env.latest_version }}.${{ env.normalized_branch_name }}-${{ env.commit_short_sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
