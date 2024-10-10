@@ -6,6 +6,9 @@ on:
     paths:
       - "pkg/**"
 
+permissions:
+  contents: write # Grant write permissions for tagging
+
 jobs:
   determine-changes:
     runs-on: ubuntu-latest
@@ -62,7 +65,7 @@ jobs:
             latest_version=$VERSION 
           fi
           echo "Latest version: $latest_version"
-          echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
+          echo "latest_version=$latest_version" >> $GITHUB_ENV
 
       - name: Set short git commit SHA
         id: short_sha
