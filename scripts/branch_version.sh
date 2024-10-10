@@ -41,10 +41,4 @@ if [ -z "$version_increment" ]; then
     version_increment="NOOP"
 fi
 
-# Print the result to console
-echo "Branch: $branch_name"
-echo "Prefix: $branch_prefix"
-echo "Version Increment: $version_increment"
-
-# Set the output for the GitHub Action
-echo "version_increment=$version_increment" >> $GITHUB_ENV
+echo $version_increment
