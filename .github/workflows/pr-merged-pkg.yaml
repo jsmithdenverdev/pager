@@ -5,13 +5,124 @@ on:
     types: [closed]
     paths:
       - "pkg/**"
+permissions:
+  contents: write # Grant write permissions for tagging
+
 jobs:
-  print-merge-info:
-    if: github.event.pull_request.merged == true
+  determine-changes:
     runs-on: ubuntu-latest
+    outputs:
+      changed_dirs: ${{ steps.set-changes.outputs.changed_dirs }}
     steps:
-      - name: Print PR Merged Info
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed packages
+        id: set-changes
         run: |
-          echo "Pull request merged!"
-          echo "Source branch: ${{ github.event.pull_request.head.ref }}"
-          echo "Target branch: ${{ github.event.pull_request.base.ref }}"
+          CHANGED_DIRS=$(git diff --name-only origin/main...HEAD | grep '^pkg/' | cut -d'/' -f1-2 | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "Changed directories: $CHANGED_DIRS"
+          echo "changed_dirs=$CHANGED_DIRS" >> $GITHUB_OUTPUT
+
+  build-and-test:
+    needs: determine-changes
+    runs-on: ubuntu-latest
+    if: needs.determine-changes.outputs.changed_dirs != '[]'
+    strategy:
+      matrix:
+        directory: ${{ fromJson(needs.determine-changes.outputs.changed_dirs) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23.1"
+
+      - name: Build package
+        run: |
+          cd ${{ matrix.directory }}
+          go build ./...
+
+      - name: Test package
+        run: |
+          cd ${{ matrix.directory }}
+          go test ./...
+
+  tag-and-release:
+    needs: determine-changes
+    runs-on: ubuntu-latest
+    if: needs.determine-changes.outputs.changed_dirs != '[]'
+    strategy:
+      matrix:
+        directory: ${{ fromJson(needs.determine-changes.outputs.changed_dirs) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Calculate next semantic version increment
+        id: calculate_increment
+        run: |
+          version_increment=$(./scripts/branch_version.sh $GITHUB_HEAD_REF)
+          echo "Version increment: $version_increment"
+          echo "version_increment=$version_increment" >> $GITHUB_ENV
+
+      - name: Get latest semantic version
+        id: get_version
+        run: |
+          latest_version=v1.0.0
+          TAG=$(git tag -l "${{ matrix.directory }}/*" --sort=-v:refname | head -n 1)
+          if [ "$TAG" ]; then
+            VERSION=$(echo "$TAG" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')
+            latest_version=$VERSION 
+          fi
+          echo "Latest version: $latest_version"
+          echo "latest_version=$latest_version" >> $GITHUB_ENV
+
+      - name: Calculate next version
+        id: calculate_version
+        run: |
+          # Extract the major, minor, and patch components from the version
+          major=$(echo "$latest_version" | cut -d '.' -f 1 | tr -d 'v')
+          minor=$(echo "$latest_version" | cut -d '.' -f 2)
+          patch=$(echo "$latest_version" | cut -d '.' -f 3)
+
+          case "$version_increment" in
+            "MAJOR")
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            "MINOR")
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            "PATCH")
+              patch=$((patch + 1))
+              ;;
+            "NOOP")
+              # No operation, keep version as is
+              ;;
+            *)
+              echo "Invalid increment type. Use MAJOR, MINOR, PATCH, or NOOP."
+              exit 1
+              ;;
+          esac
+
+          next_version="v$major.$minor.$patch"
+          echo "Next version: $next_version"
+          echo "next_version=$next_version" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ matrix.directory }}/${{ env.next_version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
