@@ -1,17 +1,17 @@
-name: PR Commit - Services
+name: Services CD
 
 on:
   pull_request:
-    types: [synchronize]
+    types: [closed]
     paths:
       - "services/**"
 jobs:
-  print-commit-info:
+  print-merge-info:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: Print Commit Info
+      - name: Print PR Merged Info
         run: |
-          echo "New commit to the pull request!"
+          echo "Pull request merged!"
           echo "Source branch: ${{ github.event.pull_request.head.ref }}"
           echo "Target branch: ${{ github.event.pull_request.base.ref }}"
-          echo "Commit hash: ${{ github.event.after }}"

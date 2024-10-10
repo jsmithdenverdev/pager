@@ -1,4 +1,4 @@
-name: Package CI on PR Commit
+name: Package CI
 
 on:
   pull_request:
