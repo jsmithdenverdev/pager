@@ -57,7 +57,7 @@ jobs:
         run: |
           latest_version=1.0.0
           TAG=$(git tag -l "${{ matrix.directory }}/*" --sort=-v:refname | head -n 1)
-          if [ -n "$TAG"]; then
+          if [ "$TAG" ]; then
             VERSION=$(echo $TAG | cut -d '/' -f 2)
             latest_version=$VERSION 
           fi
@@ -71,12 +71,9 @@ jobs:
           echo "Calculated short sha: $calculated_sha"
           echo "commit_short_sha=$calculated_sha" >> $GITHUB_ENV
 
-      - name: Confirm git commit SHA output
-        run: echo ${{ env.COMMIT_SHORT_SHA }}
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ matrix.directory }}/${{ needs.get_version.outputs.latest_version }}.${{ env.commit_short_sha }}
+          tag_name: ${{ matrix.directory }}/${{ env.latest_version }}.${{ env.commit_short_sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
