@@ -1,4 +1,4 @@
-name: PR Merged - Pkg
+name: Package CD
 
 on:
   pull_request:
