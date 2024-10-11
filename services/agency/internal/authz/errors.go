@@ -17,3 +17,5 @@ func NewAuthzError(permission permission, resource Resource) AuthzError {
 		Resource:   resource,
 	}
 }
+
+// test
