@@ -30,12 +30,30 @@ jobs:
           echo Modified directories
           echo ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
 
-  build-and-test:
+  lint-and-test:
     needs: determine-changes
     runs-on: ubuntu-latest
     strategy:
       matrix:
         directory: ${{ fromJson(needs.determine-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23.1"
+
+      - name: Test package
+        run: |
+          cd ${{ matrix.directory }}
+          go test ./...
+
+  build-and-deploy:
+    needs: lint-and-test
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -59,11 +77,6 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: "1.23.1"
-
-      - name: Test package
-        run: |
-          cd ${{ matrix.directory }}
-          go test ./...
 
       - name: SAM build
         run: |
