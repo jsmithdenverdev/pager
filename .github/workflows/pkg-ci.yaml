@@ -10,27 +10,31 @@ jobs:
   determine-changes:
     runs-on: ubuntu-latest
     outputs:
-      changed_dirs: ${{ steps.set-changes.outputs.changed_dirs }}
+      matrix: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Determine changed packages
-        id: set-changes
+      - name: Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@v45.0.3
+        with:
+          matrix: "true"
+          dir_names: "true"
+
+      - name: Log changed directories
         run: |
-          CHANGED_DIRS=$(git diff --name-only origin/main...HEAD | grep '^pkg/' | cut -d'/' -f1-2 | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          echo "Changed directories: $CHANGED_DIRS"
-          echo "changed_dirs=$CHANGED_DIRS" >> $GITHUB_OUTPUT
+          echo Modified directories
+          echo ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
 
   build-and-test:
     needs: determine-changes
     runs-on: ubuntu-latest
-    if: needs.determine-changes.outputs.changed_dirs != '[]'
     strategy:
       matrix:
-        directory: ${{ fromJson(needs.determine-changes.outputs.changed_dirs) }}
+        directory: ${{ fromJson(needs.determine-changes.outputs.matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
