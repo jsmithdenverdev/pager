@@ -18,4 +18,3 @@ func NewAuthzError(permission permission, resource Resource) AuthzError {
 	}
 }
 
-// test
