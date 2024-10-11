@@ -14,4 +14,3 @@ func (auditable Auditable) Identity() string {
 	return auditable.ID
 }
 
-
