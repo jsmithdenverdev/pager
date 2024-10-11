@@ -5,3 +5,5 @@ type Sample struct {
 	// Body is a message in a sample object
 	Body string
 }
+
+// some change
