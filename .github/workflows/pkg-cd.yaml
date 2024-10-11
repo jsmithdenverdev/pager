@@ -12,7 +12,7 @@ jobs:
   determine-changes:
     runs-on: ubuntu-latest
     outputs:
-      changed_dirs: ${{ steps.set-changes.outputs.changed_dirs }}
+      matrix: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,32 +20,18 @@ jobs:
           fetch-depth: 0
 
       - name: Changed Files
-        id: changed_files
+        id: changed-files
         uses: tj-actions/changed-files@v45.0.3
         with:
+          json: "true"
           dir_names: "true"
-
-      - name: Print changed files
-        run: |
-          echo '--------------------------'
-          echo ALL CHANGED FILES
-          echo ${{ steps.changed_files.outputs.all_changed_and_modified_files }}
-          echo '--------------------------'
-
-      - name: Determine changed packages
-        id: set-changes
-        run: |
-          CHANGED_DIRS=$(git diff --name-only origin/main...HEAD | grep '^pkg/' | cut -d'/' -f1-2 | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          echo "Changed directories: $CHANGED_DIRS"
-          echo "changed_dirs=$CHANGED_DIRS" >> $GITHUB_OUTPUT
 
   build-and-test:
     needs: determine-changes
     runs-on: ubuntu-latest
-    if: needs.determine-changes.outputs.changed_dirs != '[]'
     strategy:
       matrix:
-        directory: ${{ fromJson(needs.determine-changes.outputs.changed_dirs) }}
+        directory: ${{ fromJson(needs.determine-changes.outputs.matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -68,27 +54,24 @@ jobs:
           go test ./...
 
   tag-and-release:
-    needs: determine-changes
+    needs: [determine-changes, build-and-test]
     runs-on: ubuntu-latest
-    if: needs.determine-changes.outputs.changed_dirs != '[]'
     strategy:
       matrix:
-        directory: ${{ fromJson(needs.determine-changes.outputs.changed_dirs) }}
+        directory: ${{ fromJson(needs.determine-changes.outputs.matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Calculate next semantic version increment
-        id: calculate_increment
+      - name: Get version increment
         run: |
           version_increment=$(./scripts/branch_version.sh $GITHUB_HEAD_REF)
           echo "Version increment: $version_increment"
           echo "version_increment=$version_increment" >> $GITHUB_ENV
 
-      - name: Get latest semantic version
-        id: get_version
+      - name: Get latest package semver
         run: |
           latest_version=v1.0.0
           TAG=$(git tag -l "${{ matrix.directory }}/*" --sort=-v:refname | head -n 1)
@@ -99,8 +82,7 @@ jobs:
           echo "Latest version: $latest_version"
           echo "latest_version=$latest_version" >> $GITHUB_ENV
 
-      - name: Calculate next version
-        id: calculate_version
+      - name: Calculate next package semver
         run: |
           # Extract the major, minor, and patch components from the version
           major=$(echo "$latest_version" | cut -d '.' -f 1 | tr -d 'v')
