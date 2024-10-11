@@ -71,6 +71,12 @@ jobs:
           cd ${{ matrix.directory }}
           go test ./...
 
+      - name: Upload SAM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sam-build
+          path: .aws-sam/build
+
       # TODO: This won't be neccesary for packages as we can use a git commit
       # sha as the package version.
       # However, this may be useful for ephemeral service builds. Keeping the
