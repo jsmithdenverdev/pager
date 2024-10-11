@@ -26,6 +26,11 @@ jobs:
           json: "true"
           dir_names: "true"
 
+      - name: Log changed directories
+        run: |
+          echo Modified directories
+          echo ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
+
   build-and-test:
     needs: determine-changes
     runs-on: ubuntu-latest
