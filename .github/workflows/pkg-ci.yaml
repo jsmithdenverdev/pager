@@ -23,7 +23,7 @@ jobs:
         with:
           matrix: "true"
           dir_names: "true"
-          dir_names_max_depth: '2'
+          dir_names_max_depth: "2"
 
       - name: Log changed directories
         run: |
@@ -56,29 +56,3 @@ jobs:
         run: |
           cd ${{ matrix.directory }}
           go test ./...
-
-      # TODO: This won't be neccesary for packages as we can use a git commit
-      # sha as the package version.
-      # However, this may be useful for ephemeral service builds. Keeping the
-      # code around for the time being.
-      # - name: Normalize branch name
-      #   id: branch_name
-      #   run: |
-      #     branch_name="$GITHUB_HEAD_REF"
-      #     normalized_branch_name="${branch_name//\//-}"
-      #     echo "Normalized branch name: $normalized_branch_name"
-      #     echo "normalized_branch_name=$normalized_branch_name" >> $GITHUB_ENV
-
-      # - name: Set short git commit SHA
-      #   id: short_sha
-      #   run: |
-      #     calculated_sha=$(git rev-parse --short ${{ github.sha }})
-      #     echo "Calculated short sha: $calculated_sha"
-      #     echo "commit_short_sha=$calculated_sha" >> $GITHUB_ENV
-
-      # - name: Create GitHub Release
-      #   uses: softprops/action-gh-release@v1
-      #   with:
-      #     tag_name: ${{ matrix.directory }}/${{ env.latest_version }}-${{ env.normalized_branch_name }}.${{ env.commit_short_sha }}
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
