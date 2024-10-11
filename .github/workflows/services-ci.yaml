@@ -63,6 +63,7 @@ jobs:
         run: |
           # cd ${{ matrix.directory }}
           # go build ./...
+          echo $(pwd)
           sam build --use-container
 
       - name: Test package
