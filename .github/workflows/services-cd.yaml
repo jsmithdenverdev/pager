@@ -6,12 +6,93 @@ on:
     paths:
       - "services/**"
 jobs:
-  print-merge-info:
-    if: github.event.pull_request.merged == true
+  determine-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@v45.0.3
+        with:
+          matrix: "true"
+          dir_names: "true"
+          dir_names_max_depth: "2"
+
+      - name: Log changed directories
+        run: |
+          echo Modified directories
+          echo ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
+
+  lint-and-test:
+    needs: determine-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory: ${{ fromJson(needs.determine-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23.1"
+
+      - name: Test package
+        run: |
+          cd ${{ matrix.directory }}
+          go test ./...
+
+  build-and-deploy:
+    needs: lint-and-test
     runs-on: ubuntu-latest
     steps:
-      - name: Print PR Merged Info
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23.1"
+
+      - name: SAM build
         run: |
-          echo "Pull request merged!"
-          echo "Source branch: ${{ github.event.pull_request.head.ref }}"
-          echo "Target branch: ${{ github.event.pull_request.base.ref }}"
+          sam build
+
+      - name: SAM validate
+        run: |
+          sam validate --lint
+
+      - name: SAM deploy
+        run: |
+          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
+
+      - name: Upload SAM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sam-build
+          path: .aws-sam/build
+

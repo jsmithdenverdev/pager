@@ -52,7 +52,7 @@ jobs:
           cd ${{ matrix.directory }}
           go test ./...
 
-  build-and-deploy:
+  build:
     needs: lint-and-test
     runs-on: ubuntu-latest
     steps:
@@ -87,9 +87,10 @@ jobs:
         run: |
           sam validate --lint
 
-      - name: SAM deploy
-        run: |
-          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
+      # TODO: establish a development environment to deploy to
+      # - name: SAM deploy
+      #   run: |
+      #     sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
 
       - name: Upload SAM artifact
         uses: actions/upload-artifact@v4
