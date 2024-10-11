@@ -23,7 +23,7 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v45.0.3
         with:
-          json: "true"
+          matrix: "true"
           dir_names: "true"
 
       - name: Log changed directories
