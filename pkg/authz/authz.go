@@ -6,4 +6,3 @@ type Sample struct {
 	Body string
 }
 
-// some change
