@@ -1,4 +1,6 @@
 package authz
 
 
-type Sample struct {}
+type Sample struct {
+	// sample
+}
