@@ -2,9 +2,10 @@ name: General CI
 
 on:
   push:
-    paths-ignore:
-      - "pkg/**" # Ignore changes in pkg/ directory
-      - "services/**" # Ignore changes in services/ directory
+    paths-include:
+      - "**/*"
+      - "!pkg/**" # Ignore changes in pkg/ directory
+      - "!services/**" # Ignore changes in services/ directory
 
 jobs:
   ci-status:
