@@ -11,4 +11,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set CI status
-        run: return 0
+        run: exit 0
