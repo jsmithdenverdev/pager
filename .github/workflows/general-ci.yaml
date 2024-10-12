@@ -1,0 +1,14 @@
+name: General CI
+
+on:
+  push:
+    paths-ignore:
+      - "pkg/**" # Ignore changes in pkg/ directory
+      - "services/**" # Ignore changes in services/ directory
+
+jobs:
+  ci-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set CI status
+        run: return 0
