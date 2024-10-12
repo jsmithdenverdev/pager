@@ -97,3 +97,16 @@ jobs:
         with:
           name: sam-build
           path: .aws-sam/build
+
+  # This allows us to have a branch protection rule for tests and deploys with matrix
+  build-status:
+    runs-on: ubuntu-20.04
+    needs: [build]
+    if: always()
+    steps:
+      - name: Successful build
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+      - name: Failed build
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
