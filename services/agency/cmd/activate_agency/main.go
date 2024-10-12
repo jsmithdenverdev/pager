@@ -17,6 +17,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "run failed: %s", err.Error())
 		os.Exit(1)
 	}
+
+	// test
 }
 
 func run() error {
