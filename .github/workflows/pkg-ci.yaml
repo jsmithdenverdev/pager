@@ -58,7 +58,7 @@ jobs:
           go test ./...
 
   # This allows us to have a branch protection rule for tests and deploys with matrix
-  build-and-test-status:
+  ci-status:
     runs-on: ubuntu-latest
     needs: [build-and_test]
     if: always()
