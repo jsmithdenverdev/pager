@@ -1,4 +1,4 @@
-name: Package CI
+name: Services CI
 
 on:
   pull_request:
@@ -23,18 +23,38 @@ jobs:
         with:
           matrix: "true"
           dir_names: "true"
+          dir_names_max_depth: "2"
 
       - name: Log changed directories
         run: |
           echo Modified directories
           echo ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
 
-  build-and-test:
+  lint-and-test:
     needs: determine-changes
     runs-on: ubuntu-latest
     strategy:
       matrix:
         directory: ${{ fromJson(needs.determine-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23.1"
+
+      - name: Test package
+        run: |
+          cd ${{ matrix.directory }}
+          go test ./...
+
+  build:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -61,37 +81,19 @@ jobs:
 
       - name: SAM build
         run: |
-          # cd ${{ matrix.directory }}
-          # go build ./...
-          sam build --use-container
+          sam build
 
-      - name: Test package
+      - name: SAM validate
         run: |
-          cd ${{ matrix.directory }}
-          go test ./...
+          sam validate --lint
 
-      # TODO: This won't be neccesary for packages as we can use a git commit
-      # sha as the package version.
-      # However, this may be useful for ephemeral service builds. Keeping the
-      # code around for the time being.
-      # - name: Normalize branch name
-      #   id: branch_name
+      # TODO: establish a development environment to deploy to
+      # - name: SAM deploy
       #   run: |
-      #     branch_name="$GITHUB_HEAD_REF"
-      #     normalized_branch_name="${branch_name//\//-}"
-      #     echo "Normalized branch name: $normalized_branch_name"
-      #     echo "normalized_branch_name=$normalized_branch_name" >> $GITHUB_ENV
+      #     sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
 
-      # - name: Set short git commit SHA
-      #   id: short_sha
-      #   run: |
-      #     calculated_sha=$(git rev-parse --short ${{ github.sha }})
-      #     echo "Calculated short sha: $calculated_sha"
-      #     echo "commit_short_sha=$calculated_sha" >> $GITHUB_ENV
-
-      # - name: Create GitHub Release
-      #   uses: softprops/action-gh-release@v1
-      #   with:
-      #     tag_name: ${{ matrix.directory }}/${{ env.latest_version }}-${{ env.normalized_branch_name }}.${{ env.commit_short_sha }}
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload SAM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sam-build
+          path: .aws-sam/build
