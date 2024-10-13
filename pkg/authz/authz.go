@@ -1,6 +1,19 @@
 package authz
 
+import (
+	"context"
+)
 
-type Sample struct {
-	// sample
+type Resource struct {
+	Type string
+	ID   string
+}
+
+type Action struct {
+	Type string
+	ID   string
+}
+
+type Authorizer interface {
+	IsAuthorized(context.Context, Resource, Action) (bool, error)
 }
