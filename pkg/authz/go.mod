@@ -1,11 +1,12 @@
 module github.com/jsmithdenverdev/pager/pkg/authz
 
-go 1.23.1
+go 1.23.2
 
 require (
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2/service/verifiedpermissions v1.19.2
+	github.com/jsmithdenverdev/pager/pkg/problemdetails v1.2.0
 )
 
 require (
