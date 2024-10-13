@@ -23,7 +23,8 @@ jobs:
         with:
           matrix: "true"
           dir_names: "true"
-          dir_names_max_depth: "2"
+          dir_names_max_depth: "1"
+          path: ./pkg
 
       - name: Log changed directories
         run: |
@@ -49,18 +50,18 @@ jobs:
 
       - name: Build package
         run: |
-          cd ${{ matrix.directory }}
+          cd ./pkg/${{ matrix.directory }}
           go build ./...
 
       - name: Test package
         run: |
-          cd ${{ matrix.directory }}
+          cd ./pkg/${{ matrix.directory }}
           go test ./...
 
   # This allows us to have a branch protection rule for tests and deploys with matrix
   ci-status:
     runs-on: ubuntu-latest
-    needs: [build-and_test]
+    needs: [build-and-test]
     if: always()
     steps:
       - name: Successful build and test
