@@ -60,7 +60,7 @@ jobs:
   # This allows us to have a branch protection rule for tests and deploys with matrix
   ci-status:
     runs-on: ubuntu-latest
-    needs: [build-and_test]
+    needs: [build-and-test]
     if: always()
     steps:
       - name: Successful build and test
