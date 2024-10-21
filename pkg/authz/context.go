@@ -8,7 +8,11 @@ const (
 	contextKeyClient contextKey = "client"
 )
 
-func ClientFromContext(ctx context.Context) (Authorizer, bool) {
+func AddClientToContext(ctx context.Context, authorizer Authorizer) context.Context {
+	return context.WithValue(ctx, contextKeyClient, authorizer)
+}
+
+func RetrieveClientFromContext(ctx context.Context) (Authorizer, bool) {
 	client, ok := ctx.Value(contextKeyClient).(*client)
 	return client, ok
 }
