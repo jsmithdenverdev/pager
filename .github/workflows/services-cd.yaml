@@ -9,7 +9,7 @@ jobs:
   determine-changes:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.changed-directories.outputs.modified_directories }}
+      matrix: ${{ steps.changed-files.outputs.all_changed_files }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -24,14 +24,6 @@ jobs:
           dir_names: "true"
           dir_names_max_depth: "1"
           path: ./services
-
-      - name: Changed Directories
-        id: changed-directories
-        run: |
-          modified_directories=$(jq -ncr '${{ steps.changed-files.outputs.all_changed_and_modified_files }} - ${{ steps.changed-files.outputs.deleted_files }}')
-          echo "Modified directories (ex. deleted)"
-          echo "$modified_directories"
-          echo "modified_directories=$modified_directories" >> $GITHUB_OUTPUT
 
   lint-and-test:
     needs: determine-changes
