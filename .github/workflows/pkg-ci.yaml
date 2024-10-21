@@ -7,10 +7,11 @@ on:
       - "pkg/**"
 
 jobs:
+  jobs:
   determine-changes:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
+      matrix: ${{ steps.changed-directories.outputs.modified_directories }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -26,10 +27,13 @@ jobs:
           dir_names_max_depth: "1"
           path: ./pkg
 
-      - name: Log changed directories
+      - name: Changed Directories
+        id: changed-directories
         run: |
-          echo Modified directories
-          echo ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
+          modified_directories=$(jq -ncr '${{ steps.changed-files.outputs.all_changed_and_modified_files }} - ${{ steps.changed-files.outputs.deleted_files }}')
+          echo "Modified directories (ex. deleted)"
+          echo "$modified_directories"
+          echo "modified_directories=$modified_directories" >> $GITHUB_OUTPUT
 
   build-and-test:
     needs: determine-changes
