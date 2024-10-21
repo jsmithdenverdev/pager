@@ -7,6 +7,7 @@ on:
       - "pkg/**"
 
 jobs:
+  jobs:
   determine-changes:
     runs-on: ubuntu-latest
     outputs:
