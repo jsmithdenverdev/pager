@@ -7,10 +7,9 @@ import (
 	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions"
-	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions/types"
-	"github.com/jsmithdenverdev/pager/services/agency/internal/authz"
+	"github.com/jsmithdenverdev/pager/pkg/authz"
+	"github.com/jsmithdenverdev/pager/pkg/problemdetail"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/config"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
@@ -42,78 +41,16 @@ func (r createAgencyRequest) MapTo() models.Agency {
 
 func CreateAgency(config config.Config, logger *slog.Logger, client *verifiedpermissions.Client) func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+		client, _ := authz.RetrieveClientFromContext(ctx)
 		var response events.APIGatewayProxyResponse
 
-		var userInfo map[string]interface{}
-		if err := json.Unmarshal([]byte(event.Headers["x-pager-userinfo"]), &userInfo); err != nil {
-			logger.ErrorContext(
-				ctx,
-				"[in handlers.CreateAgency] failed to unmarshal x-pager-userinfo header",
-				slog.String("error", err.Error()))
-
-			encodeInternalServerError(ctx, &response, logger)
-			return response, nil
-		}
-
-		entitlementAttributeValues := []types.AttributeValue{}
-
-		logger.InfoContext(
-			ctx,
-			"headers",
-			slog.Any("userinfo", userInfo),
-			slog.Any("userid", event.Headers["x-pager-userid"]))
-
-		userEntitlements, ok := userInfo["entitlements"].([]interface{})
-		if !ok {
-			logger.ErrorContext(
-				ctx,
-				"[in handlers.CreateAgency] failed to unmarshal x-pager-userinfo header",
-				slog.String("error", "failed to convert entitlements to string slice"))
-
-			encodeInternalServerError(ctx, &response, logger)
-			return response, nil
-		}
-
-		for _, userEntitlement := range userEntitlements {
-			entitlementAttributeValues = append(entitlementAttributeValues, &types.AttributeValueMemberString{
-				Value: userEntitlement.(string),
-			})
-		}
-
-		authzRequest := verifiedpermissions.IsAuthorizedInput{
-			PolicyStoreId: aws.String(config.PolicyStoreID),
-			Principal: &types.EntityIdentifier{
-				EntityType: aws.String("pager::User"),
-				EntityId:   aws.String(event.Headers["x-pager-userid"]),
-			},
-			Resource: &types.EntityIdentifier{
-				EntityType: aws.String("pager::Platform"),
-				EntityId:   aws.String("platform"),
-			},
-			Action: &types.ActionIdentifier{
-				ActionType: aws.String("pager::Action"),
-				ActionId:   aws.String("CreateAgency"),
-			},
-			Entities: &types.EntitiesDefinitionMemberEntityList{
-				Value: []types.EntityItem{
-					{
-						Identifier: &types.EntityIdentifier{
-							EntityType: aws.String("pager::User"),
-							EntityId:   aws.String(event.Headers["x-pager-userid"]),
-						},
-						Attributes: map[string]types.AttributeValue{
-							"entitlements": &types.AttributeValueMemberSet{
-								Value: entitlementAttributeValues,
-							},
-						},
-					},
-				},
-			},
-		}
-
-		logger.InfoContext(ctx, "authorization decisioning", slog.Any("request", authzRequest))
-
-		authzResult, err := client.IsAuthorized(ctx, &authzRequest)
+		isAuthorized, err := client.IsAuthorized(ctx, authz.Resource{
+			Type: "pager::Platform",
+			ID:   "platform",
+		}, authz.Action{
+			Type: "pager::Action",
+			ID:   "CreateAgency",
+		})
 
 		if err != nil {
 			logger.ErrorContext(
@@ -125,14 +62,22 @@ func CreateAgency(config config.Config, logger *slog.Logger, client *verifiedper
 			return response, nil
 		}
 
-		logger.InfoContext(ctx, "authorization complete", slog.Any("result", authzResult))
+		logger.InfoContext(ctx, "authorization complete", slog.Any("result", isAuthorized))
 
-		if authzResult.Decision != types.DecisionAllow {
-			authzErr := authz.NewAuthzError(authz.PermissionCreateAgency, authz.Resource{
-				Type: "Platform",
+		if !isAuthorized {
+			authzErr := authz.NewUnauthorizedError(authz.Resource{
+				Type: "pager::Platform",
 				ID:   "platform",
+			}, authz.Action{
+				Type: "pager::Action",
+				ID:   "CreateAgency",
 			})
-			encodeUnauthorizedError(ctx, &response, logger, &authzErr)
+
+			problemdetail.WriteToAPIGatewayProxyResponse(
+				&response,
+				authz.NewProblemDetail(authzErr),
+				http.StatusUnauthorized)
+
 			return response, nil
 		}
 

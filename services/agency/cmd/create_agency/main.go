@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions"
+	"github.com/jsmithdenverdev/pager/pkg/middleware/apigateway"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/config"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/handlers"
 )
@@ -42,11 +43,14 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 
 	verifiedPermissionsClient := verifiedpermissions.NewFromConfig(awsconf)
 
-	lambda.StartWithOptions(
-		handlers.CreateAgency(
-			conf,
-			logger,
-			verifiedPermissionsClient))
+	handler := handlers.CreateAgency(
+		conf,
+		logger,
+		verifiedPermissionsClient)
+
+	handler = apigateway.WithAuthz(verifiedPermissionsClient)(handler)
+
+	lambda.StartWithOptions(handler)
 
 	return nil
 }
