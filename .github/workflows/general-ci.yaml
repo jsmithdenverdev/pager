@@ -2,7 +2,7 @@ name: General CI
 
 on:
   push:
-    paths-include:
+    paths:
       - "**/*"
       - "!pkg/**" # Ignore changes in pkg/ directory
       - "!services/**" # Ignore changes in services/ directory
