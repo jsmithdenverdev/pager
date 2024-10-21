@@ -9,7 +9,6 @@ permissions:
   contents: write # Grant write permissions for tagging
 
 jobs:
-  jobs:
   determine-changes:
     runs-on: ubuntu-latest
     outputs:
