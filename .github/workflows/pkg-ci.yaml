@@ -28,7 +28,7 @@ jobs:
 
       - name: Calculate changed directories
         run: |
-          changed_directories=$(jq -n '${{ steps.changed-files.outputs.all_changed_and_modified_files }} - ${{ steps.changed-files.outputs.deleted_files }}')
+          changed_directories=$(jq -ncr '${{ steps.changed-files.outputs.all_changed_and_modified_files }} - ${{ steps.changed-files.outputs.deleted_files }}')
           echo "Changed directories (excluding deleted)"
           echo "$changed_directories"
           echo "changed_directories=$changed_directories" >> $GITHUB_OUTPUT
