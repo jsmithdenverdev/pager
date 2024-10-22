@@ -22,7 +22,7 @@ Resources:
     Properties:
       FunctionName: "user-info"
       Handler: bootstrap
-      Runtime: provided.al2
+      Runtime: provided.al2023
       CodeUri: cmd/user_info
       Events:
         Api:

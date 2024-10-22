@@ -27,7 +27,7 @@ Resources:
     Properties:
       FunctionName: "create-agency"
       Handler: bootstrap
-      Runtime: provided.al2
+      Runtime: provided.al2023
       CodeUri: cmd/create_agency
       Events:
         Api:
