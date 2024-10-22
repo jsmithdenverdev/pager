@@ -36,10 +36,14 @@ github.com/jmespath/go-jmespath v0.4.0 h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9Y
 github.com/jmespath/go-jmespath v0.4.0/go.mod h1:T8mJZnbsbmF+m6zOOFylbeCJqk5+pHWvzYPziyZiYoo=
 github.com/jsmithdenverdev/pager/pkg/authz v1.2.0 h1:SKgOymDZVBeVFOq672i4yuiJz9kIFY7oQVIbO0fYuqY=
 github.com/jsmithdenverdev/pager/pkg/authz v1.2.0/go.mod h1:+Av20/CmI12vpDuANzemguvYAqdoSm6NMQSjK8SGk54=
+github.com/jsmithdenverdev/pager/pkg/codec v1.1.0 h1:lq0AveTkX6N7ZgkWRWBCX7odPdPuBMGuQ4XL/vzfjFk=
+github.com/jsmithdenverdev/pager/pkg/codec v1.1.0/go.mod h1:MUiFrTS09hcPp64hiDCdDcuBSnxeZbLJw/AgwuWaREM=
 github.com/jsmithdenverdev/pager/pkg/middleware v1.0.0 h1:y0Rv7AdCXBjHc+qHyACkoE20Umwp2YaFKAPbDtkWxHw=
 github.com/jsmithdenverdev/pager/pkg/middleware v1.0.0/go.mod h1:o9aSYnBH+Bq6OoYldXijsflJtLeMg+r6qjNrcXMUvsk=
 github.com/jsmithdenverdev/pager/pkg/problemdetail v1.1.0 h1:/AKI83Bv3N8m5EnOyNHv8J24wuszIf/B87xSucsjkys=
 github.com/jsmithdenverdev/pager/pkg/problemdetail v1.1.0/go.mod h1:Bhm/VRSjNdvskvJ+fD1R1qLn8xG0gl14o9dfopJwBuw=
+github.com/jsmithdenverdev/pager/pkg/valid v1.2.0 h1:a1M+j9Yjc75NAd6ysZ7TICjY0BzYKqCgeAqvEtho+cY=
+github.com/jsmithdenverdev/pager/pkg/valid v1.2.0/go.mod h1:o+OMomsLJ1HdtWXX1pUFoYWYCOBtwAWJHMulnPgrR3k=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.7.2 h1:4jaiDzPyXQvSd7D0EjG45355tLlV3VOECpq10pLC+8s=
