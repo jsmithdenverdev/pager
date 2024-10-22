@@ -3,60 +3,52 @@ package apigateway
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"net/http"
+	"log/slog"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions"
-	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions/types"
 	"github.com/jsmithdenverdev/pager/pkg/authz"
+	"github.com/jsmithdenverdev/pager/pkg/codec/apigateway"
 	"github.com/jsmithdenverdev/pager/pkg/middleware"
 	"github.com/jsmithdenverdev/pager/pkg/problemdetail"
 )
 
-func WithAuthz(verifiedPermissionsClient *verifiedpermissions.Client) middleware.APIGatewayLambdaMiddleware {
+func WithAuthz(verifiedPermissionsClient *verifiedpermissions.Client, logger *slog.Logger) middleware.APIGatewayLambdaMiddleware {
 	return func(next middleware.APIGatewayLambdaHandler) middleware.APIGatewayLambdaHandler {
 		return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-			var userInfo map[string]interface{}
-			var resp events.APIGatewayProxyResponse
+			var (
+				userInfo  authz.UserInfo
+				pdEncoder = apigateway.NewEncoder[problemdetail.ProblemDetailer]()
+			)
 
 			if err := json.Unmarshal([]byte(event.Headers["x-pager-userinfo"]), &userInfo); err != nil {
-				if err := problemdetail.WriteToAPIGatewayProxyResponse(
-					&resp,
-					problemdetail.New(
-						"auth/authorization",
-						problemdetail.WithTitle("Unauthorized")),
-					http.StatusUnauthorized); err != nil {
-					writeInternalServerError(&resp)
+				logger.ErrorContext(
+					ctx,
+					"failed to decode user info from header",
+					slog.Any("decode error", err))
+
+				resp, encErr := pdEncoder.Encode(
+					ctx,
+					problemdetail.New("internal-server-error"))
+
+				if encErr != nil {
+					logger.ErrorContext(
+						ctx,
+						"failed to encode response",
+						slog.Any("encode error", encErr))
 				}
 
-				return resp, err
+				return resp, nil
 			}
 
-			entitlementAttributeValues := []types.AttributeValue{}
-
-			userEntitlements, ok := userInfo["entitlements"].([]interface{})
-			if !ok {
-				if err := problemdetail.WriteToAPIGatewayProxyResponse(
-					&resp,
-					problemdetail.New(
-						"auth/authorization",
-						problemdetail.WithTitle("Unauthorized")),
-					http.StatusUnauthorized); err != nil {
-					writeInternalServerError(&resp)
-				}
-				return resp, errors.New("unable to convert entitlements to array")
-			}
-
-			for _, userEntitlement := range userEntitlements {
-				entitlementAttributeValues = append(entitlementAttributeValues, &types.AttributeValueMemberString{
-					Value: userEntitlement.(string),
-				})
-			}
+			logger.DebugContext(
+				ctx,
+				"authz middleware",
+				slog.Any("userInfo", userInfo))
 
 			client := authz.NewClient(
 				authz.WithVerifiedPermissionsClient(verifiedPermissionsClient),
-				authz.WithUserInfo(authz.UserInfo{}))
+				authz.WithUserInfo(userInfo))
 
 			ctx = authz.AddClientToContext(ctx, client)
 
