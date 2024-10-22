@@ -12,22 +12,23 @@ import (
 )
 
 func NewDecoder[TOut valid.Validator]() codec.Decoder[events.APIGatewayProxyRequest, TOut] {
-	return func(ctx context.Context, in events.APIGatewayProxyRequest) (TOut, error) {
-		var out TOut
-		if err := json.Unmarshal([]byte(in.Body), &out); err != nil {
-			return out, err
-		}
+	return codec.DecoderFunc[events.APIGatewayProxyRequest, TOut](
+		func(ctx context.Context, in events.APIGatewayProxyRequest) (TOut, error) {
+			var out TOut
+			if err := json.Unmarshal([]byte(in.Body), &out); err != nil {
+				return out, err
+			}
 
-		if problems := out.Valid(ctx); len(problems) > 0 {
-			return *new(TOut), valid.NewFailedValidationError(problems)
-		}
+			if problems := out.Valid(ctx); len(problems) > 0 {
+				return *new(TOut), valid.NewFailedValidationError(problems)
+			}
 
-		return *new(TOut), nil
-	}
+			return *new(TOut), nil
+		})
 }
 
 func NewEncoder[TIn any]() codec.Encoder[TIn, events.APIGatewayProxyResponse] {
-	return func(ctx context.Context, in TIn, opts ...codec.EncoderOption[events.APIGatewayProxyResponse]) (events.APIGatewayProxyResponse, error) {
+	return codec.EncoderFunc[TIn, events.APIGatewayProxyResponse](func(ctx context.Context, in TIn, opts ...codec.EncoderOption[events.APIGatewayProxyResponse]) (events.APIGatewayProxyResponse, error) {
 		response := events.APIGatewayProxyResponse{
 			StatusCode: http.StatusOK,
 		}
@@ -44,7 +45,7 @@ func NewEncoder[TIn any]() codec.Encoder[TIn, events.APIGatewayProxyResponse] {
 		}
 
 		return response, nil
-	}
+	})
 }
 
 func WithStatusCode(code int) codec.EncoderOption[events.APIGatewayProxyResponse] {
