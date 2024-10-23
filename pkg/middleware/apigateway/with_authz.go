@@ -52,6 +52,7 @@ func WithAuthz(policyStoreId string, verifiedPermissionsClient *verifiedpermissi
 				authz.WithPolicyStoreID(policyStoreId))
 
 			ctx = authz.AddClientToContext(ctx, client)
+			ctx = authz.AddUserInfoToContext(ctx, userInfo)
 
 			return next(ctx, event)
 		}
