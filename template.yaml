@@ -21,7 +21,7 @@ Resources:
     Properties:
       Location: ./services/agency/template.yaml
       Parameters:
-        PolicyStoreId: Nhunw9Q4KevxMv9ZbqWK1k
+        PolicyStoreId: !GetAtt AuthService.Outputs.PolicyStoreId
 
   ##########################################################
   # API
