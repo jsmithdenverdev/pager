@@ -5,8 +5,8 @@ go 1.23.2
 require (
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/aws-sdk-go-v2/service/verifiedpermissions v1.19.2
-	github.com/jsmithdenverdev/pager/pkg/apigateway v1.0.0
-	github.com/jsmithdenverdev/pager/pkg/authz v1.2.1
+	github.com/jsmithdenverdev/pager/pkg/apigateway v1.0.1
+	github.com/jsmithdenverdev/pager/pkg/authz v1.2.3
 	github.com/jsmithdenverdev/pager/pkg/middleware v1.0.2
 	github.com/jsmithdenverdev/pager/pkg/problemdetail v1.1.0
 )
@@ -30,5 +30,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.21 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.21 // indirect
 	github.com/aws/smithy-go v1.22.0 // indirect
-	github.com/jsmithdenverdev/pager/pkg/valid v1.2.0
+	github.com/jsmithdenverdev/pager/pkg/valid v1.2.1
 )
