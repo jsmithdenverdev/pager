@@ -75,7 +75,7 @@ func Authorizer(config config.Config, logger *slog.Logger, client *dynamodb.Clie
 		response.PrincipalID = sub
 
 		// Using the sub, fetch the user details for this user.
-		row, err := client.GetItem(ctx, &dynamodb.GetItemInput{
+		result, err := client.GetItem(ctx, &dynamodb.GetItemInput{
 			TableName: aws.String(config.TableName),
 			Key: map[string]types.AttributeValue{
 				"id": &types.AttributeValueMemberS{
@@ -89,9 +89,14 @@ func Authorizer(config config.Config, logger *slog.Logger, client *dynamodb.Clie
 			return response, nil
 		}
 
+		if result.Item == nil {
+			logger.ErrorContext(ctx, "authorization failed", slog.String("error", "user not found"), slog.String("id", sub))
+			return response, nil
+		}
+
 		// Unmarshal the user dynamodb record into a userInfo struct
 		var userInfo userInfo
-		err = attributevalue.UnmarshalMap(row.Item, &userInfo)
+		err = attributevalue.UnmarshalMap(result.Item, &userInfo)
 
 		if err != nil {
 			logger.ErrorContext(ctx, "authorization failed", slog.String("error", err.Error()))
