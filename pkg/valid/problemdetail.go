@@ -13,7 +13,7 @@ type ProblemDetail struct {
 
 func NewProblemDetail(problems []Problem) problemdetail.ProblemDetailer {
 	pd := problemdetail.New(
-		"validation-error",
+		"validation",
 		problemdetail.WithTitle("Invalid request"),
 		problemdetail.WithDetail("The request you supplied didn't pass validation."))
 
