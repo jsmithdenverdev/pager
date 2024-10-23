@@ -48,7 +48,7 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 		logger,
 		verifiedPermissionsClient)
 
-	handler = apigateway.WithAuthz(verifiedPermissionsClient)(handler)
+	handler = apigateway.WithAuthz(conf.PolicyStoreID, verifiedPermissionsClient, logger)(handler)
 
 	lambda.StartWithOptions(handler)
 
