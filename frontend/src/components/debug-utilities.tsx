@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 
 export default function DebugUtilities() {
   const [token, setToken] = useState<string>("");
-  const { user, getAccessTokenSilently } = useAuth0();
+  const { isLoading, isAuthenticated, user, getAccessTokenSilently } =
+    useAuth0();
 
   const [tokenButtonText, setTokenButtonText] = useState("Copy token");
 
@@ -27,25 +28,38 @@ export default function DebugUtilities() {
     <section className="flex flex-col border-dashed border-2 border-sky-500 p-4 ">
       <div>
         <h1 className="text-xl uppercase">
-          <span className="uppercase">Debug</span>
+          Debug
+          {isLoading && <span> - Loading...</span>}
         </h1>
       </div>
-      <div>
-        <details className="p-4  rounded-sm shadow">
-          <summary className="text-sm font-semibold cursor-pointer">
-            User Details - {user?.email}
-          </summary>
-          <pre>{JSON.stringify(user, null, 2)}</pre>
-        </details>
-      </div>
-      <div>
-        <button
-          className="rounded-sm bg-gray-200 px-4 py-2 font-bold uppercase text-gray-800 shadow hover:bg-gray-300 ml-auto"
-          onClick={handleCopyToken}
-        >
-          {tokenButtonText}
-        </button>
-      </div>
+      {isLoading ? (
+        <></>
+      ) : (
+        <>
+          {isAuthenticated ? (
+            <>
+              <div>
+                <details className="p-4  rounded-sm shadow">
+                  <summary className="text-sm font-semibold cursor-pointer">
+                    User Details - {user?.email}
+                  </summary>
+                  <pre>{JSON.stringify(user, null, 2)}</pre>
+                </details>
+              </div>
+              <div>
+                <button
+                  className="rounded-sm bg-gray-200 px-4 py-2 font-bold uppercase text-gray-800 shadow hover:bg-gray-300 ml-auto"
+                  onClick={handleCopyToken}
+                >
+                  {tokenButtonText}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>Unathenticated</>
+          )}
+        </>
+      )}
     </section>
   );
 }
