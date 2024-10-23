@@ -14,7 +14,7 @@ func NewProblemDetail(err UnauthorizedError) problemdetail.ProblemDetailer {
 		problemdetail.WithDetail(err.Error()),
 		problemdetail.WithInstance(fmt.Sprintf("%s::%s", err.Resource.Type, err.Resource.ID)))
 
-	pd.WriteStatus(http.StatusBadRequest)
+	pd.WriteStatus(http.StatusUnauthorized)
 
 	return pd
 }
