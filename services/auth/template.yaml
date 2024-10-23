@@ -29,6 +29,121 @@ Resources:
           AUTH0_DOMAIN: jsmith-dev.auth0.com
           AUTH0_AUDIENCE: https://pager
           REGION: !Ref AWS::Region
+  ###############################################
+  # POLICY STORE
+  ###############################################
+  AVPStore:
+    Type: AWS::VerifiedPermissions::PolicyStore
+    Properties:
+      ValidationSettings:
+        Mode: STRICT
+      Schema:
+        CedarJson: |
+          {
+            "pager": {
+              "actions": {
+                "CreateAgency": {
+                  "appliesTo": {
+                    "resourceTypes": ["Platform"],
+                    "principalTypes": ["User"],
+                    "context": {
+                      "type": "Record",
+                      "attributes": {}
+                    }
+                  }
+                },
+                "Deactivate": {
+                  "appliesTo": {
+                    "principalTypes": ["User"],
+                    "context": {
+                      "type": "Record",
+                      "attributes": {}
+                    },
+                    "resourceTypes": ["Agency"]
+                  },
+                  "memberOf": []
+                },
+                "Update": {
+                  "appliesTo": {
+                    "principalTypes": ["User"],
+                    "resourceTypes": ["Agency"],
+                    "context": {
+                      "type": "Record",
+                      "attributes": {}
+                    }
+                  },
+                  "memberOf": []
+                },
+                "Activate": {
+                  "appliesTo": {
+                    "principalTypes": ["User"],
+                    "resourceTypes": ["Agency"],
+                    "context": {
+                      "attributes": {},
+                      "type": "Record"
+                    }
+                  },
+                  "memberOf": []
+                }
+              },
+              "entityTypes": {
+                "Device": {
+                  "shape": {
+                    "type": "Record",
+                    "attributes": {}
+                  },
+                  "memberOfTypes": ["Agency", "User"]
+                },
+                "Agency": {
+                  "memberOfTypes": [],
+                  "shape": {
+                    "type": "Record",
+                    "attributes": {}
+                  }
+                },
+                "User": {
+                  "shape": {
+                    "attributes": {
+                      "entitlements": {
+                        "element": {
+                          "type": "String"
+                        },
+                        "type": "Set",
+                        "required": true
+                      }
+                    },
+                    "type": "Record"
+                  },
+                  "memberOfTypes": ["Agency"]
+                },
+                "Platform": {
+                  "memberOfTypes": [],
+                  "shape": {
+                    "type": "Record",
+                    "attributes": {}
+                  }
+                }
+              }
+            }
+          }
+  ###############################################
+  # POLICIES - PLATFORM ADMIN
+  ###############################################
+  PlatformAdminCreateAgencyPolicy:
+    Type: AWS::VerifiedPermissions::Policy
+    Properties:
+      PolicyStoreId: !Ref AVPStore
+      Definition:
+        Static:
+          Description: "Allow PLATFORM_ADMIN to create agencies."
+          Statement: >
+            permit(
+              principal,
+              action in [pager::Action::"CreateAgency"],
+              resource == pager::Platform::"platform"
+            ) when {
+              principal.entitlements.contains("PLATFORM_ADMIN")
+            };
 ###############################################
 # OUTPUTS
 ###############################################
@@ -36,3 +151,10 @@ Outputs:
   AuthorizerLambdaArn:
     Description: "ARN for the Authorizer Lambda Function"
     Value: !GetAtt AuthorizerFunction.Arn
+  PolicyStoreId:
+    Description: "The ID of the Amazon Verified Permissions store"
+    Value: !Ref AVPStore
+
+Metadata:
+  AWS::Include:
+    SchemaContent: schema.json
