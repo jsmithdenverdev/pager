@@ -18,5 +18,5 @@ func DecodeValid[TOut valid.Validator](ctx context.Context, in events.APIGateway
 		return *new(TOut), valid.NewFailedValidationError(problems)
 	}
 
-	return *new(TOut), nil
+	return out, nil
 }
