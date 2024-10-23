@@ -9,7 +9,7 @@ import (
 
 func NewProblemDetail(err UnauthorizedError) problemdetail.ProblemDetailer {
 	pd := problemdetail.New(
-		"auth/authorization",
+		"authorization",
 		problemdetail.WithTitle("Unauthorized"),
 		problemdetail.WithDetail(err.Error()),
 		problemdetail.WithInstance(fmt.Sprintf("%s::%s", err.Resource.Type, err.Resource.ID)))
