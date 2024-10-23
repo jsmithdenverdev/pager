@@ -5,8 +5,8 @@ go 1.23.2
 require (
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/aws-sdk-go-v2/service/verifiedpermissions v1.19.2
+	github.com/jsmithdenverdev/pager/pkg/apigateway v1.0.0
 	github.com/jsmithdenverdev/pager/pkg/authz v1.2.1
-	github.com/jsmithdenverdev/pager/pkg/codec v1.1.0
 	github.com/jsmithdenverdev/pager/pkg/middleware v1.0.2
 	github.com/jsmithdenverdev/pager/pkg/problemdetail v1.1.0
 )
@@ -21,6 +21,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.24.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.32.2 // indirect
+	github.com/jsmithdenverdev/pager/pkg/codec v1.1.0 // indirect
 )
 
 require (

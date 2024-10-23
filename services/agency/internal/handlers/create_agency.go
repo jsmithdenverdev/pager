@@ -7,8 +7,8 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions"
+	"github.com/jsmithdenverdev/pager/pkg/apigateway"
 	"github.com/jsmithdenverdev/pager/pkg/authz"
-	"github.com/jsmithdenverdev/pager/pkg/codec/apigateway"
 	"github.com/jsmithdenverdev/pager/pkg/problemdetail"
 	"github.com/jsmithdenverdev/pager/pkg/valid"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/config"
@@ -40,34 +40,28 @@ type createAgencyResponse struct {
 func CreateAgency(config config.Config, logger *slog.Logger, client *verifiedpermissions.Client) func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 		var (
-			response      = events.APIGatewayProxyResponse{}
-			decoder       = apigateway.NewDecoder[createAgencyRequest]()
-			encoder       = apigateway.NewEncoder[createAgencyResponse]()
-			pdEncoder     = apigateway.NewEncoder[problemdetail.ProblemDetailer]()
+			encoder       = apigateway.NewEncoder(apigateway.WithLogger[createAgencyResponse](logger))
+			errEncoder    = apigateway.NewProblemDetailEncoder(apigateway.WithLogger[problemdetail.ProblemDetailer](logger))
 			authClient, _ = authz.RetrieveClientFromContext(ctx)
+			authzResource = authz.Resource{
+				Type: "pager::Platform",
+				ID:   "platform",
+			}
+			authzAction = authz.Action{
+				Type: "pager::Action",
+				ID:   "CreateAgency",
+			}
 		)
 
 		// Decode APIGatewayProxyRequest into our request type and validate it
-		request, err := decoder.Decode(ctx, event)
+		request, err := apigateway.DecodeValid[createAgencyRequest](ctx, event)
 
 		if err != nil {
 			// Check if the error was a validation error
-			var validErr valid.FailedValidationError
-			if errors.As(err, &validErr) {
-				// Encode a problem details response for a validation problem, if an error
-				// occurs we'll log it. If encode fails a response will still be returned
-				// decorated with an internal-server-error problem detail.
-				response, encErr := pdEncoder.Encode(ctx, valid.NewProblemDetail(validErr.Problems))
-				if encErr != nil {
-					logger.ErrorContext(
-						ctx,
-						"failed to encode response",
-						slog.Any("encode error", encErr))
-				}
-
-				return response, nil
+			validErr := new(valid.FailedValidationError)
+			if errors.As(err, validErr) {
+				return errEncoder.EncodeValidationError(ctx, *validErr), nil
 			}
-
 			// Log the decoding error, this would likely be an error unmarhsaling a
 			// request into an expected type.
 			logger.ErrorContext(
@@ -75,28 +69,14 @@ func CreateAgency(config config.Config, logger *slog.Logger, client *verifiedper
 				"failed to decode request",
 				slog.Any("decode error", err))
 
-			// If decoding failed but was not related to validation we'll just encode
-			// a generic internal server error and return it.
-			response, encErr := pdEncoder.Encode(ctx, problemdetail.New("internal-server-error"))
-			if encErr != nil {
-				logger.ErrorContext(
-					ctx,
-					"failed to encode response",
-					slog.Any("encode error", encErr))
-			}
-
-			return response, nil
+			// If decoding failed but was not a validation failure encode an
+			// internal server error and return it.
+			return errEncoder.EncodeInternalServerError(ctx), nil
 		}
 
 		// Check if the user executing the request is authorized to perform the
 		// CreateAgency action on the Platform.
-		isAuthorized, err := authClient.IsAuthorized(ctx, authz.Resource{
-			Type: "pager::Platform",
-			ID:   "platform",
-		}, authz.Action{
-			Type: "pager::Action",
-			ID:   "CreateAgency",
-		})
+		isAuthorized, err := authClient.IsAuthorized(ctx, authzResource, authzAction)
 
 		// If an error occurs with authorization log it
 		if err != nil {
@@ -105,51 +85,19 @@ func CreateAgency(config config.Config, logger *slog.Logger, client *verifiedper
 				"failed authorization check",
 				slog.String("error", err.Error()))
 
-			// Encode a generic internal server error and return it. If encoding fails
-			// a response will still be returned with the same generic internal server
-			// error problem detail attached.
-			response, encErr := pdEncoder.Encode(ctx, problemdetail.New("internal-server-error"))
-			if encErr != nil {
-				logger.ErrorContext(
-					ctx,
-					"failed to encode response",
-					slog.Any("encode error", encErr))
-			}
-
-			return response, nil
+			// If authorization failed encode an internal server error and return it.
+			return errEncoder.EncodeInternalServerError(ctx), nil
 		}
 
 		if !isAuthorized {
-			// If the user is unauthorized encode an unauthorized problem detail
-			response, encErr := pdEncoder.Encode(
-				ctx,
-				authz.NewProblemDetail(authz.NewUnauthorizedError(authz.Resource{
-					Type: "pager::Platform",
-					ID:   "platform",
-				}, authz.Action{
-					Type: "pager::Action",
-					ID:   "CreateAgency",
-				})))
-
-			if encErr != nil {
-				logger.ErrorContext(
-					ctx,
-					"failed to encode response",
-					slog.Any("encode error", encErr))
-			}
-
-			return response, nil
+			// Encode and return unauthorized error
+			return errEncoder.EncodeAuthzError(ctx, authz.NewUnauthorizedError(authzResource, authzAction)), nil
 		}
 
-		response, encErr := encoder.Encode(ctx, createAgencyResponse{
+		response, _ := encoder.Encode(ctx, createAgencyResponse{
 			Name: request.Name,
 		})
-		if encErr != nil {
-			logger.ErrorContext(
-				ctx,
-				"failed to encode response",
-				slog.Any("encode error", encErr))
-		}
+
 		return response, nil
 	}
 }
