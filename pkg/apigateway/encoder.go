@@ -22,14 +22,9 @@ const (
 var (
 	rawInternalServerError = fmt.Sprintf(
 		`{ "type": "%s", "title": "%s", "status": %d }`,
-		problemDetailInternalServerError,
+		problemDetailTypeInternalServerError,
 		problemDetailTitleInternalServerError,
 		http.StatusInternalServerError,
-	)
-
-	problemDetailInternalServerError problemdetail.ProblemDetailer = problemdetail.New(
-		problemDetailTypeInternalServerError,
-		problemdetail.WithTitle(problemDetailTitleInternalServerError),
 	)
 )
 
@@ -147,7 +142,12 @@ func (pde *ProblemDetailEncoder) Encode(ctx context.Context, pd problemdetail.Pr
 // into an API Gateway Proxy Response, setting the status code to 500.
 func (pde *ProblemDetailEncoder) EncodeInternalServerError(ctx context.Context, ops ...EncodeOption) events.APIGatewayProxyResponse {
 	ops = append(ops, WithStatusCode(http.StatusInternalServerError))
-	resp, err := pde.Encoder.Encode(ctx, problemdetail.New(problemDetailTypeInternalServerError), ops...)
+	pd := problemdetail.New(
+		problemDetailTypeInternalServerError,
+		problemdetail.WithTitle("Internal Server Error"),
+		problemdetail.WithDetail("An internal server error occured. Please try again later."))
+	pd.WriteStatus(http.StatusInternalServerError)
+	resp, err := pde.Encoder.Encode(ctx, pd, ops...)
 	if err != nil {
 		resp = events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
