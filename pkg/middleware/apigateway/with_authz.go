@@ -13,7 +13,7 @@ import (
 	"github.com/jsmithdenverdev/pager/pkg/problemdetail"
 )
 
-func WithAuthz(verifiedPermissionsClient *verifiedpermissions.Client, logger *slog.Logger) middleware.APIGatewayLambdaMiddleware {
+func WithAuthz(policyStoreId string, verifiedPermissionsClient *verifiedpermissions.Client, logger *slog.Logger) middleware.APIGatewayLambdaMiddleware {
 	return func(next middleware.APIGatewayLambdaHandler) middleware.APIGatewayLambdaHandler {
 		return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 			var (
@@ -48,7 +48,8 @@ func WithAuthz(verifiedPermissionsClient *verifiedpermissions.Client, logger *sl
 
 			client := authz.NewClient(
 				authz.WithVerifiedPermissionsClient(verifiedPermissionsClient),
-				authz.WithUserInfo(userInfo))
+				authz.WithUserInfo(userInfo),
+				authz.WithPolicyStoreID(policyStoreId))
 
 			ctx = authz.AddClientToContext(ctx, client)
 
