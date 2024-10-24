@@ -7,7 +7,10 @@ type UserInfo struct {
 	Entitlements []Entitlement `json:"entitlements"`
 	IPDID        string        `json:"idpId"`
 	Status       string        `json:"status"`
-	Accounts     map[string]struct {
-		Roles []string `json:"roles"`
-	} `json:"accounts"`
+	Agencies     map[string]struct {
+		Role string `json:"role"`
+	} `json:"agencies"`
+	// If requests are being done within the context of an Agency, ActiveAgency
+	// will be populated with that agency identifier.
+	ActiveAgency string
 }
