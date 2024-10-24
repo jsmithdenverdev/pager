@@ -39,20 +39,13 @@ func (r createAgencyRequest) Valid(ctx context.Context) []valid.Problem {
 	return problems
 }
 
-// createAgencyRequest is the data returned on successful creation of an agency.
-type createAgencyResponse struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Status string `json:"status"`
-}
-
 func CreateAgency(
 	config config.Config,
 	logger *slog.Logger,
 	dynamo *dynamodb.Client) func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 		var (
-			encoder       = apigateway.NewEncoder(apigateway.WithLogger[createAgencyResponse](logger))
+			encoder       = apigateway.NewEncoder(apigateway.WithLogger[agencyResponse](logger))
 			errEncoder    = apigateway.NewProblemDetailEncoder(apigateway.WithLogger[problemdetail.ProblemDetailer](logger))
 			authClient, _ = authz.RetrieveClientFromContext(ctx)
 			userInfo, _   = authz.RetrieveUserInfoFromContext(ctx)
@@ -140,10 +133,14 @@ func CreateAgency(
 
 		dynamo.PutItem(ctx, putItemInput)
 
-		response, _ := encoder.Encode(ctx, createAgencyResponse{
-			ID:     id,
-			Name:   model.Name,
-			Status: string(model.Status),
+		response, _ := encoder.Encode(ctx, agencyResponse{
+			ID:         id,
+			Name:       model.Name,
+			Status:     string(model.Status),
+			Created:    model.Created,
+			CreatedBy:  model.CreatedBy,
+			Modified:   model.Modified,
+			ModifiedBy: model.ModifiedBy,
 		}, apigateway.WithStatusCode(http.StatusCreated))
 
 		return response, nil
