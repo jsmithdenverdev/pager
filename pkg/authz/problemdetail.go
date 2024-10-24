@@ -12,7 +12,7 @@ func NewProblemDetail(err UnauthorizedError) problemdetail.ProblemDetailer {
 		"authorization",
 		problemdetail.WithTitle("Unauthorized"),
 		problemdetail.WithDetail(err.Error()),
-		problemdetail.WithInstance(fmt.Sprintf("%s::%s", err.Resource.Type, err.Resource.ID)))
+		problemdetail.WithInstance(fmt.Sprintf("%s::%s", *err.Entity.EntityType, *err.Entity.EntityId)))
 
 	pd.WriteStatus(http.StatusUnauthorized)
 
