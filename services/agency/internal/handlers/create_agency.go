@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/google/uuid"
 	"github.com/jsmithdenverdev/pager/pkg/apigateway"
@@ -39,30 +40,23 @@ func (r createAgencyRequest) Valid(ctx context.Context) []valid.Problem {
 	return problems
 }
 
-// createAgencyRequest is the data returned on successful creation of an agency.
-type createAgencyResponse struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Status string `json:"status"`
-}
-
 func CreateAgency(
 	config config.Config,
 	logger *slog.Logger,
 	dynamo *dynamodb.Client) func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 		var (
-			encoder       = apigateway.NewEncoder(apigateway.WithLogger[createAgencyResponse](logger))
+			encoder       = apigateway.NewEncoder(apigateway.WithLogger[agencyResponse](logger))
 			errEncoder    = apigateway.NewProblemDetailEncoder(apigateway.WithLogger[problemdetail.ProblemDetailer](logger))
 			authClient, _ = authz.RetrieveClientFromContext(ctx)
 			userInfo, _   = authz.RetrieveUserInfoFromContext(ctx)
-			authzResource = authz.Resource{
-				Type: "pager::Platform",
-				ID:   "platform",
+			authzResource = &types.EntityIdentifier{
+				EntityType: aws.String("pager::Platform"),
+				EntityId:   aws.String("platform"),
 			}
-			authzAction = authz.Action{
-				Type: "pager::Action",
-				ID:   "CreateAgency",
+			authzAction = &types.ActionIdentifier{
+				ActionType: aws.String("pager::Action"),
+				ActionId:   aws.String("CreateAgency"),
 			}
 		)
 
@@ -89,7 +83,10 @@ func CreateAgency(
 
 		// Check if the user executing the request is authorized to perform the
 		// CreateAgency action on the Platform.
-		isAuthorized, err := authClient.IsAuthorized(ctx, authzResource, authzAction)
+		isAuthorized, err := authClient.IsAuthorized(ctx, authz.IsAuthorizedInput{
+			Resource: authzResource,
+			Action:   authzAction,
+		})
 
 		// If an error occurs with authorization log it
 		if err != nil {
@@ -140,10 +137,14 @@ func CreateAgency(
 
 		dynamo.PutItem(ctx, putItemInput)
 
-		response, _ := encoder.Encode(ctx, createAgencyResponse{
-			ID:     id,
-			Name:   model.Name,
-			Status: string(model.Status),
+		response, _ := encoder.Encode(ctx, agencyResponse{
+			ID:         id,
+			Name:       model.Name,
+			Status:     string(model.Status),
+			Created:    model.Created,
+			CreatedBy:  model.CreatedBy,
+			Modified:   model.Modified,
+			ModifiedBy: model.ModifiedBy,
 		}, apigateway.WithStatusCode(http.StatusCreated))
 
 		return response, nil

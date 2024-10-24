@@ -41,80 +41,41 @@ Resources:
         CedarJson: |
           {
             "pager": {
-              "actions": {
-                "CreateAgency": {
-                  "appliesTo": {
-                    "resourceTypes": ["Platform"],
-                    "principalTypes": ["User"],
-                    "context": {
-                      "type": "Record",
-                      "attributes": {}
-                    }
-                  }
-                },
-                "Deactivate": {
-                  "appliesTo": {
-                    "principalTypes": ["User"],
-                    "context": {
-                      "type": "Record",
-                      "attributes": {}
-                    },
-                    "resourceTypes": ["Agency"]
-                  },
-                  "memberOf": []
-                },
-                "Update": {
-                  "appliesTo": {
-                    "principalTypes": ["User"],
-                    "resourceTypes": ["Agency"],
-                    "context": {
-                      "type": "Record",
-                      "attributes": {}
-                    }
-                  },
-                  "memberOf": []
-                },
-                "Activate": {
-                  "appliesTo": {
-                    "principalTypes": ["User"],
-                    "resourceTypes": ["Agency"],
-                    "context": {
-                      "attributes": {},
-                      "type": "Record"
-                    }
-                  },
-                  "memberOf": []
-                }
-              },
               "entityTypes": {
                 "Device": {
-                  "shape": {
-                    "type": "Record",
-                    "attributes": {}
-                  },
-                  "memberOfTypes": ["Agency", "User"]
-                },
-                "Agency": {
-                  "memberOfTypes": [],
+                  "memberOfTypes": ["Agency", "User"],
                   "shape": {
                     "type": "Record",
                     "attributes": {}
                   }
                 },
                 "User": {
+                  "memberOfTypes": ["Agency"],
                   "shape": {
+                    "type": "Record",
                     "attributes": {
+                      "agencies": {
+                        "required": false,
+                        "element": {
+                          "name": "Agency",
+                          "type": "Entity"
+                        },
+                        "type": "Set"
+                      },
                       "entitlements": {
+                        "required": false,
                         "element": {
                           "type": "String"
                         },
-                        "type": "Set",
-                        "required": true
+                        "type": "Set"
+                      },
+                      "currentAgency": {
+                        "type": "Entity",
+                        "required": false,
+                        "name": "Agency"
                       }
-                    },
-                    "type": "Record"
-                  },
-                  "memberOfTypes": ["Agency"]
+                    }
+                  }
                 },
                 "Platform": {
                   "memberOfTypes": [],
@@ -122,10 +83,87 @@ Resources:
                     "type": "Record",
                     "attributes": {}
                   }
+                },
+                "Agency": {
+                  "memberOfTypes": ["Group"],
+                  "shape": {
+                    "type": "Record",
+                    "attributes": {
+                      "group": {
+                        "type": "Entity",
+                        "required": true,
+                        "name": "Group"
+                      }
+                    }
+                  }
+                },
+                "Group": {
+                  "memberOfTypes": [],
+                  "shape": {
+                    "type": "Record",
+                    "attributes": {}
+                  }
+                }
+              },
+              "actions": {
+                "Update": {
+                  "appliesTo": {
+                    "context": {
+                      "attributes": {},
+                      "type": "Record"
+                    },
+                    "principalTypes": ["User"],
+                    "resourceTypes": ["Agency"]
+                  },
+                  "memberOf": []
+                },
+                "ReadAgency": {
+                  "appliesTo": {
+                    "principalTypes": ["User"],
+                    "resourceTypes": ["Agency"],
+                    "context": {
+                      "type": "Record",
+                      "attributes": {}
+                    }
+                  },
+                  "memberOf": []
+                },
+                "Deactivate": {
+                  "memberOf": [],
+                  "appliesTo": {
+                    "principalTypes": ["User"],
+                    "context": {
+                      "type": "Record",
+                      "attributes": {}
+                    },
+                    "resourceTypes": ["Agency"]
+                  }
+                },
+                "CreateAgency": {
+                  "appliesTo": {
+                    "context": {
+                      "attributes": {},
+                      "type": "Record"
+                    },
+                    "principalTypes": ["User"],
+                    "resourceTypes": ["Platform"]
+                  }
+                },
+                "Activate": {
+                  "memberOf": [],
+                  "appliesTo": {
+                    "resourceTypes": ["Agency"],
+                    "principalTypes": ["User"],
+                    "context": {
+                      "type": "Record",
+                      "attributes": {}
+                    }
+                  }
                 }
               }
             }
           }
+
   ###############################################
   # POLICIES - PLATFORM ADMIN
   ###############################################
@@ -139,10 +177,37 @@ Resources:
           Statement: >
             permit(
               principal,
-              action in [pager::Action::"CreateAgency"],
+              action in [pager::Action::"CreateAgency", pager::Action::"ReadAgency"],
               resource == pager::Platform::"platform"
             ) when {
-              principal.entitlements.contains("PLATFORM_ADMIN")
+              principal has entitlements && principal.entitlements.contains("PLATFORM_ADMIN")
+            };
+  ###############################################
+  # POLICIES - AGENCY ADMIN
+  ###############################################
+  AgencyAdminPolicy:
+    Type: AWS::VerifiedPermissions::Policy
+    Properties:
+      PolicyStoreId: !Ref AVPStore
+      Definition:
+        Static:
+          Description: "Agency Admin Permissions"
+          Statement: >
+            permit (
+                principal,
+                action in
+                    [pager::Action::"ReadAgency",
+                    pager::Action::"Activate",
+                    pager::Action::"Deactivate",
+                    pager::Action::"Update"],
+                resource
+            )
+            when
+            {
+                principal has agencies &&
+                resource in principal.agencies &&
+                principal has currentAgency &&
+                principal.currentAgency.group == pager::Group::"admin"
             };
 ###############################################
 # OUTPUTS
