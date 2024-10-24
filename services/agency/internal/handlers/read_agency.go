@@ -9,7 +9,8 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	dbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	vptypes "github.com/aws/aws-sdk-go-v2/service/verifiedpermissions/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/jsmithdenverdev/pager/pkg/apigateway"
 	"github.com/jsmithdenverdev/pager/pkg/authz"
@@ -27,19 +28,22 @@ func ReadAgency(
 			encoder       = apigateway.NewEncoder(apigateway.WithLogger[agencyResponse](logger))
 			errEncoder    = apigateway.NewProblemDetailEncoder(apigateway.WithLogger[problemdetail.ProblemDetailer](logger))
 			authClient, _ = authz.RetrieveClientFromContext(ctx)
-			authzResource = authz.Resource{
-				Type: "pager::Platform",
-				ID:   "platform",
+			authzResource = &vptypes.EntityIdentifier{
+				EntityType: aws.String("pager::Agency"),
+				EntityId:   aws.String(event.PathParameters["agencyid"]),
 			}
-			authzAction = authz.Action{
-				Type: "pager::Action",
-				ID:   "ReadAgency",
+			authzAction = &vptypes.ActionIdentifier{
+				ActionType: aws.String("pager::Action"),
+				ActionId:   aws.String("ReadAgency"),
 			}
 		)
 
 		// Check if the user executing the request is authorized to perform the
 		// CreateAgency action on the Platform.
-		isAuthorized, err := authClient.IsAuthorized(ctx, authzResource, authzAction)
+		isAuthorized, err := authClient.IsAuthorized(ctx, authz.IsAuthorizedInput{
+			Resource: authzResource,
+			Action:   authzAction,
+		})
 
 		// If an error occurs with authorization log it
 		if err != nil {
@@ -61,11 +65,11 @@ func ReadAgency(
 
 		getItemInput := &dynamodb.GetItemInput{
 			TableName: aws.String(config.TableName),
-			Key: map[string]types.AttributeValue{
-				"pk": &types.AttributeValueMemberS{
+			Key: map[string]dbtypes.AttributeValue{
+				"pk": &dbtypes.AttributeValueMemberS{
 					Value: fmt.Sprintf("agency#%s", id),
 				},
-				"fk": &types.AttributeValueMemberS{
+				"fk": &dbtypes.AttributeValueMemberS{
 					Value: fmt.Sprintf("metadata#%s", id),
 				},
 			},

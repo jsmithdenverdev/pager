@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/google/uuid"
 	"github.com/jsmithdenverdev/pager/pkg/apigateway"
@@ -49,13 +50,13 @@ func CreateAgency(
 			errEncoder    = apigateway.NewProblemDetailEncoder(apigateway.WithLogger[problemdetail.ProblemDetailer](logger))
 			authClient, _ = authz.RetrieveClientFromContext(ctx)
 			userInfo, _   = authz.RetrieveUserInfoFromContext(ctx)
-			authzResource = authz.Resource{
-				Type: "pager::Platform",
-				ID:   "platform",
+			authzResource = &types.EntityIdentifier{
+				EntityType: aws.String("pager::Platform"),
+				EntityId:   aws.String("platform"),
 			}
-			authzAction = authz.Action{
-				Type: "pager::Action",
-				ID:   "CreateAgency",
+			authzAction = &types.ActionIdentifier{
+				ActionType: aws.String("pager::Action"),
+				ActionId:   aws.String("CreateAgency"),
 			}
 		)
 
@@ -82,7 +83,10 @@ func CreateAgency(
 
 		// Check if the user executing the request is authorized to perform the
 		// CreateAgency action on the Platform.
-		isAuthorized, err := authClient.IsAuthorized(ctx, authzResource, authzAction)
+		isAuthorized, err := authClient.IsAuthorized(ctx, authz.IsAuthorizedInput{
+			Resource: authzResource,
+			Action:   authzAction,
+		})
 
 		// If an error occurs with authorization log it
 		if err != nil {
