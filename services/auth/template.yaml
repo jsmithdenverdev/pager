@@ -84,6 +84,17 @@ Resources:
                     }
                   },
                   "memberOf": []
+                },
+                "ReadAgency": {
+                  "appliesTo": {
+                    "principalTypes": ["User"],
+                    "resourceTypes": ["Agency"],
+                    "context": {
+                      "attributes": {},
+                      "type": "Record"
+                    }
+                  },
+                  "memberOf": []
                 }
               },
               "entityTypes": {
@@ -139,7 +150,7 @@ Resources:
           Statement: >
             permit(
               principal,
-              action in [pager::Action::"CreateAgency"],
+              action in [pager::Action::"CreateAgency", pager::Action::"ReadAgency"],
               resource == pager::Platform::"platform"
             ) when {
               principal.entitlements.contains("PLATFORM_ADMIN")
