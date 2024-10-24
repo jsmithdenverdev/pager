@@ -41,7 +41,7 @@ func (c *Client) IsAuthorized(ctx context.Context, input IsAuthorizedInput) (boo
 
 	// Encode the users accounts into a slice of entity identifier attribute value
 	var accountAttributeValues []types.AttributeValue
-	for account := range c.userInfo.Accounts {
+	for account := range c.userInfo.Agencies {
 		accountAttributeValues = append(accountAttributeValues, &types.AttributeValueMemberEntityIdentifier{
 			Value: types.EntityIdentifier{
 				EntityType: aws.String("pager::Agency"),
@@ -94,7 +94,7 @@ func (c *Client) IsAuthorized(ctx context.Context, input IsAuthorizedInput) (boo
 					"group": &types.AttributeValueMemberEntityIdentifier{
 						Value: types.EntityIdentifier{
 							EntityType: aws.String("pager::Group"),
-							EntityId:   aws.String(c.userInfo.Accounts[c.userInfo.ActiveAgency].Role),
+							EntityId:   aws.String(c.userInfo.Agencies[c.userInfo.ActiveAgency].Role),
 						},
 					},
 				},
