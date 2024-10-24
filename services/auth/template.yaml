@@ -180,7 +180,7 @@ Resources:
               action in [pager::Action::"CreateAgency", pager::Action::"ReadAgency"],
               resource == pager::Platform::"platform"
             ) when {
-              principal.entitlements.contains("PLATFORM_ADMIN")
+              principal has entitlements && principal.entitlements.contains("PLATFORM_ADMIN")
             };
   ###############################################
   # POLICIES - AGENCY ADMIN
