@@ -41,47 +41,79 @@ Resources:
         CedarJson: |
           {
             "pager": {
-              "actions": {
-                "CreateAgency": {
-                  "appliesTo": {
-                    "resourceTypes": ["Platform"],
-                    "principalTypes": ["User"],
-                    "context": {
-                      "type": "Record",
-                      "attributes": {}
+              "entityTypes": {
+                "Device": {
+                  "memberOfTypes": ["Agency", "User"],
+                  "shape": {
+                    "type": "Record",
+                    "attributes": {}
+                  }
+                },
+                "User": {
+                  "memberOfTypes": ["Agency"],
+                  "shape": {
+                    "type": "Record",
+                    "attributes": {
+                      "agencies": {
+                        "required": false,
+                        "element": {
+                          "name": "Agency",
+                          "type": "Entity"
+                        },
+                        "type": "Set"
+                      },
+                      "entitlements": {
+                        "required": false,
+                        "element": {
+                          "type": "String"
+                        },
+                        "type": "Set"
+                      },
+                      "currentAgency": {
+                        "type": "Entity",
+                        "required": false,
+                        "name": "Agency"
+                      }
                     }
                   }
                 },
-                "Deactivate": {
-                  "appliesTo": {
-                    "principalTypes": ["User"],
-                    "context": {
-                      "type": "Record",
-                      "attributes": {}
-                    },
-                    "resourceTypes": ["Agency"]
-                  },
-                  "memberOf": []
+                "Platform": {
+                  "memberOfTypes": [],
+                  "shape": {
+                    "type": "Record",
+                    "attributes": {}
+                  }
                 },
+                "Agency": {
+                  "memberOfTypes": ["Group"],
+                  "shape": {
+                    "type": "Record",
+                    "attributes": {
+                      "group": {
+                        "type": "Entity",
+                        "required": true,
+                        "name": "Group"
+                      }
+                    }
+                  }
+                },
+                "Group": {
+                  "memberOfTypes": [],
+                  "shape": {
+                    "type": "Record",
+                    "attributes": {}
+                  }
+                }
+              },
+              "actions": {
                 "Update": {
                   "appliesTo": {
-                    "principalTypes": ["User"],
-                    "resourceTypes": ["Agency"],
-                    "context": {
-                      "type": "Record",
-                      "attributes": {}
-                    }
-                  },
-                  "memberOf": []
-                },
-                "Activate": {
-                  "appliesTo": {
-                    "principalTypes": ["User"],
-                    "resourceTypes": ["Agency"],
                     "context": {
                       "attributes": {},
                       "type": "Record"
-                    }
+                    },
+                    "principalTypes": ["User"],
+                    "resourceTypes": ["Agency"]
                   },
                   "memberOf": []
                 },
@@ -90,53 +122,48 @@ Resources:
                     "principalTypes": ["User"],
                     "resourceTypes": ["Agency"],
                     "context": {
-                      "attributes": {},
-                      "type": "Record"
+                      "type": "Record",
+                      "attributes": {}
                     }
                   },
                   "memberOf": []
-                }
-              },
-              "entityTypes": {
-                "Device": {
-                  "shape": {
-                    "type": "Record",
-                    "attributes": {}
-                  },
-                  "memberOfTypes": ["Agency", "User"]
                 },
-                "Agency": {
-                  "memberOfTypes": [],
-                  "shape": {
-                    "type": "Record",
-                    "attributes": {}
+                "Deactivate": {
+                  "memberOf": [],
+                  "appliesTo": {
+                    "principalTypes": ["User"],
+                    "context": {
+                      "type": "Record",
+                      "attributes": {}
+                    },
+                    "resourceTypes": ["Agency"]
                   }
                 },
-                "User": {
-                  "shape": {
-                    "attributes": {
-                      "entitlements": {
-                        "element": {
-                          "type": "String"
-                        },
-                        "type": "Set",
-                        "required": true
-                      }
+                "CreateAgency": {
+                  "appliesTo": {
+                    "context": {
+                      "attributes": {},
+                      "type": "Record"
                     },
-                    "type": "Record"
-                  },
-                  "memberOfTypes": ["Agency"]
+                    "principalTypes": ["User"],
+                    "resourceTypes": ["Platform"]
+                  }
                 },
-                "Platform": {
-                  "memberOfTypes": [],
-                  "shape": {
-                    "type": "Record",
-                    "attributes": {}
+                "Activate": {
+                  "memberOf": [],
+                  "appliesTo": {
+                    "resourceTypes": ["Agency"],
+                    "principalTypes": ["User"],
+                    "context": {
+                      "type": "Record",
+                      "attributes": {}
+                    }
                   }
                 }
               }
             }
           }
+
   ###############################################
   # POLICIES - PLATFORM ADMIN
   ###############################################
@@ -154,6 +181,33 @@ Resources:
               resource == pager::Platform::"platform"
             ) when {
               principal.entitlements.contains("PLATFORM_ADMIN")
+            };
+  ###############################################
+  # POLICIES - AGENCY ADMIN
+  ###############################################
+  AgencyAdminPolicy:
+    Type: AWS::VerifiedPermissions::Policy
+    Properties:
+      PolicyStoreId: !Ref AVPStore
+      Definition:
+        Static:
+          Description: "Agency Admin Permissions"
+          Statement: >
+            permit (
+                principal,
+                action in
+                    [pager::Action::"ReadAgency",
+                    pager::Action::"Activate",
+                    pager::Action::"Deactivate",
+                    pager::Action::"Update"],
+                resource
+            )
+            when
+            {
+                principal has agencies &&
+                resource in principal.agencies &&
+                principal has currentAgency &&
+                principal.currentAgency.group == pager::Group::"admin"
             };
 ###############################################
 # OUTPUTS
