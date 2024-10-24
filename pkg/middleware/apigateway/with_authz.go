@@ -41,6 +41,10 @@ func WithAuthz(policyStoreId string, verifiedPermissionsClient *verifiedpermissi
 				return resp, nil
 			}
 
+			if agencyId, ok := event.PathParameters["agencyid"]; ok {
+				userInfo.ActiveAgency = agencyId
+			}
+
 			logger.DebugContext(
 				ctx,
 				"authz middleware",
