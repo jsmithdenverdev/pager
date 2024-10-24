@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions"
 	"github.com/jsmithdenverdev/pager/pkg/middleware/apigateway"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/config"
@@ -43,10 +44,13 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 
 	verifiedPermissionsClient := verifiedpermissions.NewFromConfig(awsconf)
 
+	dynamodbClient := dynamodb.NewFromConfig(awsconf)
+
 	handler := handlers.CreateAgency(
 		conf,
 		logger,
-		verifiedPermissionsClient)
+		dynamodbClient,
+	)
 
 	handler = apigateway.WithAuthz(conf.PolicyStoreID, verifiedPermissionsClient, logger)(handler)
 

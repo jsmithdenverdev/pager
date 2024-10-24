@@ -18,6 +18,12 @@ const (
 type Agency struct {
 	Auditable
 	// Name is the name of the agency.
-	Name   string       `json:"name" db:"name"`
-	Status AgencyStatus `json:"status" db:"status"`
+	Name   string       `dynamodbav:"name"`
+	Status AgencyStatus `dynamodbav:"status"`
+}
+
+// AgencyUser represents an inverse relationship between an agency and a
+// user. This allows us to query users for an agency.
+type AgencyUser struct {
+	Auditable
 }
