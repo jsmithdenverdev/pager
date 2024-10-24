@@ -11,12 +11,12 @@ const (
 	contextKeyUserInfo contextKey = "user"
 )
 
-func AddClientToContext(ctx context.Context, authorizer Authorizer) context.Context {
+func AddClientToContext(ctx context.Context, authorizer *Client) context.Context {
 	return context.WithValue(ctx, contextKeyClient, authorizer)
 }
 
-func RetrieveClientFromContext(ctx context.Context) (Authorizer, bool) {
-	client, ok := ctx.Value(contextKeyClient).(*client)
+func RetrieveClientFromContext(ctx context.Context) (*Client, bool) {
+	client, ok := ctx.Value(contextKeyClient).(*Client)
 	return client, ok
 }
 
