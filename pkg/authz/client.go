@@ -39,21 +39,21 @@ func (c *Client) IsAuthorized(ctx context.Context, input IsAuthorizedInput) (boo
 		})
 	}
 
-	// Encode the users accounts into a slice of entity identifier attribute value
-	var accountAttributeValues []types.AttributeValue
-	for account := range c.userInfo.Agencies {
-		accountAttributeValues = append(accountAttributeValues, &types.AttributeValueMemberEntityIdentifier{
+	// Encode the users agencies into a slice of entity identifier attribute value
+	var agencyAttributeValues []types.AttributeValue
+	for agency := range c.userInfo.Agencies {
+		agencyAttributeValues = append(agencyAttributeValues, &types.AttributeValueMemberEntityIdentifier{
 			Value: types.EntityIdentifier{
 				EntityType: aws.String("pager::Agency"),
-				EntityId:   aws.String(account),
+				EntityId:   aws.String(agency),
 			},
 		})
 	}
 
 	// Create entity definitions to hold attributes for the entities supplied in
 	// an authz request. The default set of entitiy definitions are for a user
-	// and include the users entitlements, the accounts they are a member of, and
-	// optionally the current account.
+	// and include the users entitlements, the agencies they are a member of, and
+	// optionally the current agency.
 	entityDefinitions := &types.EntitiesDefinitionMemberEntityList{
 		Value: []types.EntityItem{
 			{
@@ -65,12 +65,12 @@ func (c *Client) IsAuthorized(ctx context.Context, input IsAuthorizedInput) (boo
 					"entitlements": &types.AttributeValueMemberSet{
 						Value: entitlementAttributeValues,
 					},
-					"accounts": &types.AttributeValueMemberSet{
-						Value: accountAttributeValues,
+					"agencies": &types.AttributeValueMemberSet{
+						Value: agencyAttributeValues,
 					},
-					"currentAccount": &types.AttributeValueMemberEntityIdentifier{
+					"currentAgency": &types.AttributeValueMemberEntityIdentifier{
 						Value: types.EntityIdentifier{
-							EntityType: aws.String("pager::Account"),
+							EntityType: aws.String("pager::Agency"),
 							EntityId:   aws.String(c.userInfo.ActiveAgency),
 						},
 					},
@@ -83,22 +83,25 @@ func (c *Client) IsAuthorized(ctx context.Context, input IsAuthorizedInput) (boo
 	// definition representing that agency to the request. The agency definition
 	// will include the role of the active user within the agency.
 	if len(c.userInfo.ActiveAgency) > 0 {
-		entityDefinitions.Value = append(
-			entityDefinitions.Value,
-			types.EntityItem{
-				Identifier: &types.EntityIdentifier{
-					EntityType: aws.String("pager::Agency"),
-					EntityId:   aws.String(c.userInfo.ActiveAgency),
-				},
-				Attributes: map[string]types.AttributeValue{
-					"group": &types.AttributeValueMemberEntityIdentifier{
-						Value: types.EntityIdentifier{
-							EntityType: aws.String("pager::Group"),
-							EntityId:   aws.String(c.userInfo.Agencies[c.userInfo.ActiveAgency].Role),
+		if agency, ok := c.userInfo.Agencies[c.userInfo.ActiveAgency]; ok {
+			entityDefinitions.Value = append(
+				entityDefinitions.Value,
+				types.EntityItem{
+					Identifier: &types.EntityIdentifier{
+						EntityType: aws.String("pager::Agency"),
+						EntityId:   aws.String(c.userInfo.ActiveAgency),
+					},
+					Attributes: map[string]types.AttributeValue{
+						"group": &types.AttributeValueMemberEntityIdentifier{
+							Value: types.EntityIdentifier{
+								EntityType: aws.String("pager::Group"),
+								EntityId:   aws.String(agency.Role),
+							},
 						},
 					},
-				},
-			})
+				})
+		}
+
 	}
 
 	entityDefinitions.Value = append(entityDefinitions.Value, input.Entities...)
