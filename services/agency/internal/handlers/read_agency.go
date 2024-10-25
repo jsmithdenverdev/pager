@@ -69,7 +69,7 @@ func ReadAgency(
 				"pk": &dbtypes.AttributeValueMemberS{
 					Value: fmt.Sprintf("agency#%s", id),
 				},
-				"fk": &dbtypes.AttributeValueMemberS{
+				"sk": &dbtypes.AttributeValueMemberS{
 					Value: fmt.Sprintf("metadata#%s", id),
 				},
 			},
