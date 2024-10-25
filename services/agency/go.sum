@@ -49,8 +49,8 @@ github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGw
 github.com/jmespath/go-jmespath/internal/testify v1.5.1/go.mod h1:L3OGu8Wl2/fWfCI6z80xFu9LTZmf1ZRjMHUOPmWr69U=
 github.com/jsmithdenverdev/pager/pkg/apigateway v1.0.2 h1:0rr93RMYAvSFf95/kUbS85scGM6EqN8hAOCYkXY+2sQ=
 github.com/jsmithdenverdev/pager/pkg/apigateway v1.0.2/go.mod h1:pdQ0dmV15g7V796Pj+5lmGzSh3lKPmuAWyMJgN+1VQo=
-github.com/jsmithdenverdev/pager/pkg/authz v1.4.0 h1:9YZR/74q9BVvgl+cy67JW7onr5OAMDZHB2oK2RhFMuY=
-github.com/jsmithdenverdev/pager/pkg/authz v1.4.0/go.mod h1:+Av20/CmI12vpDuANzemguvYAqdoSm6NMQSjK8SGk54=
+github.com/jsmithdenverdev/pager/pkg/authz v1.4.1 h1:fdqrMHVvLd/n6xmOsQe5jq/uWHZRY49xoCkIZCivRUg=
+github.com/jsmithdenverdev/pager/pkg/authz v1.4.1/go.mod h1:+Av20/CmI12vpDuANzemguvYAqdoSm6NMQSjK8SGk54=
 github.com/jsmithdenverdev/pager/pkg/codec v1.1.0 h1:lq0AveTkX6N7ZgkWRWBCX7odPdPuBMGuQ4XL/vzfjFk=
 github.com/jsmithdenverdev/pager/pkg/codec v1.1.0/go.mod h1:MUiFrTS09hcPp64hiDCdDcuBSnxeZbLJw/AgwuWaREM=
 github.com/jsmithdenverdev/pager/pkg/middleware v1.2.0 h1:afggVnI4o7Ou689rgiK6LzFGPY9qUi9U7qPZkXqVUZU=
