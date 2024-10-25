@@ -77,7 +77,7 @@ Resources:
               Action:
                 - verifiedpermissions:IsAuthorized
               Resource: !Sub arn:aws:verifiedpermissions::${AWS::AccountId}:policy-store/${PolicyStoreId}
-        - DynamoDBWritePolicy:
+        - DynamoDBReadPolicy:
             TableName: !Ref AgencyTable
 
   ###############################################
