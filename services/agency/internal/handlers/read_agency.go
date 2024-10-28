@@ -61,16 +61,16 @@ func ReadAgency(
 			return errEncoder.EncodeAuthzError(ctx, authz.NewUnauthorizedError(authzResource, authzAction)), nil
 		}
 
-		id := event.PathParameters["id"]
+		agencyId := event.PathParameters["agencyid"]
 
 		getItemInput := &dynamodb.GetItemInput{
 			TableName: aws.String(config.TableName),
 			Key: map[string]dbtypes.AttributeValue{
 				"pk": &dbtypes.AttributeValueMemberS{
-					Value: fmt.Sprintf("agency#%s", id),
+					Value: fmt.Sprintf("agency#%s", agencyId),
 				},
 				"sk": &dbtypes.AttributeValueMemberS{
-					Value: fmt.Sprintf("metadata#%s", id),
+					Value: fmt.Sprintf("metadata#%s", agencyId),
 				},
 			},
 		}
@@ -91,7 +91,7 @@ func ReadAgency(
 			pd := problemdetail.New(
 				"not-found",
 				problemdetail.WithTitle("Not Found"),
-				problemdetail.WithInstance(id))
+				problemdetail.WithInstance(agencyId))
 			pd.WriteStatus(http.StatusNotFound)
 			return errEncoder.Encode(
 				ctx,
@@ -112,7 +112,7 @@ func ReadAgency(
 		}
 
 		response, _ := encoder.Encode(ctx, agencyResponse{
-			ID:         id,
+			ID:         agencyId,
 			Name:       model.Name,
 			Status:     string(model.Status),
 			Created:    model.Created,

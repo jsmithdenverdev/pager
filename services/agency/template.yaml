@@ -64,7 +64,7 @@ Resources:
           Type: Api
           Properties:
             Path: /{agencyid}
-            Method: POST
+            Method: GET
             RestApiId: !Ref AgencyApi
       Environment:
         Variables:
