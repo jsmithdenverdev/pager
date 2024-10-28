@@ -12,3 +12,9 @@ type agencyResponse struct {
 	Modified   time.Time `json:"modified"`
 	ModifiedBy string    `json:"modifedBy"`
 }
+
+type agenciesResponse struct {
+	Records    []agencyResponse `json:"records"`
+	Pagination struct {
+	} `json:"pagination"`
+}
