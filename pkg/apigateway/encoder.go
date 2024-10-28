@@ -17,6 +17,8 @@ import (
 const (
 	problemDetailTypeInternalServerError  = "internal-server-error"
 	problemDetailTitleInternalServerError = "Internal Server Error"
+	problemDetailTypeNotFoundError        = "not-found"
+	problemDetailTitleNotFoundError       = "Not Found"
 )
 
 var (
@@ -138,13 +140,13 @@ func (pde *ProblemDetailEncoder) Encode(ctx context.Context, pd problemdetail.Pr
 	return resp
 }
 
-// EncodeInternalServerError encodes a generic internal server error as a problem detail
-// into an API Gateway Proxy Response, setting the status code to 500.
+// EncodeInternalServerError encodes an internal server error into a problem
+// detail on an APIGatewayProxyResponse, setting the status code to 500.
 func (pde *ProblemDetailEncoder) EncodeInternalServerError(ctx context.Context, ops ...EncodeOption) events.APIGatewayProxyResponse {
 	ops = append(ops, WithStatusCode(http.StatusInternalServerError))
 	pd := problemdetail.New(
 		problemDetailTypeInternalServerError,
-		problemdetail.WithTitle("Internal Server Error"),
+		problemdetail.WithTitle(problemDetailTitleInternalServerError),
 		problemdetail.WithDetail("An internal server error occured. Please try again later."))
 	pd.WriteStatus(http.StatusInternalServerError)
 	resp, err := pde.Encoder.Encode(ctx, pd, ops...)
@@ -157,8 +159,28 @@ func (pde *ProblemDetailEncoder) EncodeInternalServerError(ctx context.Context, 
 	return resp
 }
 
-// EncodeAuthzError encodes an authorization error as a problem detail
-// into an API Gateway Proxy Response, setting the status code to 401.
+// EncodeNotFoundError encodes a not found error into a problem detail on an
+// APIGatewayProxyResponse, setting the status code to 404.
+func (pde *ProblemDetailEncoder) EncodeNotFoundError(ctx context.Context, instance string, ops ...EncodeOption) events.APIGatewayProxyResponse {
+	ops = append(ops, WithStatusCode(http.StatusNotFound))
+	pd := problemdetail.New(
+		problemDetailTypeNotFoundError,
+		problemdetail.WithTitle(problemDetailTitleNotFoundError),
+		problemdetail.WithDetail("The resource was not found."),
+		problemdetail.WithInstance(instance))
+	pd.WriteStatus(http.StatusNotFound)
+	resp, err := pde.Encoder.Encode(ctx, pd, ops...)
+	if err != nil {
+		resp = events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       rawInternalServerError,
+		}
+	}
+	return resp
+}
+
+// EncodeAuthzError encodes an authorization error into a problem detail on an
+// APIGatewayProxyResponse, setting the status code to 401.
 func (pde *ProblemDetailEncoder) EncodeAuthzError(ctx context.Context, authzErr authz.UnauthorizedError, ops ...EncodeOption) events.APIGatewayProxyResponse {
 	ops = append(ops, WithStatusCode(http.StatusUnauthorized))
 	resp, err := pde.Encoder.Encode(ctx, authz.NewProblemDetail(authzErr), ops...)
@@ -171,8 +193,8 @@ func (pde *ProblemDetailEncoder) EncodeAuthzError(ctx context.Context, authzErr 
 	return resp
 }
 
-// EncodeValidationError encodes a validation error as a problem detail
-// into an API Gateway Proxy Response, setting the status code to 400.
+// EncodeValidationError encodes a validation error into a problem detail on an
+// APIGatewayProxyResponse, setting the status code to 400.
 func (pde *ProblemDetailEncoder) EncodeValidationError(ctx context.Context, validationErr valid.FailedValidationError, ops ...EncodeOption) events.APIGatewayProxyResponse {
 	ops = append(ops, WithStatusCode(http.StatusBadRequest))
 	resp, err := pde.Encoder.Encode(ctx, valid.NewProblemDetail(validationErr.Problems), ops...)
