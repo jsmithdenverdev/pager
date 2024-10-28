@@ -165,7 +165,7 @@ Resources:
           }
 
   ###############################################
-  # POLICIES - PLATFORM ADMIN
+  # POLICIES - PLATFORM ADMIN CREATE AGENCY
   ###############################################
   PlatformAdminCreateAgencyPolicy:
     Type: AWS::VerifiedPermissions::Policy
@@ -177,8 +177,26 @@ Resources:
           Statement: >
             permit(
               principal,
-              action in [pager::Action::"CreateAgency", pager::Action::"ReadAgency"],
+              action in [pager::Action::"CreateAgency"],
               resource == pager::Platform::"platform"
+            ) when {
+              principal has entitlements && principal.entitlements.contains("PLATFORM_ADMIN")
+            };
+  ###############################################
+  # POLICIES - PLATFORM ADMIN READ AGENCY
+  ###############################################
+  PlatformAdminReadAgencyPolicy:
+    Type: AWS::VerifiedPermissions::Policy
+    Properties:
+      PolicyStoreId: !Ref AVPStore
+      Definition:
+        Static:
+          Description: "Allow PLATFORM_ADMIN to create agencies."
+          Statement: >
+            permit(
+              principal,
+              action in [pager::Action::"ReadAgency"],
+              resource
             ) when {
               principal has entitlements && principal.entitlements.contains("PLATFORM_ADMIN")
             };
