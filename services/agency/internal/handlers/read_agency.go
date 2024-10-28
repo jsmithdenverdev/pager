@@ -25,12 +25,13 @@ func ReadAgency(
 	dynamo *dynamodb.Client) func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 		var (
+			agencyId      = event.PathParameters["agencyid"]
 			encoder       = apigateway.NewEncoder(apigateway.WithLogger[agencyResponse](logger))
 			errEncoder    = apigateway.NewProblemDetailEncoder(apigateway.WithLogger[problemdetail.ProblemDetailer](logger))
 			authClient, _ = authz.RetrieveClientFromContext(ctx)
 			authzResource = &vptypes.EntityIdentifier{
 				EntityType: aws.String("pager::Agency"),
-				EntityId:   aws.String(event.PathParameters["agencyid"]),
+				EntityId:   aws.String(agencyId),
 			}
 			authzAction = &vptypes.ActionIdentifier{
 				ActionType: aws.String("pager::Action"),
@@ -57,11 +58,9 @@ func ReadAgency(
 		}
 
 		if !isAuthorized {
-			// Encode and return unauthorized error
-			return errEncoder.EncodeAuthzError(ctx, authz.NewUnauthorizedError(authzResource, authzAction)), nil
+			// Encode and return not found error
+			return errEncoder.EncodeNotFoundError(ctx, agencyId), nil
 		}
-
-		agencyId := event.PathParameters["agencyid"]
 
 		getItemInput := &dynamodb.GetItemInput{
 			TableName: aws.String(config.TableName),
@@ -87,16 +86,7 @@ func ReadAgency(
 		}
 
 		if result.Item == nil {
-			// TODO: move into apigateway encoder
-			pd := problemdetail.New(
-				"not-found",
-				problemdetail.WithTitle("Not Found"),
-				problemdetail.WithInstance(agencyId))
-			pd.WriteStatus(http.StatusNotFound)
-			return errEncoder.Encode(
-				ctx,
-				pd,
-			), nil
+			return errEncoder.EncodeNotFoundError(ctx, agencyId), nil
 		}
 
 		model := new(models.Agency)
@@ -106,8 +96,6 @@ func ReadAgency(
 				ctx,
 				"failed to unmarshal item into agency",
 				slog.String("error", err.Error()))
-
-			// If authorization failed encode an internal server error and return it.
 			return errEncoder.EncodeInternalServerError(ctx), nil
 		}
 
