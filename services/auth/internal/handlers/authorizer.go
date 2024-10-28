@@ -25,7 +25,7 @@ type userInfo struct {
 	IDPID        string   `dynamodbav:"idpId" json:"idpId"`
 	Status       string   `dynamodbav:"status" json:"status"`
 	Entitlements []string `dynamodbav:"entitlements" json:"entitlements"`
-	Agencies     []struct {
+	Agencies     map[string]struct {
 		Role string `dynamodbav:"role" json:"role"`
 	} `dynamodbav:"agencies" json:"agencies"`
 }

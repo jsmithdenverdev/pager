@@ -37,7 +37,7 @@ export default function DebugUtilities() {
       ) : (
         <>
           {isAuthenticated ? (
-            <>
+            <section className="space-y-4">
               <div>
                 <details className="p-4  rounded-sm shadow">
                   <summary className="text-sm font-semibold cursor-pointer">
@@ -54,7 +54,7 @@ export default function DebugUtilities() {
                   {tokenButtonText}
                 </button>
               </div>
-            </>
+            </section>
           ) : (
             <>Unathenticated</>
           )}

@@ -50,6 +50,36 @@ Resources:
         - DynamoDBWritePolicy:
             TableName: !Ref AgencyTable
 
+  ReadAgencyFunction:
+    Type: "AWS::Serverless::Function"
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: "read-agency"
+      Handler: bootstrap
+      Runtime: provided.al2023
+      CodeUri: cmd/read_agency
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{agencyid}
+            Method: GET
+            RestApiId: !Ref AgencyApi
+      Environment:
+        Variables:
+          POLICY_STORE_ID: !Ref PolicyStoreId
+          TABLE_NAME: !Ref AgencyTable
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - verifiedpermissions:IsAuthorized
+              Resource: !Sub arn:aws:verifiedpermissions::${AWS::AccountId}:policy-store/${PolicyStoreId}
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgencyTable
+
   ###############################################
   # DATABASE
   ###############################################

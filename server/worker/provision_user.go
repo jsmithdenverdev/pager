@@ -52,7 +52,7 @@ func (handler *ProvisionUserHandler) Handle(message pubsub.Message) error {
 	}
 
 	// Search for the user in auth0 by their email. This method searches all
-	// auth connections for our account. To be on the safe side we'll filter
+	// auth connections for our agency. To be on the safe side we'll filter
 	// down to just the users who belong to our pager auth0 database connection.
 	allAuth0Users, err := handler.auth0.User.ListByEmail(handler.ctx, payload.Email)
 	if err != nil {
