@@ -121,7 +121,7 @@ Resources:
           AttributeType: S
         - AttributeName: sk
           AttributeType: S
-        - AttributeName: idp_id
+        - AttributeName: idpid
           AttributeType: S
         - AttributeName: agency_id
           AttributeType: S
