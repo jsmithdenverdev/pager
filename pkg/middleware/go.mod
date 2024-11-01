@@ -19,5 +19,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.21 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.21 // indirect
 	github.com/aws/smithy-go v1.22.0 // indirect
-	github.com/jsmithdenverdev/pager/pkg/authz v1.4.0
+	github.com/jsmithdenverdev/pager/pkg/authz v1.4.2
 )
