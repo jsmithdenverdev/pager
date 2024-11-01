@@ -39,21 +39,9 @@ func (c *Client) IsAuthorized(ctx context.Context, input IsAuthorizedInput) (boo
 		})
 	}
 
-	// Encode the users agencies into a slice of entity identifier attribute value
-	var agencyAttributeValues []types.AttributeValue
-	for agency := range c.userInfo.Agencies {
-		agencyAttributeValues = append(agencyAttributeValues, &types.AttributeValueMemberEntityIdentifier{
-			Value: types.EntityIdentifier{
-				EntityType: aws.String("pager::Agency"),
-				EntityId:   aws.String(agency),
-			},
-		})
-	}
-
 	// Create entity definitions to hold attributes for the entities supplied in
 	// an authz request. The default set of entitiy definitions are for a user
-	// and include the users entitlements, the agencies they are a member of, and
-	// optionally the current agency.
+	// and include the users entitlements.
 	entityDefinitions := &types.EntitiesDefinitionMemberEntityList{
 		Value: []types.EntityItem{
 			{
@@ -65,24 +53,40 @@ func (c *Client) IsAuthorized(ctx context.Context, input IsAuthorizedInput) (boo
 					"entitlements": &types.AttributeValueMemberSet{
 						Value: entitlementAttributeValues,
 					},
-					"agencies": &types.AttributeValueMemberSet{
-						Value: agencyAttributeValues,
-					},
-					"currentAgency": &types.AttributeValueMemberEntityIdentifier{
-						Value: types.EntityIdentifier{
-							EntityType: aws.String("pager::Agency"),
-							EntityId:   aws.String(c.userInfo.ActiveAgency),
-						},
-					},
 				},
 			},
 		},
 	}
 
-	// If we're operating in the context of an agency, we need to add an entity
-	// definition representing that agency to the request. The agency definition
-	// will include the role of the active user within the agency.
+	// If the user is a member of agencies add those agencies to the auth request
+	// context.
+	if len(c.userInfo.Agencies) > 0 {
+		// Encode the users agencies into a slice of entity identifier attribute value
+		var agencyAttributeValues []types.AttributeValue
+		for agency := range c.userInfo.Agencies {
+			agencyAttributeValues = append(agencyAttributeValues, &types.AttributeValueMemberEntityIdentifier{
+				Value: types.EntityIdentifier{
+					EntityType: aws.String("pager::Agency"),
+					EntityId:   aws.String(agency),
+				},
+			})
+		}
+		// entityDefinitions.Value[0] is the user
+		entityDefinitions.Value[0].Attributes["agencies"] = &types.AttributeValueMemberSet{
+			Value: agencyAttributeValues,
+		}
+	}
+
+	// If the user is making a request for a specific agency add the agency to
+	// the auth request context.
 	if len(c.userInfo.ActiveAgency) > 0 {
+		// entityDefinitions.Value[0] is the user
+		entityDefinitions.Value[0].Attributes["currentAgency"] = &types.AttributeValueMemberEntityIdentifier{
+			Value: types.EntityIdentifier{
+				EntityType: aws.String("pager::Agency"),
+				EntityId:   aws.String(c.userInfo.ActiveAgency),
+			},
+		}
 		if agency, ok := c.userInfo.Agencies[c.userInfo.ActiveAgency]; ok {
 			entityDefinitions.Value = append(
 				entityDefinitions.Value,
