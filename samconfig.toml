@@ -4,7 +4,7 @@ capabilities = ["CAPABILITY_IAM", "CAPABILITY_AUTO_EXPAND"]
 stack_name = "pager"
 resolve_s3 = true
 s3_prefix = "pager"
-region = "us-west-2"
+region = "us-east-1"
 image_repositories = []
 
 [dev.deploy.parameters]
@@ -12,6 +12,6 @@ capabilities = ["CAPABILITY_IAM", "CAPABILITY_AUTO_EXPAND"]
 stack_name = "pager"
 resolve_s3 = true
 s3_prefix = "pager"
-region = "us-east-1"
+region = "us-west-2"
 image_repositories = []
 profile = "dev"
