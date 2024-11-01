@@ -20,9 +20,8 @@ import (
 )
 
 type userInfo struct {
-	ID           string   `dynamodbav:"id" json:"id"`
 	Email        string   `dynamodbav:"email" json:"email"`
-	IDPID        string   `dynamodbav:"idpId" json:"idpId"`
+	IDPID        string   `dynamodbav:"idpid" json:"idpId"`
 	Status       string   `dynamodbav:"status" json:"status"`
 	Entitlements []string `dynamodbav:"entitlements" json:"entitlements"`
 	Agencies     map[string]struct {
@@ -78,7 +77,7 @@ func Authorizer(config config.Config, logger *slog.Logger, client *dynamodb.Clie
 		result, err := client.GetItem(ctx, &dynamodb.GetItemInput{
 			TableName: aws.String(config.TableName),
 			Key: map[string]types.AttributeValue{
-				"id": &types.AttributeValueMemberS{
+				"idpid": &types.AttributeValueMemberS{
 					Value: sub,
 				},
 			},
@@ -118,6 +117,8 @@ func Authorizer(config config.Config, logger *slog.Logger, client *dynamodb.Clie
 			"userid":   sub,
 			"userinfo": string(userJSON),
 		}
+
+		logger.InfoContext(ctx, "authorization complete", slog.Any("response", response))
 
 		return response, nil
 	}
