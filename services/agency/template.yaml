@@ -121,11 +121,36 @@ Resources:
           AttributeType: S
         - AttributeName: sk
           AttributeType: S
+        - AttributeName: idp_id
+          AttributeType: S
+        - AttributeName: agency_id
+          AttributeType: S
+        - AttributeName: type
+          AttributeType: S
+        - AttributeName: created
+          AttributeType: S
       KeySchema:
         - AttributeName: pk
           KeyType: HASH
         - AttributeName: sk
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: idpid-agencyId-index
+          KeySchema:
+            - AttributeName: idpid
+              KeyType: HASH
+            - AttributeName: agency_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: type-created-index
+          KeySchema:
+            - AttributeName: type
+              KeyType: HASH
+            - AttributeName: created
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
       BillingMode: PAY_PER_REQUEST
 ###############################################
 # OUTPUTS
