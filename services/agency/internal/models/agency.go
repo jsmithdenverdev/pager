@@ -17,13 +17,18 @@ const (
 // notifications can be sent.
 type Agency struct {
 	Auditable
+	ID string `dynamodbav:"agency_id"`
 	// Name is the name of the agency.
 	Name   string       `dynamodbav:"name"`
+	Type   string       `dynamodbav:"type"`
 	Status AgencyStatus `dynamodbav:"status"`
 }
 
-// AgencyUser represents an inverse relationship between an agency and a
+// Member represents an inverse relationship between an agency and a
 // user. This allows us to query users for an agency.
-type AgencyUser struct {
+type Member struct {
 	Auditable
+	AgencyID string `dynamodbav:"agency_id"`
+	IDPID    string `dynamodbav:"idpid"`
+	Type     string `dynamodbav:"type"`
 }

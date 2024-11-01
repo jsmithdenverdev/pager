@@ -14,7 +14,9 @@ type agencyResponse struct {
 }
 
 type agenciesResponse struct {
-	Records    []agencyResponse `json:"records"`
+	Records []struct {
+		ID string `json:"id"`
+	} `json:"records"`
 	Pagination struct {
 	} `json:"pagination"`
 }

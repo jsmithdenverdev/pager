@@ -2,14 +2,13 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	dbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/jsmithdenverdev/pager/pkg/apigateway"
 	"github.com/jsmithdenverdev/pager/pkg/authz"
@@ -36,133 +35,63 @@ func ListAgencies(
 			}
 		}
 
-		if platformAdmin {
-			scanInput := &dynamodb.ScanInput{
-				TableName:        &config.TableName,
-				FilterExpression: aws.String("begins_with(#n0, :v0)"),
-				ExpressionAttributeNames: map[string]string{
-					"#n0": "sk",
-				},
-				ExpressionAttributeValues: map[string]dbtypes.AttributeValue{
-					":v0": &dbtypes.AttributeValueMemberS{
-						Value: "metadata#",
-					},
-				},
-			}
-			scanResult, err := dynamo.Scan(ctx, scanInput)
-			if err != nil {
-				logger.ErrorContext(
-					ctx,
-					"failed to get item from dynamodb",
-					slog.String("error", err.Error()))
-
-				// If authorization failed encode an internal server error and return it.
-				return errEncoder.EncodeInternalServerError(ctx), nil
-			}
-			agencies := make([]agencyResponse, 0)
-			agenciesResponse := agenciesResponse{}
-			for _, record := range scanResult.Items {
-				model := new(models.Agency)
-
-				if err := attributevalue.UnmarshalMap(record, model); err != nil {
-					logger.ErrorContext(
-						ctx,
-						"failed to unmarshal item into agency",
-						slog.String("error", err.Error()))
-
-					// If authorization failed encode an internal server error and return it.
-					return errEncoder.EncodeInternalServerError(ctx), nil
-				}
-
-				agencies = append(agencies, agencyResponse{
-					ID:         model.ID,
-					Name:       model.Name,
-					Status:     string(model.Status),
-					Created:    model.Created,
-					CreatedBy:  model.CreatedBy,
-					Modified:   model.Modified,
-					ModifiedBy: model.ModifiedBy,
-				})
-
-			}
-			agenciesResponse.Records = agencies
-
-			response, _ := encoder.Encode(ctx, agenciesResponse, apigateway.WithStatusCode(http.StatusOK))
-			return response, nil
-		} else {
-			agencyKeys := make([]map[string]dbtypes.AttributeValue, 0)
-
-			for agencyId := range user.Agencies {
-				agencyKeys = append(agencyKeys, map[string]dbtypes.AttributeValue{
-					"pk": &dbtypes.AttributeValueMemberS{
-						Value: fmt.Sprintf("agency#%s", agencyId),
-					},
-					"sk": &dbtypes.AttributeValueMemberS{
-						Value: fmt.Sprintf("metadata#%s", agencyId),
-					},
-				})
-			}
-
-			batchGetItemInput := &dynamodb.BatchGetItemInput{
-				RequestItems: map[string]dbtypes.KeysAndAttributes{
-					config.TableName: {
-						Keys: agencyKeys,
-					},
-				},
-			}
-
-			results, err := dynamo.BatchGetItem(ctx, batchGetItemInput)
-			if err != nil {
-				logger.ErrorContext(
-					ctx,
-					"failed to get item from dynamodb",
-					slog.String("error", err.Error()))
-
-				// If authorization failed encode an internal server error and return it.
-				return errEncoder.EncodeInternalServerError(ctx), nil
-			}
-
-			if records, ok := results.Responses[config.TableName]; ok {
-				agencies := make([]agencyResponse, 0)
-				agenciesResponse := agenciesResponse{}
-				for _, record := range records {
-					model := new(models.Agency)
-
-					if err := attributevalue.UnmarshalMap(record, model); err != nil {
-						logger.ErrorContext(
-							ctx,
-							"failed to unmarshal item into agency",
-							slog.String("error", err.Error()))
-
-						// If authorization failed encode an internal server error and return it.
-						return errEncoder.EncodeInternalServerError(ctx), nil
-					}
-
-					agencies = append(agencies, agencyResponse{
-						ID:         model.ID,
-						Name:       model.Name,
-						Status:     string(model.Status),
-						Created:    model.Created,
-						CreatedBy:  model.CreatedBy,
-						Modified:   model.Modified,
-						ModifiedBy: model.ModifiedBy,
-					})
-
-				}
-				agenciesResponse.Records = agencies
-
-				response, _ := encoder.Encode(ctx, agenciesResponse, apigateway.WithStatusCode(http.StatusOK))
-				return response, nil
-			} else {
-				response, _ := encoder.Encode(
-					ctx,
-					agenciesResponse{
-						Records: make([]agencyResponse, 0),
-					},
-					apigateway.WithStatusCode(http.StatusOK))
-
-				return response, nil
-			}
+		input := &dynamodb.QueryInput{
+			TableName: aws.String(config.TableName),
 		}
+
+		if platformAdmin {
+			// The type-created-index can be leveraged to fetch all records of a given
+			// type from the database. This allows platform admins to load all
+			// agencies.
+			input.IndexName = aws.String("type-created-index")
+			input.KeyConditionExpression = aws.String("#type = :agencyType")
+			input.ExpressionAttributeNames = map[string]string{"#type": "type"}
+			input.ExpressionAttributeValues = map[string]types.AttributeValue{":agencyType": &types.AttributeValueMemberS{Value: "AGENCY"}}
+		} else {
+			// The idpid-agencyId-index can be leveraged to fetch all agencies the
+			// current user is a member of.
+			input.IndexName = aws.String("idpid-agencyId-index")
+			input.KeyConditionExpression = aws.String("#idpid = :idpid")
+			input.ExpressionAttributeNames = map[string]string{"#idpid": "idpid"}
+			input.ExpressionAttributeValues = map[string]types.AttributeValue{":idpid": &types.AttributeValueMemberS{Value: user.IPDID}}
+		}
+
+		results, err := dynamo.Query(ctx, input)
+		if err != nil {
+			logger.ErrorContext(
+				ctx,
+				"failed to query dynamodb",
+				slog.String("error", err.Error()))
+
+			// If authorization failed encode an internal server error and return it.
+			return errEncoder.EncodeInternalServerError(ctx), nil
+		}
+
+		response := agenciesResponse{
+			Records: make([]struct {
+				ID string `json:"id"`
+			}, 0),
+		}
+
+		for _, item := range results.Items {
+			var agency models.Agency
+			if err := attributevalue.UnmarshalMap(item, &agency); err != nil {
+				logger.ErrorContext(
+					ctx,
+					"failed to unmarshal dyanmodb row",
+					slog.String("error", err.Error()))
+
+				// If authorization failed encode an internal server error and return it.
+				return errEncoder.EncodeInternalServerError(ctx), nil
+			}
+
+			response.Records = append(response.Records, struct {
+				ID string `json:"id"`
+			}{
+				ID: agency.ID,
+			})
+		}
+
+		return encoder.Encode(ctx, response, apigateway.WithStatusCode(http.StatusOK))
 	}
 }
