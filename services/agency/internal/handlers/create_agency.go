@@ -108,7 +108,7 @@ func CreateAgency(
 		model := models.Agency{
 			Auditable: models.Auditable{
 				PK:         fmt.Sprintf("agency#%s", id),
-				SK:         fmt.Sprintf("metadata#%s", id),
+				SK:         fmt.Sprintf("agency#%s", id),
 				Created:    time.Now(),
 				CreatedBy:  userInfo.IPDID,
 				Modified:   time.Now(),
