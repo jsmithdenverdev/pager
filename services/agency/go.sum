@@ -49,12 +49,12 @@ github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGw
 github.com/jmespath/go-jmespath/internal/testify v1.5.1/go.mod h1:L3OGu8Wl2/fWfCI6z80xFu9LTZmf1ZRjMHUOPmWr69U=
 github.com/jsmithdenverdev/pager/pkg/apigateway v1.1.0 h1:Ooxus2cwBuJ4sEvr8H0vNmn6hgZkuirkOVm1mSC5WUI=
 github.com/jsmithdenverdev/pager/pkg/apigateway v1.1.0/go.mod h1:pdQ0dmV15g7V796Pj+5lmGzSh3lKPmuAWyMJgN+1VQo=
-github.com/jsmithdenverdev/pager/pkg/authz v1.4.1 h1:fdqrMHVvLd/n6xmOsQe5jq/uWHZRY49xoCkIZCivRUg=
-github.com/jsmithdenverdev/pager/pkg/authz v1.4.1/go.mod h1:+Av20/CmI12vpDuANzemguvYAqdoSm6NMQSjK8SGk54=
+github.com/jsmithdenverdev/pager/pkg/authz v1.4.2 h1:2WefIBXOTXMtfx4TpgvCsara0Rks7N1QvFpqh/LvifI=
+github.com/jsmithdenverdev/pager/pkg/authz v1.4.2/go.mod h1:+Av20/CmI12vpDuANzemguvYAqdoSm6NMQSjK8SGk54=
 github.com/jsmithdenverdev/pager/pkg/codec v1.1.0 h1:lq0AveTkX6N7ZgkWRWBCX7odPdPuBMGuQ4XL/vzfjFk=
 github.com/jsmithdenverdev/pager/pkg/codec v1.1.0/go.mod h1:MUiFrTS09hcPp64hiDCdDcuBSnxeZbLJw/AgwuWaREM=
-github.com/jsmithdenverdev/pager/pkg/middleware v1.2.0 h1:afggVnI4o7Ou689rgiK6LzFGPY9qUi9U7qPZkXqVUZU=
-github.com/jsmithdenverdev/pager/pkg/middleware v1.2.0/go.mod h1:+39pIAAZgQ3GK1AbFywlivsybLuzKklKYY4GD78GmWY=
+github.com/jsmithdenverdev/pager/pkg/middleware v1.2.1 h1:KbPw4GI2ww/Vu0Fxv0Kxo/v/g83/OS48ra3tIRi08jk=
+github.com/jsmithdenverdev/pager/pkg/middleware v1.2.1/go.mod h1:6MoDMtFn6B57gf/P29pWsO6txl8xl2WMKMMjbl13eeg=
 github.com/jsmithdenverdev/pager/pkg/problemdetail v1.1.0 h1:/AKI83Bv3N8m5EnOyNHv8J24wuszIf/B87xSucsjkys=
 github.com/jsmithdenverdev/pager/pkg/problemdetail v1.1.0/go.mod h1:Bhm/VRSjNdvskvJ+fD1R1qLn8xG0gl14o9dfopJwBuw=
 github.com/jsmithdenverdev/pager/pkg/valid v1.2.1 h1:6DXo66n3vjiQjlWmPbgIuLf91dIU5V6J29FsVS1qLXw=

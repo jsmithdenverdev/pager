@@ -1,0 +1,10 @@
+{
+  "idpid": "auth0|6606e16332edd5a3975a6e9f",
+  "email": "pager-admin@pager.com",
+  "created": "2024-11-01T20:47:19.251474238Z",
+  "created_by": "auth0|6606e16332edd5a3975a6e9f",
+  "modified": "2024-11-01T20:47:19.25147431Z",
+  "modified_by": "auth0|6606e16332edd5a3975a6e9f",
+  "entitlements": ["PLATFORM_ADMIN"],
+  "status": "PENDING"
+}
