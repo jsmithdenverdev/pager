@@ -17,7 +17,6 @@ import (
 
 func UserInfo(config config.Config, logger *slog.Logger, client *dynamodb.Client) func(context.Context, events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	type userInfoResponse struct {
-		ID     string `json:"id"`
 		Email  string `json:"email"`
 		IDPID  string `json:"idpId"`
 		Status string `json:"status"`
@@ -59,7 +58,6 @@ func UserInfo(config config.Config, logger *slog.Logger, client *dynamodb.Client
 		}
 
 		resp, err := json.Marshal(userInfoResponse{
-			ID:     user.ID,
 			Email:  user.Email,
 			IDPID:  user.IDPID,
 			Status: user.Status,

@@ -85,19 +85,19 @@ Resources:
                   }
                 },
                 "Agency": {
-                  "memberOfTypes": ["Group"],
+                  "memberOfTypes": ["Membership"],
                   "shape": {
                     "type": "Record",
                     "attributes": {
-                      "group": {
+                      "membership": {
                         "type": "Entity",
                         "required": true,
-                        "name": "Group"
+                        "name": "Membership"
                       }
                     }
                   }
                 },
-                "Group": {
+                "Membership": {
                   "memberOfTypes": [],
                   "shape": {
                     "type": "Record",
@@ -191,7 +191,7 @@ Resources:
       PolicyStoreId: !Ref AVPStore
       Definition:
         Static:
-          Description: "Allow PLATFORM_ADMIN to create agencies."
+          Description: "Allow PLATFORM_ADMIN to read agencies."
           Statement: >
             permit(
               principal,
@@ -225,7 +225,7 @@ Resources:
                 principal has agencies &&
                 resource in principal.agencies &&
                 principal has currentAgency &&
-                principal.currentAgency.group == pager::Group::"admin"
+                principal.currentAgency.membership == pager::Membership::"WRITER"
             };
 ###############################################
 # OUTPUTS

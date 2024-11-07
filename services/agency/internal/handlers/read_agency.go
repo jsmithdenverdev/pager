@@ -69,7 +69,7 @@ func ReadAgency(
 					Value: fmt.Sprintf("agency#%s", agencyId),
 				},
 				"sk": &dbtypes.AttributeValueMemberS{
-					Value: fmt.Sprintf("metadata#%s", agencyId),
+					Value: fmt.Sprintf("agency#%s", agencyId),
 				},
 			},
 		}
@@ -107,6 +107,8 @@ func ReadAgency(
 			CreatedBy:  model.CreatedBy,
 			Modified:   model.Modified,
 			ModifiedBy: model.ModifiedBy,
+			Address:    model.Address,
+			Contact:    model.Contact,
 		}, apigateway.WithStatusCode(http.StatusOK))
 
 		return response, nil

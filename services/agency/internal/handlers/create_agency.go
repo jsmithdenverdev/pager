@@ -24,7 +24,9 @@ import (
 
 // createAgencyRequest represents the data required to create a new Agency.
 type createAgencyRequest struct {
-	Name string `json:"name"`
+	Name    string `json:"name"`
+	Address string `json:"address"`
+	Contact string `json:"contact"`
 }
 
 // Valid performs validations on a createAgencyRequest and returns a slice of
@@ -104,7 +106,8 @@ func CreateAgency(
 			return errEncoder.EncodeAuthzError(ctx, authz.NewUnauthorizedError(authzResource, authzAction)), nil
 		}
 
-		id := uuid.NewString()
+		id := uuid.New().String()
+
 		model := models.Agency{
 			Auditable: models.Auditable{
 				PK:         fmt.Sprintf("agency#%s", id),
@@ -114,9 +117,10 @@ func CreateAgency(
 				Modified:   time.Now(),
 				ModifiedBy: userInfo.IPDID,
 			},
-			ID:     id,
-			Name:   request.Name,
-			Status: models.AgencyStatusPending,
+			Name:    request.Name,
+			Status:  models.AgencyStatusPending,
+			Contact: request.Contact,
+			Address: request.Address,
 		}
 
 		dynamoInput, err := attributevalue.MarshalMap(model)
