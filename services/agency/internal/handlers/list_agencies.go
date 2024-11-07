@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -52,16 +52,40 @@ func (r listAgenciesRequest) Valid(ctx context.Context) []valid.Problem {
 	return problems
 }
 
-func getAgenciesGSI(platformAdmin bool, request listAgenciesRequest) string {
+func getAgenciesGSI(platformAdmin bool, sort agenciesSort) string {
 	if platformAdmin {
-		switch request.Sort {
+		switch sort {
+		case agenciesSortCreatedAsc:
+			return "type-created-index"
+		case agenciesSortCreatedDesc:
+			return "type-created-index"
+		case agenciesSortModifiedAsc:
+			return "type-modified-index"
+		case agenciesSortModifiedDesc:
+			return "type-modified-index"
+		case agenciesSortNameAsc:
+			return "type-name-index"
+		case agenciesSortNameDesc:
+			return "type-name-index"
 		default:
 			return "type-created-index"
 		}
 	} else {
-		switch request.Sort {
+		switch sort {
+		case agenciesSortCreatedAsc:
+			return "idpid-agency_created-index"
+		case agenciesSortCreatedDesc:
+			return "idpid-agency_created-index"
+		case agenciesSortModifiedAsc:
+			return "idpid-agency_modified-index"
+		case agenciesSortModifiedDesc:
+			return "idpid-agency_modified-index"
+		case agenciesSortNameAsc:
+			return "idpid-name-index"
+		case agenciesSortNameDesc:
+			return "idpid-name-index"
 		default:
-			return "idpid-created-index"
+			return "idpid-agency_created-index"
 		}
 	}
 }
@@ -72,31 +96,24 @@ func ListAgencies(
 	dynamoClient *dynamodb.Client) func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 		var (
-			encoder       = apigateway.NewEncoder(apigateway.WithLogger[agenciesResponse](logger))
-			errEncoder    = apigateway.NewProblemDetailEncoder(apigateway.WithLogger[problemdetail.ProblemDetailer](logger))
-			user, _       = authz.RetrieveUserInfoFromContext(ctx)
-			platformAdmin = false
+			encoder           = apigateway.NewEncoder(apigateway.WithLogger[agenciesResponse](logger))
+			errEncoder        = apigateway.NewProblemDetailEncoder(apigateway.WithLogger[problemdetail.ProblemDetailer](logger))
+			user, _           = authz.RetrieveUserInfoFromContext(ctx)
+			platformAdmin     = false
+			first             = 10
+			firstStr, firstOk = event.QueryStringParameters["first"]
+			after, afterOk    = event.QueryStringParameters["after"]
+			sort, sortOk      = event.QueryStringParameters["sort"]
 		)
 
-		// Decode APIGatewayProxyRequest into our request type and validate it
-		request, err := apigateway.DecodeValid[listAgenciesRequest](ctx, event)
-
-		if err != nil {
-			// Check if the error was a validation error
-			validErr := new(valid.FailedValidationError)
-			if errors.As(err, validErr) {
-				return errEncoder.EncodeValidationError(ctx, *validErr), nil
+		if firstOk {
+			if firstParsed, err := strconv.Atoi(firstStr); err == nil {
+				first = firstParsed
 			}
-			// Log the decoding error, this would likely be an error unmarhsaling a
-			// request into an expected type.
-			logger.ErrorContext(
-				ctx,
-				"failed to decode request",
-				slog.Any("decode error", err))
+		}
 
-			// If decoding failed but was not a validation failure encode an
-			// internal server error and return it.
-			return errEncoder.EncodeInternalServerError(ctx), nil
+		if !sortOk {
+			sort = agenciesSortCreatedAsc
 		}
 
 		for _, entitlement := range user.Entitlements {
@@ -107,26 +124,26 @@ func ListAgencies(
 
 		input := &dynamodb.QueryInput{
 			TableName: aws.String(config.TableName),
-			Limit:     aws.Int32(int32(request.First)),
+			Limit:     aws.Int32(int32(first)),
 		}
 
-		if request.After != "" {
+		if afterOk && after != "" {
 			input.ExclusiveStartKey = map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("agency#%s", request.After),
+					Value: fmt.Sprintf("agency#%s", after),
 				},
 				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("agency#%s", request.After),
+					Value: fmt.Sprintf("agency#%s", after),
 				},
 			}
 		}
 
-		input.IndexName = aws.String(getAgenciesGSI(platformAdmin, request))
+		input.IndexName = aws.String(getAgenciesGSI(platformAdmin, sort))
 
 		// If sort is ascending
-		if request.Sort == agenciesSortCreatedAsc ||
-			request.Sort == agenciesSortModifiedAsc ||
-			request.Sort == agenciesSortNameAsc {
+		if sort == agenciesSortCreatedAsc ||
+			sort == agenciesSortModifiedAsc ||
+			sort == agenciesSortNameAsc {
 			input.ScanIndexForward = aws.Bool(true)
 		}
 

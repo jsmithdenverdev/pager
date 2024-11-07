@@ -18,32 +18,30 @@ func Test_getAgenciesGSI(t *testing.T) {
 			sort: map[string]string{
 				agenciesSortCreatedAsc:   "type-created-index",
 				agenciesSortCreatedDesc:  "type-created-index",
-				agenciesSortModifiedAsc:  "type-created-index",
-				agenciesSortModifiedDesc: "type-created-index",
-				agenciesSortNameAsc:      "type-created-index",
-				agenciesSortNameDesc:     "type-created-index",
+				agenciesSortModifiedAsc:  "type-modified-index",
+				agenciesSortModifiedDesc: "type-modified-index",
+				agenciesSortNameAsc:      "type-name-index",
+				agenciesSortNameDesc:     "type-name-index",
 			},
 		},
 		"member sorting": {
 			platformAdmin: false,
 			sort: map[string]string{
-				agenciesSortCreatedAsc:   "idpid-created-index",
-				agenciesSortCreatedDesc:  "idpid-created-index",
-				agenciesSortModifiedAsc:  "idpid-created-index",
-				agenciesSortModifiedDesc: "idpid-created-index",
-				agenciesSortNameAsc:      "idpid-created-index",
-				agenciesSortNameDesc:     "idpid-created-index",
+				agenciesSortCreatedAsc:   "idpid-agency_created-index",
+				agenciesSortCreatedDesc:  "idpid-agency_created-index",
+				agenciesSortModifiedAsc:  "idpid-agency_modified-index",
+				agenciesSortModifiedDesc: "idpid-agency_modified-index",
+				agenciesSortNameAsc:      "idpid-name-index",
+				agenciesSortNameDesc:     "idpid-name-index",
 			},
 		},
 	}
 
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
-			for direction, expectedGsi := range tc.sort {
-				t.Run(direction, func(t *testing.T) {
-					assert.Equal(t, expectedGsi, getAgenciesGSI(tc.platformAdmin, listAgenciesRequest{
-						Sort: direction,
-					}))
+			for sort, expectedGsi := range tc.sort {
+				t.Run(sort, func(t *testing.T) {
+					assert.Equal(t, expectedGsi, getAgenciesGSI(tc.platformAdmin, sort))
 				})
 			}
 		})
