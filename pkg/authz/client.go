@@ -96,9 +96,9 @@ func (c *Client) IsAuthorized(ctx context.Context, input IsAuthorizedInput) (boo
 						EntityId:   aws.String(c.userInfo.ActiveAgency),
 					},
 					Attributes: map[string]types.AttributeValue{
-						"group": &types.AttributeValueMemberEntityIdentifier{
+						"membership": &types.AttributeValueMemberEntityIdentifier{
 							Value: types.EntityIdentifier{
-								EntityType: aws.String("pager::Group"),
+								EntityType: aws.String("pager::Membership"),
 								EntityId:   aws.String(agency.Role),
 							},
 						},
