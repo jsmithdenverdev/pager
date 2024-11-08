@@ -80,12 +80,33 @@
       {
         "PutRequest": {
           "Item": {
-            "pk": { "S": "agency#3d452401-a21b-450f-8233-b502dbeee18f" },
-            "sk": { "S": "agency#3d452401-a21b-450f-8233-b502dbeee18f" },
-            "type": { "S": "AGENCY" },
-            "created": { "S": "2024-11-01T12:00:00Z" },
-            "modified": { "S": "2024-11-01T12:00:00Z" },
-            "name": { "S": "Alpine Rescue Team" }
+            "pk": {
+              "S": "agency#3d452401-a21b-450f-8233-b502dbeee18f"
+            },
+            "sk": {
+              "S": "agency#3d452401-a21b-450f-8233-b502dbeee18f"
+            },
+            "address": {
+              "S": "28802 Rainbow Hill Rd, Evergreen, CO 80439"
+            },
+            "contact": {
+              "S": "sar-writer@pager.com"
+            },
+            "created": {
+              "S": "2024-11-01T12:00:00Z"
+            },
+            "modified": {
+              "S": "2024-11-01T12:00:00Z"
+            },
+            "name": {
+              "S": "Alpine Rescue Team"
+            },
+            "status": {
+              "S": "ACTIVE"
+            },
+            "type": {
+              "S": "AGENCY"
+            }
           }
         }
       },
@@ -118,12 +139,33 @@
       {
         "PutRequest": {
           "Item": {
-            "pk": { "S": "agency#81d91cd2-663c-45cd-a215-49f2a2373668" },
-            "sk": { "S": "agency#81d91cd2-663c-45cd-a215-49f2a2373668" },
-            "type": { "S": "AGENCY" },
-            "created": { "S": "2024-11-02T12:00:00Z" },
-            "modified": { "S": "2024-11-02T12:00:00Z" },
-            "name": { "S": "Clear Creek EMS" }
+            "pk": {
+              "S": "agency#81d91cd2-663c-45cd-a215-49f2a2373668"
+            },
+            "sk": {
+              "S": "agency#81d91cd2-663c-45cd-a215-49f2a2373668"
+            },
+            "created": {
+              "S": "2024-11-02T12:00:00Z"
+            },
+            "modified": {
+              "S": "2024-11-02T12:00:00Z"
+            },
+            "name": {
+              "S": "Clear Creek EMS"
+            },
+            "type": {
+              "S": "AGENCY"
+            },
+            "status": {
+              "S": "ACTIVE"
+            },
+            "contact": {
+              "S": "ems-writer@pager.com"
+            },
+            "address": {
+              "S": "750 Brownell St, Georgetown, CO 80444"
+            }
           }
         }
       },
