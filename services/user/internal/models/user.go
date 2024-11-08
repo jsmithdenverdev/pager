@@ -9,7 +9,6 @@ const (
 )
 
 type User struct {
-	ID     string     `dynamodbav:"id"`
 	Email  string     `dynamodbav:"email"`
 	IDPID  string     `dynamodbav:"idpId"`
 	Status UserStatus `dynamodbav:"status"`

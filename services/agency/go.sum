@@ -49,8 +49,8 @@ github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGw
 github.com/jmespath/go-jmespath/internal/testify v1.5.1/go.mod h1:L3OGu8Wl2/fWfCI6z80xFu9LTZmf1ZRjMHUOPmWr69U=
 github.com/jsmithdenverdev/pager/pkg/apigateway v1.1.0 h1:Ooxus2cwBuJ4sEvr8H0vNmn6hgZkuirkOVm1mSC5WUI=
 github.com/jsmithdenverdev/pager/pkg/apigateway v1.1.0/go.mod h1:pdQ0dmV15g7V796Pj+5lmGzSh3lKPmuAWyMJgN+1VQo=
-github.com/jsmithdenverdev/pager/pkg/authz v1.4.2 h1:2WefIBXOTXMtfx4TpgvCsara0Rks7N1QvFpqh/LvifI=
-github.com/jsmithdenverdev/pager/pkg/authz v1.4.2/go.mod h1:+Av20/CmI12vpDuANzemguvYAqdoSm6NMQSjK8SGk54=
+github.com/jsmithdenverdev/pager/pkg/authz v1.5.0 h1:c4k0/eDZtjElNMupth6r1QGxS7X74H6o8PG6lmSaEcI=
+github.com/jsmithdenverdev/pager/pkg/authz v1.5.0/go.mod h1:+Av20/CmI12vpDuANzemguvYAqdoSm6NMQSjK8SGk54=
 github.com/jsmithdenverdev/pager/pkg/codec v1.1.0 h1:lq0AveTkX6N7ZgkWRWBCX7odPdPuBMGuQ4XL/vzfjFk=
 github.com/jsmithdenverdev/pager/pkg/codec v1.1.0/go.mod h1:MUiFrTS09hcPp64hiDCdDcuBSnxeZbLJw/AgwuWaREM=
 github.com/jsmithdenverdev/pager/pkg/middleware v1.2.1 h1:KbPw4GI2ww/Vu0Fxv0Kxo/v/g83/OS48ra3tIRi08jk=
@@ -62,8 +62,9 @@ github.com/jsmithdenverdev/pager/pkg/valid v1.2.1/go.mod h1:o+OMomsLJ1HdtWXX1pUF
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-github.com/stretchr/testify v1.7.2 h1:4jaiDzPyXQvSd7D0EjG45355tLlV3VOECpq10pLC+8s=
-github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
+github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
+github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v2 v2.2.8 h1:obN1ZagJSUGI0Ek/LBmuj4SNLPfIny3KsKFopxRdj10=
 gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
