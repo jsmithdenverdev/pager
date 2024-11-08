@@ -104,6 +104,7 @@ func ListAgencies(
 			firstStr, firstOk = event.QueryStringParameters["first"]
 			after, afterOk    = event.QueryStringParameters["after"]
 			sort, sortOk      = event.QueryStringParameters["sort"]
+			_, hydrate        = event.QueryStringParameters["hydrate"]
 		)
 
 		if firstOk {
@@ -179,8 +180,13 @@ func ListAgencies(
 			Records: make([]agencyResponse, 0),
 		}
 
-		agencies := make([]models.Agency, len(results.Items))
-		if err := attributevalue.UnmarshalListOfMaps(results.Items, &agencies); err != nil {
+		// When we list we fetch from a GSI. This results in a partial read. We need
+		// to perform a separate hydration step below.
+		// TODO: It might be better to project these attributes and prevent the dual
+		// read. That just means more attributes to keep in sync. Might not be worth
+		// the cost.
+		partialAgencies := make([]models.Agency, len(results.Items))
+		if err := attributevalue.UnmarshalListOfMaps(results.Items, &partialAgencies); err != nil {
 			logger.ErrorContext(
 				ctx,
 				"failed to unmarshal dynamodb results",
@@ -190,24 +196,81 @@ func ListAgencies(
 			return errEncoder.EncodeInternalServerError(ctx), nil
 		}
 
+		// If LastEvaluatedKey is populated that means we have additional results
+		// beyond this page.
 		if results.LastEvaluatedKey != nil {
 			if pkAttr, ok := results.LastEvaluatedKey["pk"].(*types.AttributeValueMemberS); ok {
 				response.NextCursor = pkAttr.Value
 			}
 		}
 
-		for _, agency := range agencies {
-			response.Records = append(response.Records, agencyResponse{
-				ID:         strings.Split(agency.PK, "#")[1],
-				Name:       agency.Name,
-				Status:     string(agency.Status),
-				Created:    agency.Created,
-				CreatedBy:  agency.CreatedBy,
-				Modified:   agency.Modified,
-				ModifiedBy: agency.ModifiedBy,
-				Address:    agency.Address,
-				Contact:    agency.Contact,
+		if hydrate {
+			// Construct a set of keys to hydrate the agency models
+			agencyKeys := []map[string]types.AttributeValue{}
+			for _, agency := range partialAgencies {
+				agencyKeys = append(agencyKeys, map[string]types.AttributeValue{
+					"pk": &types.AttributeValueMemberS{
+						Value: agency.PK,
+					},
+					"sk": &types.AttributeValueMemberS{
+						Value: agency.SK,
+					},
+				})
+			}
+
+			// Hydrate full agency model
+			items, err := dynamoClient.BatchGetItem(ctx, &dynamodb.BatchGetItemInput{
+				RequestItems: map[string]types.KeysAndAttributes{
+					config.TableName: {
+						Keys: agencyKeys,
+					},
+				},
 			})
+
+			if err != nil {
+				logger.ErrorContext(
+					ctx,
+					"failed to batchgetitem dynamodb",
+					slog.String("error", err.Error()))
+
+				// If authorization failed encode an internal server error and return it.
+				return errEncoder.EncodeInternalServerError(ctx), nil
+			}
+
+			hydratedAgencyAttributeValueMaps := items.Responses[config.TableName]
+
+			hydratedAgencies := make([]models.Agency, len(hydratedAgencyAttributeValueMaps))
+			if err := attributevalue.UnmarshalListOfMaps(hydratedAgencyAttributeValueMaps, &hydratedAgencies); err != nil {
+				logger.ErrorContext(
+					ctx,
+					"failed to unmarshal dynamodb results",
+					slog.String("error", err.Error()))
+
+				// If authorization failed encode an internal server error and return it.
+				return errEncoder.EncodeInternalServerError(ctx), nil
+			}
+
+			for _, agency := range hydratedAgencies {
+				response.Records = append(response.Records, agencyResponse{
+					ID:         strings.Split(agency.PK, "#")[1],
+					Name:       agency.Name,
+					Status:     string(agency.Status),
+					Created:    agency.Created,
+					CreatedBy:  agency.CreatedBy,
+					Modified:   agency.Modified,
+					ModifiedBy: agency.ModifiedBy,
+					Address:    agency.Address,
+					Contact:    agency.Contact,
+				})
+			}
+		} else {
+			for _, agency := range partialAgencies {
+				response.Records = append(response.Records, agencyResponse{
+					ID:       strings.Split(agency.PK, "#")[1],
+					Created:  agency.Created,
+					Modified: agency.Modified,
+				})
+			}
 		}
 
 		return encoder.Encode(ctx, response, apigateway.WithStatusCode(http.StatusOK))
