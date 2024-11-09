@@ -2,6 +2,11 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: "AWS::Serverless-2016-10-31"
 Description: AWS SAM template for the Pager User service.
 
+Parameters:
+  PolicyStoreId:
+    Type: String
+    Description: "Amazon Verified Permissions Policy Store ID"
+
 Resources:
   ###############################################
   # API
@@ -37,6 +42,36 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref UserTable
+          REGION: !Ref AWS::Region
+  InviteUserFunction:
+    Type: "AWS::Serverless::Function"
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: "invite-user"
+      Handler: bootstrap
+      Runtime: provided.al2023
+      CodeUri: cmd/invite_user
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /
+            Method: POST
+            RestApiId: !Ref UserApi
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - verifiedpermissions:IsAuthorized
+              Resource: !Sub arn:aws:verifiedpermissions::${AWS::AccountId}:policy-store/${PolicyStoreId}
+        - DynamoDBReadPolicy:
+            TableName: !Ref UserTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref UserTable
+          POLICY_STORE_ID: !Ref PolicyStoreId
           REGION: !Ref AWS::Region
   ###############################################
   # DATABASE

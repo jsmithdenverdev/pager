@@ -6,11 +6,17 @@ import (
 )
 
 type Config struct {
-	TableName string
+	PolicyStoreID string
+	TableName     string
 }
 
 func LoadFromEnv(getenv func(string) string) (Config, error) {
 	missing := make([]string, 0)
+	PolicyStoreID := getenv("POLICY_STORE_ID")
+	if PolicyStoreID == "" {
+		missing = append(missing, "POLICY_STORE_ID")
+	}
+
 	tableName := getenv("TABLE_NAME")
 	if tableName == "" {
 		missing = append(missing, "TABLE_NAME")
@@ -21,6 +27,7 @@ func LoadFromEnv(getenv func(string) string) (Config, error) {
 	}
 
 	return Config{
-		TableName: tableName,
+		PolicyStoreID: PolicyStoreID,
+		TableName:     tableName,
 	}, nil
 }
