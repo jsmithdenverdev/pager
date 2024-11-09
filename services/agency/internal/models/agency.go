@@ -16,7 +16,7 @@ const (
 // Members of an Agency are tracked as Users, which have Devices to which
 // notifications can be sent.
 type Agency struct {
-	Auditable
+	Model
 	Name    string       `dynamodbav:"name"`
 	Status  AgencyStatus `dynamodbav:"status"`
 	Contact string       `dynamodbav:"contact"`
