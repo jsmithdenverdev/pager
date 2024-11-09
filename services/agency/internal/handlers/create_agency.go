@@ -109,13 +109,15 @@ func CreateAgency(
 		id := uuid.New().String()
 
 		model := models.Agency{
-			Auditable: models.Auditable{
-				PK:         fmt.Sprintf("agency#%s", id),
-				SK:         fmt.Sprintf("agency#%s", id),
-				Created:    time.Now(),
-				CreatedBy:  userInfo.IPDID,
-				Modified:   time.Now(),
-				ModifiedBy: userInfo.IPDID,
+			Model: models.Model{
+				PK: fmt.Sprintf("agency#%s", id),
+				SK: fmt.Sprintf("agency#%s", id),
+				Auditable: models.Auditable{
+					Created:    time.Now(),
+					CreatedBy:  userInfo.IPDID,
+					Modified:   time.Now(),
+					ModifiedBy: userInfo.IPDID,
+				},
 			},
 			Name:    request.Name,
 			Status:  models.AgencyStatusPending,
