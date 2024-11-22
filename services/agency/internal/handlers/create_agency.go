@@ -139,7 +139,17 @@ func CreateAgency(
 			Item:      dynamoInput,
 		}
 
-		dynamo.PutItem(ctx, putItemInput)
+		_, err = dynamo.PutItem(ctx, putItemInput)
+		if err != nil {
+			// Log the dynamo error
+			logger.ErrorContext(
+				ctx,
+				"failed to put item in dynamo",
+				slog.Any("put item error", err))
+
+			response := errEncoder.EncodeInternalServerError(ctx)
+			return response, nil
+		}
 
 		response, _ := encoder.Encode(ctx, agencyResponse{
 			ID:         id,
