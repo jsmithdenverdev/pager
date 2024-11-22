@@ -22,6 +22,12 @@ Resources:
       Location: ./services/agency/template.yaml
       Parameters:
         PolicyStoreId: !GetAtt AuthService.Outputs.PolicyStoreId
+  PageService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./services/page/template.yaml
+      Parameters:
+        PolicyStoreId: !GetAtt AuthService.Outputs.PolicyStoreId
 
   ##########################################################
   # API
@@ -66,10 +72,7 @@ Resources:
       AuthorizationType: "CUSTOM"
       AuthorizerId: !Ref ApiAuthorizer
       RouteKey: "ANY /user"
-      Target: !Join
-        - /
-        - - integrations
-          - !Ref UserServiceRootIntegration
+      Target: !Sub "integrations/${UserServiceRootIntegration}"
   UserServiceWildCardRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -77,32 +80,39 @@ Resources:
       AuthorizationType: "CUSTOM"
       AuthorizerId: !Ref ApiAuthorizer
       RouteKey: "ANY /user/{proxy+}"
-      Target: !Join
-        - /
-        - - integrations
-          - !Ref UserServiceWildCardIntegration
+      Target: !Sub "integrations/${UserServiceWildCardIntegration}"
   AgencyServiceRootRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref RootApi
       AuthorizationType: "CUSTOM"
       AuthorizerId: !Ref ApiAuthorizer
-      RouteKey: "ANY /agency"
-      Target: !Join
-        - /
-        - - integrations
-          - !Ref AgencyServiceRootIntegration
+      RouteKey: "ANY /agencies"
+      Target: !Sub "integrations/${AgencyServiceRootIntegration}"
   AgencyServiceWildCardRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref RootApi
       AuthorizationType: "CUSTOM"
       AuthorizerId: !Ref ApiAuthorizer
-      RouteKey: "ANY /agency/{proxy+}"
-      Target: !Join
-        - /
-        - - integrations
-          - !Ref AgencyServiceWildCardIntegration
+      RouteKey: "ANY /agencies/{proxy+}"
+      Target: !Sub "integrations/${AgencyServiceWildCardIntegration}"
+  PageServiceRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RootApi
+      AuthorizationType: "CUSTOM"
+      AuthorizerId: !Ref ApiAuthorizer
+      RouteKey: "ANY /agencies/{agencyid}/pages"
+      Target: !Sub "integrations/${PageServiceRootIntegration}"
+  PageServiceWildCardRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref RootApi
+      AuthorizationType: "CUSTOM"
+      AuthorizerId: !Ref ApiAuthorizer
+      RouteKey: "ANY /agencies/{agencyid}/pages/{proxy+}"
+      Target: !Sub "integrations/${PageServiceWildCardIntegration}"
 
   ##########################################################
   # ROUTE INTEGRATIONS
@@ -157,6 +167,33 @@ Resources:
         "overwrite:path": "prod/${request.path.proxy}"
         "append:header.x-pager-userid": "$context.authorizer.userid"
         "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
+  PageServiceRootIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref RootApi
+      Description: "Page API root proxy integration"
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub "https://${PageService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/prod"
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        "append:header.x-pager-userid": "$context.authorizer.userid"
+        "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
+        "append:header.x-pager-agencyid": "$request.path.agencyid"
+  PageServiceWildCardIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref RootApi
+      Description: "Page API wild card proxy integration"
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub "https://${PageService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/"
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        "overwrite:path": "prod/${request.path.proxy}"
+        "append:header.x-pager-userid": "$context.authorizer.userid"
+        "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
+        "append:header.x-pager-agencyid": "$request.path.agencyid"
 
   ##########################################################
   # COGNITO
