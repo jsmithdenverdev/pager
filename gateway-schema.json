@@ -1,0 +1,36 @@
+{
+  "ANY /agencies": {
+    "destination": {
+      "gateway": "agency",
+      "overwrites": {
+        "append:header.x-pager-userid": "$context.authorizer.userid",
+        "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
+      }
+    }
+  },
+  "ANY /agencies/{proxy+}": {
+    "gateway": "agency",
+    "overwrites": {
+      "overwrite:path": "prod/${request.path.proxy}",
+      "append:header.x-pager-userid": "$context.authorizer.userid",
+      "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
+    }
+  },
+  "ANY /agencies/{agencyid}/pages": {
+    "gateway": "page",
+    "overwrites": {
+      "append:header.x-pager-agencyid": "$request.path.agency",
+      "append:header.x-pager-userid": "$context.authorizer.userid",
+      "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
+    }
+  },
+  "ANY /agencies/{agencyid}/pages/{proxy+}": {
+    "gateway": "page",
+    "overwrites": {
+      "overwrite:path": "prod/${request.path.proxy}",
+      "append:header.x-pager-agencyid": "$request.path.agency",
+      "append:header.x-pager-userid": "$context.authorizer.userid",
+      "append:header.x-pager-userinfo": "$context.authorizer.userinfo"
+    }
+  }
+}
