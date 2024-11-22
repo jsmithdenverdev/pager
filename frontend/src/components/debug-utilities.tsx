@@ -25,22 +25,20 @@ export default function DebugUtilities() {
   }, [getAccessTokenSilently]);
 
   return (
-    <section className="flex flex-col border-dashed border-2 border-sky-500 p-4 ">
-      <div>
-        <h1 className="text-xl uppercase">
-          Debug
-          {isLoading && <span> - Loading...</span>}
-        </h1>
-      </div>
+    <details className="p-2  text-xs">
+      <summary className="font-semibold cursor-pointer uppercase">
+        Debug
+        {isLoading && <span> - Loading...</span>}
+      </summary>
       {isLoading ? (
         <></>
       ) : (
         <>
           {isAuthenticated ? (
-            <section className="space-y-4">
+            <section className="space-y-2">
               <div>
-                <details className="p-4  rounded-sm shadow">
-                  <summary className="text-sm font-semibold cursor-pointer">
+                <details className="p-2  ">
+                  <summary className="font-semibold cursor-pointer">
                     User Details - {user?.email}
                   </summary>
                   <pre>{JSON.stringify(user, null, 2)}</pre>
@@ -48,7 +46,7 @@ export default function DebugUtilities() {
               </div>
               <div>
                 <button
-                  className="rounded-sm bg-gray-200 px-4 py-2 font-bold uppercase text-gray-800 shadow hover:bg-gray-300 ml-auto"
+                  className="rounded-sm bg-gray-200 p-2 uppercase text-gray-800 shadow hover:bg-gray-300 ml-auto"
                   onClick={handleCopyToken}
                 >
                   {tokenButtonText}
@@ -60,6 +58,14 @@ export default function DebugUtilities() {
           )}
         </>
       )}
+    </details>
+  );
+
+  return (
+    <section className="flex flex-col border-dashed border-2 border-sky-500 p-4 ">
+      <div>
+        <h1 className="text-xl uppercase">Debug</h1>
+      </div>
     </section>
   );
 }

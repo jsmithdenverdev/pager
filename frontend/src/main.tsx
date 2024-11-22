@@ -9,6 +9,7 @@ import AuthCallback from "./routes/auth-callback";
 import Home from "./routes/home";
 import "./index.css";
 import AuthGuard from "./routes/auth-guard";
+import PageDetails from "./routes/page-details";
 
 function App() {
   const {} = useAuth0();
@@ -23,9 +24,10 @@ function App() {
             {
               element: <AuthGuard />,
               children: [
+                { index: true, element: <Home /> },
                 {
-                  index: true,
-                  element: <Home />,
+                  path: "/agencies/:agencyId/pages/:pageId",
+                  element: <PageDetails />,
                 },
               ],
             },
