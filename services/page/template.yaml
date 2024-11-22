@@ -125,7 +125,11 @@ Resources:
           AttributeType: S
         - AttributeName: sk
           AttributeType: S
-
+      BillingMode: PROVISIONED
+      TableName: pages
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
 ###############################################
 # OUTPUTS
 ###############################################
