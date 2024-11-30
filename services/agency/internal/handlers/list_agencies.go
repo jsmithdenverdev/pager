@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -90,6 +91,38 @@ func getAgenciesGSI(platformAdmin bool, sort agenciesSort) string {
 	}
 }
 
+// sortAgencies sorts a slice of agencies based on the given sort criteria.
+func sortAgencies(agencies []models.Agency, sortBy agenciesSort) {
+	switch sortBy {
+	case agenciesSortCreatedAsc:
+		sort.Slice(agencies, func(i, j int) bool {
+			return agencies[i].Created.Before(agencies[j].Created)
+		})
+	case agenciesSortCreatedDesc:
+		sort.Slice(agencies, func(i, j int) bool {
+			return agencies[i].Created.After(agencies[j].Created)
+		})
+	case agenciesSortModifiedAsc:
+		sort.Slice(agencies, func(i, j int) bool {
+			return agencies[i].Modified.Before(agencies[j].Modified)
+		})
+	case agenciesSortModifiedDesc:
+		sort.Slice(agencies, func(i, j int) bool {
+			return agencies[i].Modified.After(agencies[j].Modified)
+		})
+	case agenciesSortNameAsc:
+		sort.Slice(agencies, func(i, j int) bool {
+			return agencies[i].Name < agencies[j].Name
+		})
+	case agenciesSortNameDesc:
+		sort.Slice(agencies, func(i, j int) bool {
+			return agencies[i].Name > agencies[j].Name
+		})
+	default:
+		// No sorting if sortBy does not match any known constants
+	}
+}
+
 func ListAgencies(
 	config config.Config,
 	logger *slog.Logger,
@@ -123,6 +156,14 @@ func ListAgencies(
 			}
 		}
 
+		logger.DebugContext(
+			ctx,
+			"sort and pagination",
+			slog.Any("first", first),
+			slog.Any("after", after),
+			slog.Any("sort", sort),
+			slog.Any("hydrate", hydrate))
+
 		input := &dynamodb.QueryInput{
 			TableName: aws.String(config.TableName),
 			Limit:     aws.Int32(int32(first)),
@@ -141,12 +182,11 @@ func ListAgencies(
 
 		input.IndexName = aws.String(getAgenciesGSI(platformAdmin, sort))
 
-		// If sort is ascending
-		if sort == agenciesSortCreatedAsc ||
-			sort == agenciesSortModifiedAsc ||
-			sort == agenciesSortNameAsc {
-			input.ScanIndexForward = aws.Bool(true)
-		}
+		var scanIndexForward = sort == agenciesSortCreatedDesc ||
+			sort == agenciesSortModifiedDesc ||
+			sort == agenciesSortNameDesc
+
+		input.ScanIndexForward = aws.Bool(scanIndexForward)
 
 		if platformAdmin {
 			// The type-created-index can be leveraged to fetch all records of a given
@@ -164,6 +204,11 @@ func ListAgencies(
 			input.ExpressionAttributeNames = map[string]string{"#idpid": "idpid"}
 			input.ExpressionAttributeValues = map[string]types.AttributeValue{":idpid": &types.AttributeValueMemberS{Value: user.IPDID}}
 		}
+
+		logger.DebugContext(
+			ctx,
+			"dynamo query",
+			slog.Any("input", input))
 
 		results, err := dynamoClient.Query(ctx, input)
 		if err != nil {
@@ -203,6 +248,12 @@ func ListAgencies(
 				response.NextCursor = pkAttr.Value
 			}
 		}
+
+		logger.DebugContext(
+			ctx,
+			"dynamo results",
+			slog.Any("results", results),
+			slog.Any("partial agencies (unhydrated)", partialAgencies))
 
 		if hydrate {
 			// Construct a set of keys to hydrate the agency models
@@ -249,6 +300,9 @@ func ListAgencies(
 				// If authorization failed encode an internal server error and return it.
 				return errEncoder.EncodeInternalServerError(ctx), nil
 			}
+
+			// Re-sort the agencies given the input criteria
+			sortAgencies(hydratedAgencies, sort)
 
 			for _, agency := range hydratedAgencies {
 				response.Records = append(response.Records, agencyResponse{

@@ -9,6 +9,7 @@ const (
 )
 
 type User struct {
+	Model
 	Email  string     `dynamodbav:"email"`
 	IDPID  string     `dynamodbav:"idpId"`
 	Status UserStatus `dynamodbav:"status"`

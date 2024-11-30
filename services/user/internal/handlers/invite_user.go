@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -13,57 +12,60 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions/types"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/google/uuid"
 	"github.com/jsmithdenverdev/pager/pkg/apigateway"
 	"github.com/jsmithdenverdev/pager/pkg/authz"
 	"github.com/jsmithdenverdev/pager/pkg/problemdetail"
 	"github.com/jsmithdenverdev/pager/pkg/valid"
-	"github.com/jsmithdenverdev/pager/services/agency/internal/config"
-	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
+	"github.com/jsmithdenverdev/pager/services/user/internal/config"
+	"github.com/jsmithdenverdev/pager/services/user/internal/models"
 )
 
-// createAgencyRequest represents the data required to create a new Agency.
-type createAgencyRequest struct {
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Contact string `json:"contact"`
+// inviteUserRequest represents the data required to invite a new User.
+type inviteUserRequest struct {
+	Email    string `json:"email"`
+	AgencyID string `json:"agencyId"`
+	Role     string `json:"role"`
+}
+
+type inviteUserResponse struct {
+	Email    string `json:"email"`
+	AgencyID string `json:"agencyId"`
+	Role     string `json:"role"`
+	Status   string `json:"status"`
 }
 
 // Valid performs validations on a createAgencyRequest and returns a slice of
 // problem structs if issues are encountered.
-func (r createAgencyRequest) Valid(ctx context.Context) []valid.Problem {
+func (r inviteUserRequest) Valid(ctx context.Context) []valid.Problem {
 	var problems []valid.Problem
-	if r.Name == "" {
-		problems = append(problems, valid.Problem{
-			Name:        "name",
-			Description: "Name must be at least 1 character",
-		})
-	}
 	return problems
 }
 
-func CreateAgency(
+func InviteUser(
 	config config.Config,
 	logger *slog.Logger,
 	dynamo *dynamodb.Client) func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 		var (
-			encoder       = apigateway.NewEncoder(apigateway.WithLogger[agencyResponse](logger))
+			encoder       = apigateway.NewEncoder(apigateway.WithLogger[inviteUserResponse](logger))
 			errEncoder    = apigateway.NewProblemDetailEncoder(apigateway.WithLogger[problemdetail.ProblemDetailer](logger))
 			authClient, _ = authz.RetrieveClientFromContext(ctx)
 			userInfo, _   = authz.RetrieveUserInfoFromContext(ctx)
-			authzResource = &types.EntityIdentifier{
-				EntityType: aws.String("pager::Platform"),
-				EntityId:   aws.String("platform"),
-			}
-			authzAction = &types.ActionIdentifier{
-				ActionType: aws.String("pager::Action"),
-				ActionId:   aws.String("CreateAgency"),
-			}
 		)
 
 		// Decode APIGatewayProxyRequest into our request type and validate it
-		request, err := apigateway.DecodeValid[createAgencyRequest](ctx, event)
+		request, err := apigateway.DecodeValid[inviteUserRequest](ctx, event)
+
+		var (
+			authzResource = &types.EntityIdentifier{
+				EntityType: aws.String("pager::Agency"),
+				EntityId:   aws.String(request.AgencyID),
+			}
+			authzAction = &types.ActionIdentifier{
+				ActionType: aws.String("pager::Action"),
+				ActionId:   aws.String("InviteUser"),
+			}
+		)
 
 		if err != nil {
 			// Check if the error was a validation error
@@ -106,12 +108,9 @@ func CreateAgency(
 			return errEncoder.EncodeAuthzError(ctx, authz.NewUnauthorizedError(authzResource, authzAction)), nil
 		}
 
-		id := uuid.New().String()
-
-		model := models.Agency{
+		model := models.User{
+			Email: request.Email,
 			Model: models.Model{
-				PK: fmt.Sprintf("agency#%s", id),
-				SK: fmt.Sprintf("agency#%s", id),
 				Auditable: models.Auditable{
 					Created:    time.Now(),
 					CreatedBy:  userInfo.IPDID,
@@ -119,10 +118,6 @@ func CreateAgency(
 					ModifiedBy: userInfo.IPDID,
 				},
 			},
-			Name:    request.Name,
-			Status:  models.AgencyStatusPending,
-			Contact: request.Contact,
-			Address: request.Address,
 		}
 
 		dynamoInput, err := attributevalue.MarshalMap(model)
@@ -141,26 +136,10 @@ func CreateAgency(
 			Item:      dynamoInput,
 		}
 
-		_, err = dynamo.PutItem(ctx, putItemInput)
-		if err != nil {
-			// Log the dynamo error
-			logger.ErrorContext(
-				ctx,
-				"failed to put item in dynamo",
-				slog.Any("put item error", err))
+		dynamo.PutItem(ctx, putItemInput)
 
-			response := errEncoder.EncodeInternalServerError(ctx)
-			return response, nil
-		}
-
-		response, _ := encoder.Encode(ctx, agencyResponse{
-			ID:         id,
-			Name:       model.Name,
-			Status:     string(model.Status),
-			Created:    model.Created,
-			CreatedBy:  model.CreatedBy,
-			Modified:   model.Modified,
-			ModifiedBy: model.ModifiedBy,
+		response, _ := encoder.Encode(ctx, inviteUserResponse{
+			Email: request.Email,
 		}, apigateway.WithStatusCode(http.StatusCreated))
 
 		return response, nil
