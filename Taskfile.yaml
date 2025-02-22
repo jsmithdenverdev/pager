@@ -1,0 +1,299 @@
+version: '3'
+
+# This Taskfile organizes commands for the Pager microservices architecture.
+# It is structured in two main sections:
+# 1. Common Tasks: Global and shared task definitions
+# 2. Service-Specific Tasks: Organized by service (agency, auth, page, user)
+
+tasks:
+  ###############################################################################
+  # Common Tasks
+  # These tasks are either used as building blocks for service-specific tasks
+  # or operate at the global level across all services
+  ###############################################################################
+
+  # Private Tasks - Used as building blocks for service-specific tasks
+  test:mocks:
+    private: true
+    desc: Generate mocks using mockery
+    dir: "{{.DIR}}"
+    cmds:
+      - mockery --dir {{.DIR}} --all --output {{.DIR}}/mocks
+
+  test:unit:
+    private: true
+    desc: Run unit tests
+    dir: "{{.DIR}}"
+    cmds:
+      - go test -v ./...
+
+  test:unit:coverage:
+    private: true
+    desc: Run unit tests with coverage
+    dir: "{{.DIR}}"
+    cmds:
+      - go test -v -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+
+  lint:
+    private: true
+    desc: Run golangci-lint
+    dir: "{{.DIR}}"
+    cmds:
+      - golangci-lint run {{.DIR}}/...
+
+  sam:build:
+    private: true
+    desc: Execute SAM build
+    dir: "{{.DIR}}"
+    cmds:
+      - sam build
+
+  sam:validate:
+    private: true
+    desc: Execute SAM validate
+    dir: "{{.DIR}}"
+    cmds:
+      - sam validate
+
+  sam:deploy:
+    private: true
+    desc: Execute SAM deploy
+    dir: "{{.DIR}}"
+    deps: [sam:build, sam:validate]
+    cmds:
+      - sam deploy
+
+  # Global Tasks - Operate across all services
+  sam:build:all:
+    desc: Execute SAM build from root
+    cmds:
+      - sam build
+
+  sam:validate:all:
+    desc: Execute SAM validate from root
+    cmds:
+      - sam validate
+
+  sam:deploy:all:
+    desc: Execute SAM deploy from root
+    deps: [sam:build:all, sam:validate:all]
+    cmds:
+      - sam deploy
+
+  ###############################################################################
+  # Agency Service
+  # Handles agency-related functionality including agency management,
+  # configuration, and relationships
+  ###############################################################################
+  test:mocks:agency:
+    desc: Generate mocks for agency service
+    cmds:
+      - task: test:mocks
+        vars:
+          DIR: services/agency
+
+  test:unit:agency:
+    desc: Run unit tests for agency service
+    cmds:
+      - task: test:unit
+        vars:
+          DIR: services/agency
+
+  test:unit:coverage:agency:
+    desc: Run unit tests with coverage for agency service
+    cmds:
+      - task: test:unit:coverage
+        vars:
+          DIR: services/agency
+
+  lint:agency:
+    desc: Run linter for agency service
+    cmds:
+      - task: lint
+        vars:
+          DIR: services/agency
+
+  sam:build:agency:
+    desc: Execute SAM build for agency service
+    cmds:
+      - task: sam:build
+        vars:
+          DIR: services/agency
+
+  sam:validate:agency:
+    desc: Execute SAM validate for agency service
+    cmds:
+      - task: sam:validate
+        vars:
+          DIR: services/agency
+
+  sam:deploy:agency:
+    desc: Execute SAM deploy for agency service
+    deps: [sam:build:agency, sam:validate:agency]
+    cmds:
+      - task: sam:deploy
+        vars:
+          DIR: services/agency
+
+  ###############################################################################
+  # Auth Service
+  # Manages authentication, authorization, and user identity across the platform
+  ###############################################################################
+  test:mocks:auth:
+    desc: Generate mocks for auth service
+    cmds:
+      - task: test:mocks
+        vars:
+          DIR: services/auth
+
+  test:unit:auth:
+    desc: Run unit tests for auth service
+    cmds:
+      - task: test:unit
+        vars:
+          DIR: services/auth
+
+  test:unit:coverage:auth:
+    desc: Run unit tests with coverage for auth service
+    cmds:
+      - task: test:unit:coverage
+        vars:
+          DIR: services/auth
+
+  lint:auth:
+    desc: Run linter for auth service
+    cmds:
+      - task: lint
+        vars:
+          DIR: services/auth
+
+  sam:build:auth:
+    desc: Execute SAM build for auth service
+    cmds:
+      - task: sam:build
+        vars:
+          DIR: services/auth
+
+  sam:validate:auth:
+    desc: Execute SAM validate for auth service
+    cmds:
+      - task: sam:validate
+        vars:
+          DIR: services/auth
+
+  sam:deploy:auth:
+    desc: Execute SAM deploy for auth service
+    deps: [sam:build:auth, sam:validate:auth]
+    cmds:
+      - task: sam:deploy
+        vars:
+          DIR: services/auth
+
+  ###############################################################################
+  # Page Service
+  # Handles page creation, management, and delivery functionality
+  ###############################################################################
+  test:mocks:page:
+    desc: Generate mocks for page service
+    cmds:
+      - task: test:mocks
+        vars:
+          DIR: services/page
+
+  test:unit:page:
+    desc: Run unit tests for page service
+    cmds:
+      - task: test:unit
+        vars:
+          DIR: services/page
+
+  test:unit:coverage:page:
+    desc: Run unit tests with coverage for page service
+    cmds:
+      - task: test:unit:coverage
+        vars:
+          DIR: services/page
+
+  lint:page:
+    desc: Run linter for page service
+    cmds:
+      - task: lint
+        vars:
+          DIR: services/page
+
+  sam:build:page:
+    desc: Execute SAM build for page service
+    cmds:
+      - task: sam:build
+        vars:
+          DIR: services/page
+
+  sam:validate:page:
+    desc: Execute SAM validate for page service
+    cmds:
+      - task: sam:validate
+        vars:
+          DIR: services/page
+
+  sam:deploy:page:
+    desc: Execute SAM deploy for page service
+    deps: [sam:build:page, sam:validate:page]
+    cmds:
+      - task: sam:deploy
+        vars:
+          DIR: services/page
+
+  ###############################################################################
+  # User Service
+  # Manages user profiles, preferences, and user-related operations
+  ###############################################################################
+  test:mocks:user:
+    desc: Generate mocks for user service
+    cmds:
+      - task: test:mocks
+        vars:
+          DIR: services/user
+
+  test:unit:user:
+    desc: Run unit tests for user service
+    cmds:
+      - task: test:unit
+        vars:
+          DIR: services/user
+
+  test:unit:coverage:user:
+    desc: Run unit tests with coverage for user service
+    cmds:
+      - task: test:unit:coverage
+        vars:
+          DIR: services/user
+
+  lint:user:
+    desc: Run linter for user service
+    cmds:
+      - task: lint
+        vars:
+          DIR: services/user
+
+  sam:build:user:
+    desc: Execute SAM build for user service
+    cmds:
+      - task: sam:build
+        vars:
+          DIR: services/user
+
+  sam:validate:user:
+    desc: Execute SAM validate for user service
+    cmds:
+      - task: sam:validate
+        vars:
+          DIR: services/user
+
+  sam:deploy:user:
+    desc: Execute SAM deploy for user service
+    deps: [sam:build:user, sam:validate:user]
+    cmds:
+      - task: sam:deploy
+        vars:
+          DIR: services/user
