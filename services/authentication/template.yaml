@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+Description: AWS SAM template for the Pager Authentication service.
+
+Parameters:
+  UserTableName:
+    Type: String
+    Description: The name of the User DynamoDB table
+
+Resources:
+  ###############################################
+  # FUNCTIONS
+  ###############################################
+  AuthorizerFunction:
+    Type: "AWS::Serverless::Function"
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: "authorizer"
+      Handler: bootstrap
+      Runtime: provided.al2023
+      CodeUri: cmd/authorizer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UserTableName
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref UserTableName
+          AUTH0_DOMAIN: jsmith-dev.auth0.com
+          AUTH0_AUDIENCE: https://pager
+          REGION: !Ref AWS::Region
+
+###############################################
+# OUTPUTS
+###############################################
+Outputs:
+  AuthorizerLambdaArn:
+    Description: "ARN for the Authorizer Lambda Function"
+    Value: !GetAtt AuthorizerFunction.Arn
+
+Metadata:
+  AWS::Include:
+    SchemaContent: schema.json

@@ -6,14 +6,20 @@ Resources:
   ##########################################################
   # SERVICES
   ##########################################################
+  AuthorizationService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./services/authorization/template.yaml
   UserService:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/user/template.yaml
-  AuthService:
+      Parameters:
+        PolicyStoreId: !GetAtt AuthorizationService.Outputs.PolicyStoreId
+  AuthenticationService:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./services/auth/template.yaml
+      Location: ./services/authentication/template.yaml
       Parameters:
         UserTableName: !GetAtt UserService.Outputs.TableName
   AgencyService:
@@ -21,13 +27,13 @@ Resources:
     Properties:
       Location: ./services/agency/template.yaml
       Parameters:
-        PolicyStoreId: !GetAtt AuthService.Outputs.PolicyStoreId
+        PolicyStoreId: !GetAtt AuthorizationService.Outputs.PolicyStoreId
   PageService:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/page/template.yaml
       Parameters:
-        PolicyStoreId: !GetAtt AuthService.Outputs.PolicyStoreId
+        PolicyStoreId: !GetAtt AuthorizationService.Outputs.PolicyStoreId
 
   ##########################################################
   # API
@@ -46,12 +52,12 @@ Resources:
       IdentitySource:
         - "$request.header.Authorization"
       Name: pager-api-authorizer
-      AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthService.Outputs.AuthorizerLambdaArn}/invocations"
+      AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticationService.Outputs.AuthorizerLambdaArn}/invocations"
       AuthorizerPayloadFormatVersion: "2.0"
   ApiGatewayAuthorizerPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !GetAtt AuthService.Outputs.AuthorizerLambdaArn
+      FunctionName: !GetAtt AuthenticationService.Outputs.AuthorizerLambdaArn
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RootApi}/authorizers/${ApiAuthorizer}
