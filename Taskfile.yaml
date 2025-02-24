@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 # This Taskfile organizes commands for the Pager microservices architecture.
 # It is structured in two main sections:
@@ -50,7 +50,7 @@ tasks:
     desc: Execute SAM build
     dir: "{{.DIR}}"
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - AWS_PROFILE={{.AWS_PROFILE}} sam build
 
@@ -59,41 +59,44 @@ tasks:
     desc: Execute SAM validate
     dir: "{{.DIR}}"
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
-      - AWS_PROFILE={{.AWS_PROFILE}} sam validate
+      - AWS_PROFILE={{.AWS_PROFILE}} sam validate --lint
 
   sam:deploy:
     private: true
     desc: Execute SAM deploy
     dir: "{{.DIR}}"
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     deps: [sam:build, sam:validate]
     cmds:
+      - task: sam:build
+      - task: sam:validate
       - AWS_PROFILE={{.AWS_PROFILE}} sam deploy
 
   # Global Tasks - Operate across all services
   sam:build:all:
     desc: Execute SAM build from root
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - AWS_PROFILE={{.AWS_PROFILE}} sam build
 
   sam:validate:all:
     desc: Execute SAM validate from root
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - AWS_PROFILE={{.AWS_PROFILE}} sam validate
 
   sam:deploy:all:
     desc: Execute SAM deploy from root
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
-    deps: [sam:build:all, sam:validate:all]
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
+      - task: sam:build:all
+      - task: sam:validate:all
       - AWS_PROFILE={{.AWS_PROFILE}} sam deploy
 
   ###############################################################################
@@ -132,33 +135,33 @@ tasks:
   sam:build:agency:
     desc: Execute SAM build for agency service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - task: sam:build
         vars:
           DIR: services/agency
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   sam:validate:agency:
     desc: Execute SAM validate for agency service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - task: sam:validate
         vars:
           DIR: services/agency
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   sam:deploy:agency:
     desc: Execute SAM deploy for agency service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     deps: [sam:build:agency, sam:validate:agency]
     cmds:
       - task: sam:deploy
         vars:
           DIR: services/agency
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   ###############################################################################
   # Auth Service
@@ -195,33 +198,33 @@ tasks:
   sam:build:auth:
     desc: Execute SAM build for auth service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - task: sam:build
         vars:
           DIR: services/auth
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   sam:validate:auth:
     desc: Execute SAM validate for auth service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - task: sam:validate
         vars:
           DIR: services/auth
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   sam:deploy:auth:
     desc: Execute SAM deploy for auth service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     deps: [sam:build:auth, sam:validate:auth]
     cmds:
       - task: sam:deploy
         vars:
           DIR: services/auth
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   ###############################################################################
   # Page Service
@@ -258,33 +261,33 @@ tasks:
   sam:build:page:
     desc: Execute SAM build for page service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - task: sam:build
         vars:
           DIR: services/page
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   sam:validate:page:
     desc: Execute SAM validate for page service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - task: sam:validate
         vars:
           DIR: services/page
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   sam:deploy:page:
     desc: Execute SAM deploy for page service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     deps: [sam:build:page, sam:validate:page]
     cmds:
       - task: sam:deploy
         vars:
           DIR: services/page
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   ###############################################################################
   # User Service
@@ -321,30 +324,30 @@ tasks:
   sam:build:user:
     desc: Execute SAM build for user service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - task: sam:build
         vars:
           DIR: services/user
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   sam:validate:user:
     desc: Execute SAM validate for user service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - task: sam:validate
         vars:
           DIR: services/user
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   sam:deploy:user:
     desc: Execute SAM deploy for user service
     vars:
-      AWS_PROFILE: '{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}'
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     deps: [sam:build:user, sam:validate:user]
     cmds:
       - task: sam:deploy
         vars:
           DIR: services/user
-          AWS_PROFILE: '{{.AWS_PROFILE}}'
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
