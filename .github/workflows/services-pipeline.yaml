@@ -1,0 +1,163 @@
+name: Services Pipeline
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - "services/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "services/**"
+
+jobs:
+  determine-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      service_changes: ${{ steps.changed-files.outputs.all_changed_files }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@v45.0.3
+        with:
+          matrix: "true"
+          dir_names: "true"
+          dir_names_max_depth: "1"
+          path: ./services
+          files_ignore: |
+            authorization/**
+
+  lint-and-test:
+    needs: determine-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory: ${{ fromJson(needs.determine-changes.outputs.service_changes) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23.1"
+
+      - name: Test package
+        run: |
+          cd ./services/${{ matrix.directory }}
+          go test ./...
+
+  build:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23.1"
+
+      - name: SAM build
+        run: |
+          sam build
+
+      - name: SAM validate
+        run: |
+          sam validate --lint
+
+      - name: Upload SAM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sam-build
+          path: .aws-sam/build
+
+  deploy-dev:
+    needs: build
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    environment: development
+    env:
+      AWS_REGION: us-east-1  # Can be overridden in GitHub Environment settings
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download SAM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sam-build
+          path: .aws-sam/build
+
+      - name: Deploy to dev
+        run: |
+          sam deploy --stack-name dev-stack --region ${{ env.AWS_REGION }} --no-confirm-changeset --no-fail-on-empty-changeset
+
+  deploy-prod:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AWS_REGION: us-east-1  # Can be overridden in GitHub Environment settings
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download SAM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sam-build
+          path: .aws-sam/build
+
+      - name: Deploy to prod
+        run: |
+          sam deploy --stack-name prod-stack --region ${{ env.AWS_REGION }} --no-confirm-changeset --no-fail-on-empty-changeset
+
+  # This job ensures branch protection rules work with matrix jobs
+  pipeline-status:
+    if: always()
+    runs-on: ubuntu-latest
+    needs: [lint-and-test, build, deploy-dev, deploy-prod]
+    steps:
+      - name: Check pipeline status
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
