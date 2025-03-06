@@ -58,14 +58,15 @@ jobs:
           cd ./services/${{ matrix.directory }}
           go test ./...
 
-  build:
+  build-dev:
+    if: github.event_name == 'pull_request'
     needs: lint-and-test
     runs-on: ubuntu-latest
+    environment: development
     permissions:
       id-token: write
       contents: read
-    env:
-      AWS_REGION: us-east-1
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -81,8 +82,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
         with:
-          role-to-assume: arn:aws:iam::703046187094:role/GitHubActionsOIDCRole
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -100,19 +101,64 @@ jobs:
       - name: Upload SAM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sam-build
+          name: sam-build-dev
+          path: .aws-sam/build
+
+  build-prod:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23.1"
+
+      - name: SAM build
+        run: |
+          sam build
+
+      - name: SAM validate
+        run: |
+          sam validate --lint
+
+      - name: Upload SAM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sam-build-prod
           path: .aws-sam/build
 
   deploy-dev:
-    needs: build
+    needs: build-dev
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     environment: development
-    env:
-      AWS_REGION: us-east-1 # Can be overridden in GitHub Environment settings
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -120,29 +166,28 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
         with:
-          role-to-assume: arn:aws:iam::703046187094:role/GitHubActionsOIDCRole
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Download SAM artifact
         uses: actions/download-artifact@v4
         with:
-          name: sam-build
+          name: sam-build-dev
           path: .aws-sam/build
 
       - name: Deploy to dev
         run: |
-          sam deploy --stack-name dev-stack --region ${{ env.AWS_REGION }} --no-confirm-changeset --no-fail-on-empty-changeset
+          sam deploy --region ${{ vars.AWS_REGION }} --no-confirm-changeset --no-fail-on-empty-changeset
 
   deploy-prod:
-    needs: build
+    needs: build-prod
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     environment: production
-    env:
-      AWS_REGION: us-east-1 # Can be overridden in GitHub Environment settings
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -150,24 +195,24 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
         with:
-          role-to-assume: arn:aws:iam::703046187094:role/GitHubActionsOIDCRole
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Download SAM artifact
         uses: actions/download-artifact@v4
         with:
-          name: sam-build
+          name: sam-build-prod
           path: .aws-sam/build
 
       - name: Deploy to prod
         run: |
-          sam deploy --stack-name prod-stack --region ${{ env.AWS_REGION }} --no-confirm-changeset --no-fail-on-empty-changeset
+          sam deploy --region ${{ vars.AWS_REGION }} --no-confirm-changeset --no-fail-on-empty-changeset
 
   # This job ensures branch protection rules work with matrix jobs
   pipeline-status:
     if: always()
     runs-on: ubuntu-latest
-    needs: [lint-and-test, build, deploy-dev, deploy-prod]
+    needs: [lint-and-test, build-dev, build-prod, deploy-dev, deploy-prod]
     steps:
       - name: Check pipeline status
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
