@@ -36,6 +36,9 @@ jobs:
   lint-and-test:
     needs: determine-changes
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     strategy:
       matrix:
         directory: ${{ fromJson(needs.determine-changes.outputs.service_changes) }}
@@ -58,6 +61,11 @@ jobs:
   build:
     needs: lint-and-test
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -73,9 +81,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::703046187094:role/GitHubActionsOIDCRole
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -100,9 +107,12 @@ jobs:
     needs: build
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     environment: development
     env:
-      AWS_REGION: us-east-1  # Can be overridden in GitHub Environment settings
+      AWS_REGION: us-east-1 # Can be overridden in GitHub Environment settings
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -110,8 +120,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::703046187094:role/GitHubActionsOIDCRole
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Download SAM artifact
@@ -128,9 +137,12 @@ jobs:
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     environment: production
     env:
-      AWS_REGION: us-east-1  # Can be overridden in GitHub Environment settings
+      AWS_REGION: us-east-1 # Can be overridden in GitHub Environment settings
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -138,8 +150,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::703046187094:role/GitHubActionsOIDCRole
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Download SAM artifact
