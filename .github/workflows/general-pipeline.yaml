@@ -1,4 +1,4 @@
-name: General CI
+name: General Pipeline
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - "!services/**" # Ignore changes in services/ directory
 
 jobs:
-  ci-status:
+  pipeline-status:
     runs-on: ubuntu-latest
     steps:
       - name: Set CI status
