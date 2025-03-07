@@ -35,6 +35,7 @@ jobs:
 
   lint-and-test:
     needs: determine-changes
+    if: ${{ needs.determine-changes.outputs.service_changes != '[]' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -59,7 +60,9 @@ jobs:
           go test ./...
 
   build-dev:
-    if: github.event_name == 'pull_request'
+    if: |
+      github.event_name == 'pull_request' && 
+      (needs.lint-and-test.result == 'success' || needs.lint-and-test.result == 'skipped')
     needs: lint-and-test
     runs-on: ubuntu-latest
     environment: development
@@ -105,7 +108,10 @@ jobs:
           path: .aws-sam/build
 
   build-prod:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main' && 
+      (needs.lint-and-test.result == 'success' || needs.lint-and-test.result == 'skipped')
     needs: lint-and-test
     runs-on: ubuntu-latest
     environment: production
@@ -152,7 +158,9 @@ jobs:
 
   deploy-dev:
     needs: build-dev
-    if: github.event_name == 'pull_request'
+    if: |
+      github.event_name == 'pull_request' && 
+      needs.build-dev.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -181,7 +189,10 @@ jobs:
 
   deploy-prod:
     needs: build-prod
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main' && 
+      needs.build-prod.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
