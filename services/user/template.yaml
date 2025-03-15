@@ -42,6 +42,7 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref UserTable
+          POLICY_STORE_ID: !Ref PolicyStoreId
           REGION: !Ref AWS::Region
   InviteUserFunction:
     Type: "AWS::Serverless::Function"
