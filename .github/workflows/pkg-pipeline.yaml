@@ -1,12 +1,15 @@
-name: Package CD
+name: Pkg Pipeline
 
 on:
   pull_request:
-    types: [closed]
+    types: [opened, synchronize]
     paths:
       - "pkg/**"
-permissions:
-  contents: write # Grant write permissions for tagging
+  push:
+    branches:
+      - main
+    paths:
+      - "pkg/**"
 
 jobs:
   determine-changes:
@@ -56,6 +59,9 @@ jobs:
           go test ./...
 
   tag-and-release:
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main'
     needs: [determine-changes, build-and-test]
     runs-on: ubuntu-latest
     strategy:
@@ -123,3 +129,13 @@ jobs:
           tag_name: pkg/${{ matrix.directory }}/${{ env.next_version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # This job ensures branch protection rules work with matrix jobs
+  pipeline-status:
+    if: always()
+    runs-on: ubuntu-latest
+    needs: [lint-and-test, tag-and-release]
+    steps:
+      - name: Check pipeline status
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
