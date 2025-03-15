@@ -1,5 +1,5 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Transform: "AWS::Serverless-2016-10-31"
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
 Description: AWS SAM template for the Pager Authorization service.
 
 Resources:
@@ -147,8 +147,8 @@ Resources:
       PolicyStoreId: !Ref AVPStore
       Definition:
         Static:
-          Description: "Allow PLATFORM_ADMIN to create agencies."
-          Statement: >
+          Description: Allow PLATFORM_ADMIN to create agencies.
+          Statement: |
             permit(
               principal,
               action in [pager::Action::"CreateAgency"],
@@ -165,8 +165,8 @@ Resources:
       PolicyStoreId: !Ref AVPStore
       Definition:
         Static:
-          Description: "Allow PLATFORM_ADMIN to read agencies."
-          Statement: >
+          Description: Allow PLATFORM_ADMIN to read agencies.
+          Statement: |
             permit(
               principal,
               action in [pager::Action::"ReadAgency"],
@@ -183,8 +183,8 @@ Resources:
       PolicyStoreId: !Ref AVPStore
       Definition:
         Static:
-          Description: "Agency Admin Permissions"
-          Statement: >
+          Description: Agency Admin Permissions
+          Statement: |
             permit (
                 principal,
                 action in
@@ -193,9 +193,7 @@ Resources:
                     pager::Action::"Deactivate",
                     pager::Action::"Update"],
                 resource
-            )
-            when
-            {
+            ) when {
                 principal has agencies &&
                 resource in principal.agencies &&
                 principal has currentAgency &&
@@ -206,7 +204,7 @@ Resources:
 ###############################################
 Outputs:
   PolicyStoreId:
-    Description: "The ID of the Amazon Verified Permissions store"
+    Description: The ID of the Amazon Verified Permissions store
     Value: !Ref AVPStore
 
 Metadata:
