@@ -10,8 +10,10 @@ import (
 
 type optionFunc func(*Client)
 
+// dummy
+
 type Client struct {
-	userInfo      UserInfo
+	userInfo      User
 	policyStoreId string
 	*verifiedpermissions.Client
 }
@@ -135,7 +137,7 @@ func WithVerifiedPermissionsClient(vpc *verifiedpermissions.Client) optionFunc {
 	}
 }
 
-func WithUserInfo(userInfo UserInfo) optionFunc {
+func WithUserInfo(userInfo User) optionFunc {
 	return func(c *Client) {
 		c.userInfo = userInfo
 		return

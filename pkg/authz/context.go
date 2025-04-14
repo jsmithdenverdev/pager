@@ -11,20 +11,20 @@ const (
 	contextKeyUserInfo contextKey = "user"
 )
 
-func AddClientToContext(ctx context.Context, authorizer *Client) context.Context {
+func WithClient(ctx context.Context, authorizer *Client) context.Context {
 	return context.WithValue(ctx, contextKeyClient, authorizer)
 }
 
-func RetrieveClientFromContext(ctx context.Context) (*Client, bool) {
+func ClientFrom(ctx context.Context) (*Client, bool) {
 	client, ok := ctx.Value(contextKeyClient).(*Client)
 	return client, ok
 }
 
-func AddUserInfoToContext(ctx context.Context, userInfo UserInfo) context.Context {
+func WithUser(ctx context.Context, userInfo User) context.Context {
 	return context.WithValue(ctx, contextKeyUserInfo, userInfo)
 }
 
-func RetrieveUserInfoFromContext(ctx context.Context) (UserInfo, bool) {
-	userInfo, ok := ctx.Value(contextKeyUserInfo).(UserInfo)
+func UserFrom(ctx context.Context) (User, bool) {
+	userInfo, ok := ctx.Value(contextKeyUserInfo).(User)
 	return userInfo, ok
 }
