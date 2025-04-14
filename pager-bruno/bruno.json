@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "name": "pager",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "size": 0,
+  "filesCount": 0,
+  "presets": {
+    "requestType": "http",
+    "requestUrl": "https://8f4xd78oqa.execute-api.us-east-1.amazonaws.com/prod"
+  }
+}
