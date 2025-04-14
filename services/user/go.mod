@@ -23,6 +23,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.23.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.27.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.31.3 // indirect
+	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/jsmithdenverdev/pager/pkg/codec v1.1.0 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 )
