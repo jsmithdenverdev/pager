@@ -6,6 +6,9 @@ on:
     paths:
       - "pkg/**"
 
+permissions:
+  contents: write
+
 jobs:
   determine-changes:
     runs-on: ubuntu-latest
