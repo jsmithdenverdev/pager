@@ -1,12 +1,13 @@
-name: Package CD
+name: Pkg Pipeline
 
 on:
   pull_request:
-    types: [closed]
+    types: [opened, synchronize, closed]
     paths:
       - "pkg/**"
+
 permissions:
-  contents: write # Grant write permissions for tagging
+  contents: write
 
 jobs:
   determine-changes:
@@ -28,7 +29,7 @@ jobs:
           dir_names_max_depth: "1"
           path: ./pkg
 
-  build-and-test:
+  test:
     needs: determine-changes
     runs-on: ubuntu-latest
     strategy:
@@ -45,18 +46,17 @@ jobs:
         with:
           go-version: "1.23.1"
 
-      - name: Build package
-        run: |
-          cd ./pkg/${{ matrix.directory }}
-          go build ./...
-
       - name: Test package
         run: |
           cd ./pkg/${{ matrix.directory }}
           go test ./...
 
   tag-and-release:
-    needs: [determine-changes, build-and-test]
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true
+    needs: [determine-changes, test]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -69,6 +69,7 @@ jobs:
 
       - name: Get version increment
         run: |
+          echo "Github Head Ref: $GITHUB_HEAD_REF"
           version_increment=$(./scripts/branch_version.sh $GITHUB_HEAD_REF)
           echo "Version increment: $version_increment"
           echo "version_increment=$version_increment" >> $GITHUB_ENV
@@ -123,3 +124,13 @@ jobs:
           tag_name: pkg/${{ matrix.directory }}/${{ env.next_version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # This job ensures branch protection rules work with matrix jobs
+  pipeline-status:
+    if: always()
+    runs-on: ubuntu-latest
+    needs: [test, tag-and-release]
+    steps:
+      - name: Check pipeline status
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

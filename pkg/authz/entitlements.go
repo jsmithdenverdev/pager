@@ -1,7 +1,9 @@
 package authz
 
+// Entitlement represents a type of access or privilege within the system.
 type Entitlement string
 
 const (
-	EntitlementPlatformAdmin Entitlement = "PLATFORM_ADMIN"
+	// EntPlatformAdmin represents the platform administrator entitlement.
+	EntPlatformAdmin Entitlement = "PLATFORM_ADMIN"
 )
