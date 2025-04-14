@@ -150,7 +150,9 @@ jobs:
 
       - name: SAM validate
         run: |
-          sam validate --lint
+          # https://github.com/aws/aws-sam-cli/issues/7974
+          # sam validate --lint
+          sam validate
 
       - name: Upload SAM artifact
         uses: actions/upload-artifact@v4
