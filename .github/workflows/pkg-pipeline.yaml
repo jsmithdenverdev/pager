@@ -70,6 +70,7 @@ jobs:
 
       - name: Get version increment
         run: |
+          echo "Github Head Ref: $GITHUB_HEAD_REF"
           version_increment=$(./scripts/branch_version.sh $GITHUB_HEAD_REF)
           echo "Version increment: $version_increment"
           echo "version_increment=$version_increment" >> $GITHUB_ENV
