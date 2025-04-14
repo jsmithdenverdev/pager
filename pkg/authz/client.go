@@ -10,8 +10,6 @@ import (
 
 type optionFunc func(*Client)
 
-// dummy
-
 type Client struct {
 	userInfo      User
 	policyStoreId string
