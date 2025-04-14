@@ -2,12 +2,7 @@ name: Pkg Pipeline
 
 on:
   pull_request:
-    types: [opened, synchronize]
-    paths:
-      - "pkg/**"
-  push:
-    branches:
-      - main
+    types: [opened, synchronize, closed]
     paths:
       - "pkg/**"
 
@@ -55,8 +50,9 @@ jobs:
 
   tag-and-release:
     if: |
-      github.event_name == 'push' && 
-      github.ref == 'refs/heads/main'
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true
     needs: [determine-changes, test]
     runs-on: ubuntu-latest
     strategy:
