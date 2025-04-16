@@ -167,20 +167,26 @@ Resources:
         StreamViewType: NEW_AND_OLD_IMAGES
 
   ###############################################
-  # EVENT BRIDGE
+  # QUEUES
   ###############################################
-  AgencyCDCPipe:
-    Type: AWS::Pipes::Pipe
+  AgencyCDCQueue:
+    Type: AWS::SQS::Queue
     Properties:
-      Name: agency-cdc-pipe
-      RoleArn: !GetAtt AgencyCDCPipeRole.Arn
-      Source: !GetAtt AgencyTable.StreamArn
-      SourceParameters:
-        DynamoDBStreamParameters:
-          StartingPosition: LATEST
-      Target: !GetAtt AgencyCDCQueue.Arn
-      TargetParameters:
-        SqsQueueParameters: {}
+      QueueName: agency-cdc-queue
+      VisibilityTimeout: 300
+
+###############################################
+# EVENT BRIDGE
+###############################################
+AgencyCDCPipe:
+  Type: AWS::Pipes::Pipe
+  Properties:
+    Name: agency-cdc-pipe
+    RoleArn: !GetAtt AgencyCDCPipeRole.Arn
+    Source: !GetAtt AgencyTable.StreamArn
+    SourceParameters:
+      DynamoDBStreamParameters:
+        StartingPosition: LATEST
       FilterCriteria:
         Filters:
           - Pattern: |
@@ -192,15 +198,9 @@ Resources:
                   }
                 }
               }
-
-  ###############################################
-  # QUEUES
-  ###############################################
-  AgencyCDCQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: agency-cdc-queue
-      VisibilityTimeout: 300
+    Target: !GetAtt AgencyCDCQueue.Arn
+    TargetParameters:
+      SqsQueueParameters: {}
 
 ###############################################
 # OUTPUTS
