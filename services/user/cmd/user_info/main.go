@@ -19,13 +19,13 @@ var (
 )
 
 func main() {
-	if err := run(context.Background(), os.Stdout, os.Getenv); err != nil {
+	if err := run(context.Background(), os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "run failed: %s", err.Error())
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, stdout io.Writer, getenv func(string) string) error {
+func run(ctx context.Context, stdout io.Writer) error {
 	logger := slog.New(slog.NewJSONHandler(stdout, nil))
 
 	var cfg app.Config
