@@ -60,14 +60,15 @@ func ListAgencies(
 		)
 
 		// DynamoDB query for agencies by user
-		pk := "pk#user." + user.IPDID
 		queryInput := &dynamodb.QueryInput{
 			TableName: &config.TableName,
 			KeyConditions: map[string]types.Condition{
 				"pk": {
 					ComparisonOperator: types.ComparisonOperatorEq,
 					AttributeValueList: []types.AttributeValue{
-						&types.AttributeValueMemberS{Value: pk},
+						&types.AttributeValueMemberS{
+							Value: "member#" + user.IPDID,
+						},
 					},
 				},
 			},
