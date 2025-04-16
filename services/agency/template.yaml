@@ -175,32 +175,32 @@ Resources:
       QueueName: agency-cdc-queue
       VisibilityTimeout: 300
 
-###############################################
-# EVENT BRIDGE
-###############################################
-AgencyCDCPipe:
-  Type: AWS::Pipes::Pipe
-  Properties:
-    Name: agency-cdc-pipe
-    RoleArn: !GetAtt AgencyCDCPipeRole.Arn
-    Source: !GetAtt AgencyTable.StreamArn
-    SourceParameters:
-      DynamoDBStreamParameters:
-        StartingPosition: LATEST
-      FilterCriteria:
-        Filters:
-          - Pattern: |
-              {
-                "eventName": ["MODIFY"],
-                "dynamodb": {
-                  "NewImage": {
-                    "type": { "S": ["AGENCY"] }
+  ###############################################
+  # EVENT BRIDGE
+  ###############################################
+  AgencyCDCPipe:
+    Type: AWS::Pipes::Pipe
+    Properties:
+      Name: agency-cdc-pipe
+      RoleArn: !GetAtt AgencyCDCPipeRole.Arn
+      Source: !GetAtt AgencyTable.StreamArn
+      SourceParameters:
+        DynamoDBStreamParameters:
+          StartingPosition: LATEST
+        FilterCriteria:
+          Filters:
+            - Pattern: |
+                {
+                  "eventName": ["MODIFY"],
+                  "dynamodb": {
+                    "NewImage": {
+                      "type": { "S": ["AGENCY"] }
+                    }
                   }
                 }
-              }
-    Target: !GetAtt AgencyCDCQueue.Arn
-    TargetParameters:
-      SqsQueueParameters: {}
+      Target: !GetAtt AgencyCDCQueue.Arn
+      TargetParameters:
+        SqsQueueParameters: {}
 
 ###############################################
 # OUTPUTS
