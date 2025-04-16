@@ -53,43 +53,43 @@ func (r listAgenciesRequest) Valid(ctx context.Context) []valid.Problem {
 	return problems
 }
 
-func getAgenciesGSI(platformAdmin bool, sort agenciesSort) string {
-	if platformAdmin {
-		switch sort {
-		case agenciesSortCreatedAsc:
-			return "type-created-index"
-		case agenciesSortCreatedDesc:
-			return "type-created-index"
-		case agenciesSortModifiedAsc:
-			return "type-modified-index"
-		case agenciesSortModifiedDesc:
-			return "type-modified-index"
-		case agenciesSortNameAsc:
-			return "type-name-index"
-		case agenciesSortNameDesc:
-			return "type-name-index"
-		default:
-			return "type-created-index"
-		}
-	} else {
-		switch sort {
-		case agenciesSortCreatedAsc:
-			return "idpid-agency_created-index"
-		case agenciesSortCreatedDesc:
-			return "idpid-agency_created-index"
-		case agenciesSortModifiedAsc:
-			return "idpid-agency_modified-index"
-		case agenciesSortModifiedDesc:
-			return "idpid-agency_modified-index"
-		case agenciesSortNameAsc:
-			return "idpid-name-index"
-		case agenciesSortNameDesc:
-			return "idpid-name-index"
-		default:
-			return "idpid-agency_created-index"
-		}
-	}
-}
+// func getAgenciesGSI(platformAdmin bool, sort agenciesSort) string {
+// 	if platformAdmin {
+// 		switch sort {
+// 		case agenciesSortCreatedAsc:
+// 			return "type-created-index"
+// 		case agenciesSortCreatedDesc:
+// 			return "type-created-index"
+// 		case agenciesSortModifiedAsc:
+// 			return "type-modified-index"
+// 		case agenciesSortModifiedDesc:
+// 			return "type-modified-index"
+// 		case agenciesSortNameAsc:
+// 			return "type-name-index"
+// 		case agenciesSortNameDesc:
+// 			return "type-name-index"
+// 		default:
+// 			return "type-created-index"
+// 		}
+// 	} else {
+// 		switch sort {
+// 		case agenciesSortCreatedAsc:
+// 			return "idpid-agency_created-index"
+// 		case agenciesSortCreatedDesc:
+// 			return "idpid-agency_created-index"
+// 		case agenciesSortModifiedAsc:
+// 			return "idpid-agency_modified-index"
+// 		case agenciesSortModifiedDesc:
+// 			return "idpid-agency_modified-index"
+// 		case agenciesSortNameAsc:
+// 			return "idpid-name-index"
+// 		case agenciesSortNameDesc:
+// 			return "idpid-name-index"
+// 		default:
+// 			return "idpid-agency_created-index"
+// 		}
+// 	}
+// }
 
 // sortAgencies sorts a slice of agencies based on the given sort criteria.
 func sortAgencies(agencies []models.Agency, sortBy agenciesSort) {
@@ -180,7 +180,7 @@ func ListAgencies(
 			}
 		}
 
-		input.IndexName = aws.String(getAgenciesGSI(platformAdmin, sort))
+		// input.IndexName = aws.String(getAgenciesGSI(platformAdmin, sort))
 
 		var scanIndexForward = sort == agenciesSortCreatedDesc ||
 			sort == agenciesSortModifiedDesc ||
@@ -192,17 +192,17 @@ func ListAgencies(
 			// The type-created-index can be leveraged to fetch all records of a given
 			// type from the database. This allows platform admins to load all
 			// agencies.
-			input.IndexName = aws.String("type-created-index")
-			input.KeyConditionExpression = aws.String("#type = :agencyType")
-			input.ExpressionAttributeNames = map[string]string{"#type": "type"}
-			input.ExpressionAttributeValues = map[string]types.AttributeValue{":agencyType": &types.AttributeValueMemberS{Value: "AGENCY"}}
+			// input.IndexName = aws.String("type-created-index")
+			// input.KeyConditionExpression = aws.String("#type = :agencyType")
+			// input.ExpressionAttributeNames = map[string]string{"#type": "type"}
+			// input.ExpressionAttributeValues = map[string]types.AttributeValue{":agencyType": &types.AttributeValueMemberS{Value: "AGENCY"}}
 		} else {
 			// The idpid-agency_created-index can be leveraged to fetch all agencies the
 			// current user is a member of, ordered by created date.
-			input.IndexName = aws.String("idpid-agency_created-index")
-			input.KeyConditionExpression = aws.String("#idpid = :idpid")
-			input.ExpressionAttributeNames = map[string]string{"#idpid": "idpid"}
-			input.ExpressionAttributeValues = map[string]types.AttributeValue{":idpid": &types.AttributeValueMemberS{Value: user.IPDID}}
+			// input.IndexName = aws.String("idpid-agency_created-index")
+			// input.KeyConditionExpression = aws.String("#idpid = :idpid")
+			// input.ExpressionAttributeNames = map[string]string{"#idpid": "idpid"}
+			// input.ExpressionAttributeValues = map[string]types.AttributeValue{":idpid": &types.AttributeValueMemberS{Value: user.IPDID}}
 		}
 
 		logger.DebugContext(
@@ -210,11 +210,13 @@ func ListAgencies(
 			"dynamo query",
 			slog.Any("input", input))
 
-		results, err := dynamoClient.Query(ctx, input)
+		results, err := dynamoClient.Scan(ctx, &dynamodb.ScanInput{
+			TableName: aws.String(config.TableName),
+		})
 		if err != nil {
 			logger.ErrorContext(
 				ctx,
-				"failed to query dynamodb",
+				"failed to scan dynamodb",
 				slog.String("error", err.Error()))
 
 			// If authorization failed encode an internal server error and return it.
