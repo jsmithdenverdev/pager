@@ -33,7 +33,7 @@ func UserInfo(config Config, logger *slog.Logger, client *dynamodb.Client) func(
 		row, err := client.GetItem(ctx, &dynamodb.GetItemInput{
 			TableName: aws.String(config.TableName),
 			Key: map[string]types.AttributeValue{
-				"id": &types.AttributeValueMemberS{
+				"idpid": &types.AttributeValueMemberS{
 					Value: userId,
 				},
 			},
