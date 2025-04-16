@@ -130,6 +130,8 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
 
 ###############################################
 # OUTPUTS
@@ -138,3 +140,6 @@ Outputs:
   ApiId:
     Description: "API Gateway ID for Agency API"
     Value: !Ref AgencyApi
+  AgencyTableStreamArn:
+    Description: "DynamoDB Stream ARN for AgencyTable"
+    Value: !GetAtt AgencyTable.StreamArn
