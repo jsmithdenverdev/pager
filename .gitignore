@@ -196,3 +196,5 @@ build
 tmp
 
 .aws-sam
+
+collection.bruno
