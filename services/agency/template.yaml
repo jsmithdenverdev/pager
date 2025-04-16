@@ -194,7 +194,7 @@ Resources:
                   "eventName": ["MODIFY"],
                   "dynamodb": {
                     "NewImage": {
-                      "type": { "S": ["AGENCY"] }
+                      "pk": { "S": [{ "prefix": "agency#" }] }
                     }
                   }
                 }
