@@ -1,4 +1,4 @@
-package models
+package app
 
 type UserStatus = string
 
@@ -8,8 +8,8 @@ const (
 	UserStatusPending  UserStatus = "PENDING"
 )
 
-type User struct {
-	Model
+type user struct {
+	model
 	Email  string     `dynamodbav:"email"`
 	IDPID  string     `dynamodbav:"idpId"`
 	Status UserStatus `dynamodbav:"status"`

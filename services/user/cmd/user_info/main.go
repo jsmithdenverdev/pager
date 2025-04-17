@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/jsmithdenverdev/pager/services/user/internal/config"
-	"github.com/jsmithdenverdev/pager/services/user/internal/handlers"
+	"github.com/caarlos0/env/v11"
+	"github.com/jsmithdenverdev/pager/services/user/internal/app"
 )
 
 var (
@@ -19,17 +19,18 @@ var (
 )
 
 func main() {
-	if err := run(context.Background(), os.Stdout, os.Getenv); err != nil {
+	if err := run(context.Background(), os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "run failed: %s", err.Error())
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, stdout io.Writer, getenv func(string) string) error {
+func run(ctx context.Context, stdout io.Writer) error {
 	logger := slog.New(slog.NewJSONHandler(stdout, nil))
 
-	conf, err := config.LoadFromEnv(getenv)
-	if err != nil {
+	var cfg app.Config
+
+	if err := env.Parse(&cfg); err != nil {
 		return fmt.Errorf("[in main.run] failed to load config from env: %w", err)
 	}
 
@@ -40,7 +41,7 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 
 	dynamodb := dynamodb.NewFromConfig(awsconf)
 
-	lambda.StartWithOptions(handlers.UserInfo(conf, logger, dynamodb))
+	lambda.StartWithOptions(app.UserInfo(cfg, logger, dynamodb))
 
 	return nil
 }

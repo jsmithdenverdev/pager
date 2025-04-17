@@ -1,4 +1,4 @@
-package handlers
+package app
 
 import (
 	"context"
@@ -16,8 +16,6 @@ import (
 	"github.com/jsmithdenverdev/pager/pkg/authz"
 	"github.com/jsmithdenverdev/pager/pkg/problemdetail"
 	"github.com/jsmithdenverdev/pager/pkg/valid"
-	"github.com/jsmithdenverdev/pager/services/user/internal/config"
-	"github.com/jsmithdenverdev/pager/services/user/internal/models"
 )
 
 // inviteUserRequest represents the data required to invite a new User.
@@ -42,7 +40,7 @@ func (r inviteUserRequest) Valid(ctx context.Context) []valid.Problem {
 }
 
 func InviteUser(
-	config config.Config,
+	config Config,
 	logger *slog.Logger,
 	dynamo *dynamodb.Client) func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -108,10 +106,10 @@ func InviteUser(
 			return errEncoder.EncodeAuthzError(ctx, authz.NewUnauthorizedError(authzResource, authzAction)), nil
 		}
 
-		model := models.User{
+		model := user{
 			Email: request.Email,
-			Model: models.Model{
-				Auditable: models.Auditable{
+			model: model{
+				auditable: auditable{
 					Created:    time.Now(),
 					CreatedBy:  userInfo.IPDID,
 					Modified:   time.Now(),

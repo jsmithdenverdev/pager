@@ -1,6 +1,10 @@
 version = 0.1
 [default.deploy.parameters]
-capabilities = ["CAPABILITY_IAM", "CAPABILITY_AUTO_EXPAND"]
+capabilities = [
+  "CAPABILITY_IAM",
+  "CAPABILITY_AUTO_EXPAND",
+  "CAPABILITY_NAMED_IAM",
+]
 stack_name = "pager"
 resolve_s3 = true
 s3_prefix = "pager"
@@ -8,7 +12,11 @@ region = "us-east-1"
 image_repositories = []
 
 [dev.deploy.parameters]
-capabilities = ["CAPABILITY_IAM", "CAPABILITY_AUTO_EXPAND"]
+capabilities = [
+  "CAPABILITY_IAM",
+  "CAPABILITY_AUTO_EXPAND",
+  "CAPABILITY_NAMED_IAM",
+]
 stack_name = "pager"
 resolve_s3 = true
 s3_prefix = "pager"

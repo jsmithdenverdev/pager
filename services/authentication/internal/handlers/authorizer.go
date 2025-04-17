@@ -15,19 +15,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jsmithdenverdev/pager/pkg/authz"
 	"github.com/jsmithdenverdev/pager/services/auth/internal/config"
 	"github.com/lestrrat-go/jwx/jwk"
 )
-
-type userInfo struct {
-	Email        string   `dynamodbav:"email" json:"email"`
-	IDPID        string   `dynamodbav:"idpid" json:"idpId"`
-	Status       string   `dynamodbav:"status" json:"status"`
-	Entitlements []string `dynamodbav:"entitlements" json:"entitlements"`
-	Agencies     map[string]struct {
-		Role string `dynamodbav:"role" json:"role"`
-	} `dynamodbav:"agencies" json:"agencies"`
-}
 
 func Authorizer(config config.Config, logger *slog.Logger, client *dynamodb.Client) func(context.Context, events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
@@ -93,8 +84,8 @@ func Authorizer(config config.Config, logger *slog.Logger, client *dynamodb.Clie
 			return response, nil
 		}
 
-		// Unmarshal the user dynamodb record into a userInfo struct
-		var userInfo userInfo
+		// Unmarshal the user dynamodb record into a UserInfo struct
+		var userInfo authz.UserInfo
 		err = attributevalue.UnmarshalMap(result.Item, &userInfo)
 
 		if err != nil {

@@ -11,9 +11,9 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/verifiedpermissions"
+	"github.com/caarlos0/env/v11"
 	"github.com/jsmithdenverdev/pager/pkg/middleware/apigateway"
-	"github.com/jsmithdenverdev/pager/services/user/internal/config"
-	"github.com/jsmithdenverdev/pager/services/user/internal/handlers"
+	"github.com/jsmithdenverdev/pager/services/user/internal/app"
 )
 
 var (
@@ -30,8 +30,9 @@ func main() {
 func run(ctx context.Context, stdout io.Writer, getenv func(string) string) error {
 	fmt.Fprintf(stdout, "Version %s", Version)
 
-	conf, err := config.LoadFromEnv(getenv)
-	if err != nil {
+	var cfg app.Config
+
+	if err := env.Parse(&cfg); err != nil {
 		return fmt.Errorf("[in main.run] failed to load config from env: %w", err)
 	}
 
@@ -46,13 +47,13 @@ func run(ctx context.Context, stdout io.Writer, getenv func(string) string) erro
 
 	dynamodbClient := dynamodb.NewFromConfig(awsconf)
 
-	handler := handlers.InviteUser(
-		conf,
+	handler := app.InviteUser(
+		cfg,
 		logger,
 		dynamodbClient,
 	)
 
-	handler = apigateway.WithAuthz(conf.PolicyStoreID, verifiedPermissionsClient, logger)(handler)
+	handler = apigateway.WithAuthz(cfg.PolicyStoreID, verifiedPermissionsClient, logger)(handler)
 
 	lambda.StartWithOptions(handler)
 

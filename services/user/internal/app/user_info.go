@@ -1,4 +1,4 @@
-package handlers
+package app
 
 import (
 	"context"
@@ -11,11 +11,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/jsmithdenverdev/pager/services/user/internal/config"
-	"github.com/jsmithdenverdev/pager/services/user/internal/models"
 )
 
-func UserInfo(config config.Config, logger *slog.Logger, client *dynamodb.Client) func(context.Context, events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func UserInfo(config Config, logger *slog.Logger, client *dynamodb.Client) func(context.Context, events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	type userInfoResponse struct {
 		Email  string `json:"email"`
 		IDPID  string `json:"idpId"`
@@ -35,7 +33,7 @@ func UserInfo(config config.Config, logger *slog.Logger, client *dynamodb.Client
 		row, err := client.GetItem(ctx, &dynamodb.GetItemInput{
 			TableName: aws.String(config.TableName),
 			Key: map[string]types.AttributeValue{
-				"id": &types.AttributeValueMemberS{
+				"idpid": &types.AttributeValueMemberS{
 					Value: userId,
 				},
 			},
@@ -48,7 +46,7 @@ func UserInfo(config config.Config, logger *slog.Logger, client *dynamodb.Client
 			}, err
 		}
 
-		var user models.User
+		var user user
 
 		if err := attributevalue.UnmarshalMap(row.Item, &user); err != nil {
 			return events.APIGatewayProxyResponse{
