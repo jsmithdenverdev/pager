@@ -20,16 +20,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
-// type userInfo struct {
-// 	Email        string   `dynamodbav:"email" json:"email"`
-// 	IDPID        string   `dynamodbav:"idpid" json:"idpId"`
-// 	Status       string   `dynamodbav:"status" json:"status"`
-// 	Entitlements []string `dynamodbav:"entitlements" json:"entitlements"`
-// 	Agencies     map[string]struct {
-// 		Role string `dynamodbav:"role" json:"role"`
-// 	} `dynamodbav:"agencies" json:"agencies"`
-// }
-
 func Authorizer(config config.Config, logger *slog.Logger, client *dynamodb.Client) func(context.Context, events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
 	return func(ctx context.Context, event events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
 		// Create a deny response by default. If auth succeeds we modify the
