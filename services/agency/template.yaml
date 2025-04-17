@@ -19,37 +19,6 @@ Resources:
       StageName: prod
 
   ###############################################
-  # IAM
-  ###############################################
-  AgencyCDCPipeRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: agency-cdc-pipe-role
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: pipes.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: PipePermissions
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:DescribeStream
-                  - dynamodb:GetRecords
-                  - dynamodb:GetShardIterator
-                  - dynamodb:ListStreams
-                Resource: !GetAtt AgencyTable.StreamArn
-              - Effect: Allow
-                Action:
-                  - sqs:SendMessage
-                Resource: !GetAtt AgencyCDCQueue.Arn
-
-  ###############################################
   # FUNCTIONS
   ###############################################
   CreateAgencyFunction:
@@ -165,42 +134,6 @@ Resources:
         WriteCapacityUnits: 1
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
-
-  ###############################################
-  # QUEUES
-  ###############################################
-  AgencyCDCQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: agency-cdc-queue
-      VisibilityTimeout: 300
-
-  ###############################################
-  # EVENT BRIDGE
-  ###############################################
-  AgencyCDCPipe:
-    Type: AWS::Pipes::Pipe
-    Properties:
-      Name: agency-cdc-pipe
-      RoleArn: !GetAtt AgencyCDCPipeRole.Arn
-      Source: !GetAtt AgencyTable.StreamArn
-      SourceParameters:
-        DynamoDBStreamParameters:
-          StartingPosition: LATEST
-        FilterCriteria:
-          Filters:
-            - Pattern: |
-                {
-                  "eventName": ["MODIFY"],
-                  "dynamodb": {
-                    "NewImage": {
-                      "pk": { "S": [{ "prefix": "agency#" }] }
-                    }
-                  }
-                }
-      Target: !GetAtt AgencyCDCQueue.Arn
-      TargetParameters:
-        SqsQueueParameters: {}
 
 ###############################################
 # OUTPUTS
