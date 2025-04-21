@@ -6,7 +6,7 @@ Resources:
   GatewayService:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./gateway/template.yaml
+      Location: ./gateway.yaml
 
   IdentityService:
     Type: AWS::Serverless::Application

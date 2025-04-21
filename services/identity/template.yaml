@@ -1,3 +1,56 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: Pager Identity Service
+
+Parameters:
+  Auth0Domain:
+    Type: String
+    Default: auth0.com
+  Auth0Audience:
+    Type: String
+    Default: pager
+
+Resources:
+  IdentityAuthorizer:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: pager-identity-authorizer
+      Handler: bootstrap
+      Runtime: provided.al2023
+      CodeUri: ./cmd/authorize
+      Timeout: 10
+      MemorySize: 128
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: Fn::Ref IdentityTable
+      Environment:
+        Variables:
+          TABLE_NAME: Fn::Ref IdentityTable
+          AUTH0_DOMAIN: Fn::Ref Auth0Domain
+          AUTH0_AUDIENCE: Fn::Ref Auth0Audience
+
+  IdentityTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: pager-identity
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+Outputs:
+  IdentityTable:
+    Description: Identity Table Name
+    Value: Fn::Ref IdentityTable
+  IdentityAuthorizerLambdaArn:
+    Description: Identity Authorizer Lambda ARN
+    Value: Fn::GetAtt IdentityAuthorizer.Arn
