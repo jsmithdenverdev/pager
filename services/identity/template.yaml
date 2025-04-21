@@ -24,12 +24,12 @@ Resources:
       MemorySize: 128
       Policies:
         - DynamoDBReadPolicy:
-            TableName: Fn::Ref IdentityTable
+            TableName: !Ref IdentityTable
       Environment:
         Variables:
-          TABLE_NAME: Fn::Ref IdentityTable
-          AUTH0_DOMAIN: Fn::Ref Auth0Domain
-          AUTH0_AUDIENCE: Fn::Ref Auth0Audience
+          TABLE_NAME: !Ref IdentityTable
+          AUTH0_DOMAIN: !Ref Auth0Domain
+          AUTH0_AUDIENCE: !Ref Auth0Audience
 
   IdentityTable:
     Type: AWS::DynamoDB::Table
@@ -50,7 +50,7 @@ Resources:
 Outputs:
   IdentityTable:
     Description: Identity Table Name
-    Value: Fn::Ref IdentityTable
+    Value: !Ref IdentityTable
   IdentityAuthorizerLambdaArn:
     Description: Identity Authorizer Lambda ARN
-    Value: Fn::GetAtt IdentityAuthorizer.Arn
+    Value: !GetAtt IdentityAuthorizer.Arn

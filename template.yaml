@@ -2,6 +2,14 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: Pager
 
+Parameters:
+  Auth0Domain:
+    Type: String
+    Default: auth0.com
+  Auth0Audience:
+    Type: String
+    Default: pager
+
 Resources:
   GatewayService:
     Type: AWS::Serverless::Application
@@ -12,6 +20,9 @@ Resources:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/identity/template.yaml
+      Parameters:
+        Auth0Domain: !Ref Auth0Domain
+        Auth0Audience: !Ref Auth0Audience
 
   AgencyService:
     Type: AWS::Serverless::Application
