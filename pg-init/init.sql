@@ -1,2 +1,0 @@
-CREATE DATABASE pager;
-CREATE DATABASE spicedb;
