@@ -27,14 +27,6 @@ Resources:
         Auth0Audience: !Ref Auth0Audience
         Environment: !Ref Environment
 
-  GatewayService:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: ./gateway.yaml
-      Parameters:
-        Environment: !Ref Environment
-        AuthorizerFunctionArn: !GetAtt IdentityService.Outputs.AuthorizerFunctionArn
-
   AgencyService:
     Type: AWS::Serverless::Application
     Properties:
@@ -49,3 +41,12 @@ Resources:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/page/template.yaml
+
+  GatewayService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./gateway.yaml
+      Parameters:
+        Environment: !Ref Environment
+        AuthorizerFunctionArn: !GetAtt IdentityService.Outputs.AuthorizerFunctionArn
+        AgencyServiceApiId: !GetAtt AgencyService.Outputs.AgencyApiId
