@@ -9,7 +9,6 @@ Parameters:
     Type: String
   Environment:
     Type: String
-    Description: Deployment environment (e.g., dev, prod)
 
 Resources:
   AuthorizerFunction:
