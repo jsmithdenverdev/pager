@@ -2,6 +2,10 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: Pager Gateway Service
 
+Parameters:
+  AuthorizerFunctionArn:
+    Type: String
+
 Resources:
   NullResource:
     Type: AWS::CloudFormation::WaitConditionHandle

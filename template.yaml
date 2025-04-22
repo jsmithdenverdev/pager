@@ -9,13 +9,15 @@ Parameters:
   Auth0Audience:
     Type: String
     Default: pager
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Deployment environment (dev or prod)
 
 Resources:
-  GatewayService:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: ./gateway.yaml
-
   IdentityService:
     Type: AWS::Serverless::Application
     Properties:
@@ -23,6 +25,14 @@ Resources:
       Parameters:
         Auth0Domain: !Ref Auth0Domain
         Auth0Audience: !Ref Auth0Audience
+        Environment: !Ref Environment
+
+  GatewayService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./gateway.yaml
+      Parameters:
+        AuthorizerFunctionArn: !GetAtt IdentityService.AuthorizerFunctionArn
 
   AgencyService:
     Type: AWS::Serverless::Application
