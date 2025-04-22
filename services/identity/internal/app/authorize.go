@@ -21,6 +21,8 @@ import (
 
 func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func(context.Context, events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
 	return func(ctx context.Context, request events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
+		logger.InfoContext(ctx, "authorizing request", slog.Any("request", request))
+
 		response := events.APIGatewayCustomAuthorizerResponse{
 			PrincipalID: "Anonymous",
 			PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{

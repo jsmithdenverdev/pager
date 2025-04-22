@@ -48,7 +48,7 @@ Resources:
       Parameters:
         Environment: !Ref Environment
 
-  GatewayService:
+  Gateway:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./gateway.yaml
@@ -56,3 +56,8 @@ Resources:
         Environment: !Ref Environment
         AuthorizerFunctionArn: !GetAtt IdentityService.Outputs.AuthorizerFunctionArn
         AgencyServiceApiId: !GetAtt AgencyService.Outputs.AgencyApiId
+
+Outputs:
+  ApiGatewayUrl:
+    Value: !GetAtt Gateway.Outputs.ApiGatewayUrl
+    Description: API Gateway URL
