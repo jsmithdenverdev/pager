@@ -3,9 +3,40 @@ Transform: AWS::Serverless-2016-10-31
 Description: Pager Gateway Service
 
 Parameters:
+  Environment:
+    Type: String
+    Description: Deployment environment (dev or prod)
   AuthorizerFunctionArn:
     Type: String
 
 Resources:
-  NullResource:
-    Type: AWS::CloudFormation::WaitConditionHandle
+  ApiGateway:
+    Type: AWS::ApiGatewayV2::HttpApi
+    Properties:
+      Name: !Sub "pager-gateway-${Environment}"
+
+  ApiGatewayAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref ApiGateway
+      AuthorizerType: REQUEST
+      IdentitySource:
+        - $request.header.Authorization
+      Name: !Sub "pager-gateway-authorizer-${Environment}"
+      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFunctionArn}/invocations
+      AuthorizerPayloadFormatVersion: "2.0"
+
+  ApiGatewayAuthorizerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthorizerFunctionArn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/authorizers/${ApiGatewayAuthorizer}
+
+  ApiGatewayStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref ApiGateway
+      StageName: !Ref Environment
+      AutoDeploy: true
