@@ -14,6 +14,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Api
     Properties:
       Name: !Sub "pager-gateway-${Environment}"
+      ProtocolType: HTTP
 
   ApiGatewayAuthorizer:
     Type: AWS::ApiGatewayV2::Authorizer
