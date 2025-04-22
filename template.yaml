@@ -32,7 +32,7 @@ Resources:
     Properties:
       Location: ./gateway.yaml
       Parameters:
-        AuthorizerFunctionArn: !GetAtt IdentityService.AuthorizerFunctionArn
+        AuthorizerFunctionArn: !GetAtt IdentityService.Outputs.AuthorizerFunctionArn
 
   AgencyService:
     Type: AWS::Serverless::Application
