@@ -37,7 +37,7 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 			},
 		}
 
-		token := getTokenFromHeader(request.Headers["Authorization"])
+		token := getTokenFromHeader(request.Headers["authorization"])
 		if token == "" {
 			logger.ErrorContext(ctx, "authorization failed", slog.String("error", "no token in header"))
 			return response, nil
