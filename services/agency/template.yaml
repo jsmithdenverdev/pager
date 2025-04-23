@@ -5,13 +5,14 @@ Description: Pager Agency Service
 Parameters:
   Environment:
     Type: String
-
+  ApiGatewayId:
+    Type: String
 Resources:
-  AgencyApi:
-    Type: "AWS::Serverless::Api"
-    Properties:
-      Name: !Sub "pager-agency-api-${Environment}"
-      StageName: !Ref Environment
+  # AgencyApi:
+  #   Type: "AWS::Serverless::Api"
+  #   Properties:
+  #     Name: !Sub "pager-agency-api-${Environment}"
+  #     StageName: !Ref Environment
 
   AgencyFunction:
     Type: AWS::Serverless::Function
@@ -26,19 +27,18 @@ Resources:
       MemorySize: 128
       Events:
         AgencyApi:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /
             Method: GET
-            RestApiId: !Ref AgencyApi
+            ApiId: !Ref ApiGatewayId
         AgencyApiPizza:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /pizza
             Method: GET
-            RestApiId: !Ref AgencyApi
-
-Outputs:
-  AgencyApiId:
-    Description: Agency API ID
-    Value: !Ref AgencyApi
+            ApiId: !Ref ApiGatewayId
+# Outputs:
+# AgencyApiId:
+#   Description: Agency API ID
+#   Value: !Ref AgencyApi
