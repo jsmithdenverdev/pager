@@ -26,17 +26,15 @@ Resources:
       Timeout: 10
       MemorySize: 128
       Events:
-        AgencyApi:
+        AgencyRoot:
           Type: HttpApi
           Properties:
-            Path: /
-            Method: GET
+            Path: /agencies
             ApiId: !Ref ApiGatewayId
-        AgencyApiPizza:
+        AgencyById:
           Type: HttpApi
           Properties:
-            Path: /pizza
-            Method: GET
+            Path: /agencies/{id}
             ApiId: !Ref ApiGatewayId
 # Outputs:
 # AgencyApiId:
