@@ -31,6 +31,12 @@ Resources:
             Path: /
             Method: GET
             RestApiId: !Ref AgencyApi
+        AgencyApiPizza:
+          Type: Api
+          Properties:
+            Path: /pizza
+            Method: GET
+            RestApiId: !Ref AgencyApi
 
 Outputs:
   AgencyApiId:
