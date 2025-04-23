@@ -57,14 +57,14 @@ Resources:
       RouteKey: ANY /agencies
       Target: !Sub integrations/${AgencyServiceRootIntegration}
 
-  AgencyServiceWildCardRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref ApiGateway
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref ApiGatewayAuthorizer
-      RouteKey: ANY /agencies/{proxy+}
-      Target: !Sub integrations/${AgencyServiceWildCardIntegration}
+  # AgencyServiceWildCardRoute:
+  #   Type: AWS::ApiGatewayV2::Route
+  #   Properties:
+  #     ApiId: !Ref ApiGateway
+  #     AuthorizationType: CUSTOM
+  #     AuthorizerId: !Ref ApiGatewayAuthorizer
+  #     RouteKey: ANY /agencies/{proxy+}
+  #     Target: !Sub integrations/${AgencyServiceWildCardIntegration}
 
   ###########################################################################
   # INTEGRATIONS
@@ -82,19 +82,19 @@ Resources:
         append:header.x-pager-userid: $context.authorizer.userid
         append:header.x-pager-userinfo: $context.authorizer.userinfo
 
-  AgencyServiceWildCardIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref ApiGateway
-      Description: Agency API wild card proxy integration
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${AgencyServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
-      PayloadFormatVersion: "1.0"
-      RequestParameters:
-        overwrite:path: ${request.path.proxy}
-        append:header.x-pager-userid: $context.authorizer.userid
-        append:header.x-pager-userinfo: $context.authorizer.userinfo
+  # AgencyServiceWildCardIntegration:
+  #   Type: AWS::ApiGatewayV2::Integration
+  #   Properties:
+  #     ApiId: !Ref ApiGateway
+  #     Description: Agency API wild card proxy integration
+  #     IntegrationType: HTTP_PROXY
+  #     IntegrationMethod: ANY
+  #     IntegrationUri: !Sub https://${AgencyServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+  #     PayloadFormatVersion: "1.0"
+  #     RequestParameters:
+  #       overwrite:path: ${request.path.proxy}
+  #       append:header.x-pager-userid: $context.authorizer.userid
+  #       append:header.x-pager-userinfo: $context.authorizer.userinfo
 
 Outputs:
   ApiGatewayUrl:

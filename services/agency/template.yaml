@@ -28,8 +28,8 @@ Resources:
         AgencyApi:
           Type: Api
           Properties:
-            Path: /{proxy}
-            Method: ANY
+            Path: /
+            Method: GET
             RestApiId: !Ref AgencyApi
 
 Outputs:

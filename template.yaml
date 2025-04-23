@@ -48,10 +48,10 @@ Resources:
       Parameters:
         Environment: !Ref Environment
 
-  Gateway:
+  GatewayService:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./gateway.yaml
+      Location: ./services/gateway.yaml
       Parameters:
         Environment: !Ref Environment
         AuthorizerFunctionArn: !GetAtt IdentityService.Outputs.AuthorizerFunctionArn
