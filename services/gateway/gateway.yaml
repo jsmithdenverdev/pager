@@ -31,8 +31,6 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref ApiGateway
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref ApiGatewayAuthorizer
       RouteKey: ANY /agencies/{proxy+}
       Target: !Sub integrations/${AgencyServiceRootIntegration}
 
