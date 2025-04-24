@@ -23,32 +23,6 @@ Resources:
             FunctionArn: !Ref AuthorizerFunctionArn
       StageName: !Ref Environment
 
-  # ApiGatewayAuthorizer:
-  #   Type: AWS::ApiGatewayV2::Authorizer
-  #   Properties:
-  #     ApiId: !Ref ApiGateway
-  #     AuthorizerType: REQUEST
-  #     IdentitySource:
-  #       - $request.header.Authorization
-  #     Name: !Sub "pager-gateway-authorizer-${Environment}"
-  #     AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFunctionArn}/invocations
-  #     AuthorizerPayloadFormatVersion: "2.0"
-
-  ApiGatewayAuthorizerPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref AuthorizerFunctionArn
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/authorizers/${ApiGatewayAuthorizer}
-
-  # ApiGatewayStage:
-  #   Type: AWS::ApiGatewayV2::Stage
-  #   Properties:
-  #     ApiId: !Ref ApiGateway
-  #     StageName: !Ref Environment
-  #     AutoDeploy: true
-
   ###########################################################################
   # ROUTES
   ###########################################################################
@@ -62,30 +36,9 @@ Resources:
       RouteKey: ANY /agencies/{proxy+}
       Target: !Sub integrations/${AgencyServiceRootIntegration}
 
-  # AgencyServiceWildCardRoute:
-  #   Type: AWS::ApiGatewayV2::Route
-  #   Properties:
-  #     ApiId: !Ref ApiGateway
-  #     AuthorizationType: CUSTOM
-  #     AuthorizerId: !Ref ApiGatewayAuthorizer
-  #     RouteKey: ANY /agencies/{proxy+}
-  #     Target: !Sub integrations/${AgencyServiceWildCardIntegration}
-
   ###########################################################################
   # INTEGRATIONS
   ###########################################################################
-
-  # :
-  #   Type: AWS::ApiGatewayV2::Integration
-  #   Properties:
-  #     ApiId: !Ref ApiGateway
-  #     IntegrationType: HTTP_PROXY
-  #     IntegrationMethod: ANY
-  #     IntegrationUri: !Sub https://${AgencyServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
-  #     PayloadFormatVersion: "1.0"
-  #     RequestParameters:
-  #       append:header.x-pager-userid: $context.authorizer.userid
-  #       append:header.x-pager-userinfo: $context.authorizer.userinfo
 
   AgencyServiceRootIntegration:
     Type: AWS::ApiGatewayV2::Integration
