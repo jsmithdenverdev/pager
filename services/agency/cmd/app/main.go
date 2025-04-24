@@ -27,14 +27,14 @@ func run(ctx context.Context) error {
 func newServer(loghandler slog.Handler) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET //", func(w http.ResponseWriter, r *http.Request) {
 		logger := slog.New(loghandler)
 		logger.InfoContext(r.Context(), "request received", slog.Any("request", r))
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("list agencies"))
 	})
 
-	mux.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET //{id}", func(w http.ResponseWriter, r *http.Request) {
 		logger := slog.New(loghandler)
 		logger.InfoContext(r.Context(), "request received", slog.Any("request", r))
 		w.WriteHeader(http.StatusOK)
