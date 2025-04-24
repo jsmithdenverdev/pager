@@ -30,11 +30,13 @@ Resources:
           Type: HttpApi
           Properties:
             Path: /agencies
+            Method: ANY
             ApiId: !Ref ApiGatewayId
         AgencyById:
           Type: HttpApi
           Properties:
             Path: /agencies/{id}
+            Method: ANY
             ApiId: !Ref ApiGatewayId
 # Outputs:
 # AgencyApiId:
