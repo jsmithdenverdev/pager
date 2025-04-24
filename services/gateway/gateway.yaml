@@ -33,7 +33,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref ApiGateway
-      RouteKey: ANY /agencies/
+      RouteKey: ANY /agencies
       Target: !Sub integrations/${AgencyRootRouteIntegration}
 
   AgencyProxyRoute:
@@ -47,7 +47,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref ApiGateway
-      RouteKey: ANY /agencies/{agencyid}/pages/
+      RouteKey: ANY /agencies/{agencyid}/pages
       Target: !Sub integrations/${AgencyPageRootRouteIntegration}
 
   AgencyPageProxyRoute:
@@ -61,7 +61,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref ApiGateway
-      RouteKey: ANY /pages/
+      RouteKey: ANY /pages
       Target: !Sub integrations/${PageRootRouteIntegration}
 
   PageProxyRoute:
