@@ -27,22 +27,12 @@ Resources:
         Auth0Domain: !Ref Auth0Domain
         Auth0Audience: !Ref Auth0Audience
 
-  GatewayService:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: ./services/gateway/gateway.yaml
-      Parameters:
-        Environment: !Ref Environment
-        AuthorizerFunctionArn: !GetAtt IdentityService.Outputs.AuthorizerFunctionArn
-        # AgencyServiceApiId: !GetAtt AgencyService.Outputs.AgencyApiId
-
   AgencyService:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/agency/template.yaml
       Parameters:
         Environment: !Ref Environment
-        ApiGatewayId: !ImportValue ApiGatewayId
 
   EndpointService:
     Type: AWS::Serverless::Application
@@ -57,6 +47,15 @@ Resources:
       Location: ./services/page/template.yaml
       Parameters:
         Environment: !Ref Environment
+
+  GatewayService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./services/gateway/gateway.yaml
+      Parameters:
+        Environment: !Ref Environment
+        AuthorizerFunctionArn: !GetAtt IdentityService.Outputs.AuthorizerFunctionArn
+        AgencyServiceApiId: !GetAtt AgencyService.Outputs.AgencyApiId
 
 Outputs:
   ApiGatewayUrl:
