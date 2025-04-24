@@ -23,11 +23,11 @@ func run(ctx context.Context) error {
 	return nil
 }
 
-func handler(loghandler slog.Handler) func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	return func(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func handler(loghandler slog.Handler) func(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	return func(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 		logger := slog.New(loghandler)
 		logger.InfoContext(ctx, "request received", "event", event)
-		return events.APIGatewayProxyResponse{
+		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 200,
 		}, nil
 	}
