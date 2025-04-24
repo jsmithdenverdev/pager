@@ -31,6 +31,12 @@ Resources:
             Path: /{proxy+}
             Method: ANY
             ApiId: !Ref Api
+        AgenciesProxy:
+          Type: HttpApi
+          Properties:
+            Path: /agencies/{agencyid}/{proxy+}
+            Method: ANY
+            ApiId: !Ref Api
 
 Outputs:
   ApiId:
