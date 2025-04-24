@@ -13,21 +13,25 @@ Parameters:
 
 Resources:
   ApiGateway:
-    Type: AWS::ApiGatewayV2::Api
+    Type: AWS::Serverless::HttpApi
     Properties:
       Name: !Sub "pager-gateway-${Environment}"
-      ProtocolType: HTTP
+      Auth:
+        Authorizers:
+          ApiGatewayAuthorizer:
+            AuthorizerPayloadFormatVersion: 2.0
+      StageName: !Ref Environment
 
-  ApiGatewayAuthorizer:
-    Type: AWS::ApiGatewayV2::Authorizer
-    Properties:
-      ApiId: !Ref ApiGateway
-      AuthorizerType: REQUEST
-      IdentitySource:
-        - $request.header.Authorization
-      Name: !Sub "pager-gateway-authorizer-${Environment}"
-      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFunctionArn}/invocations
-      AuthorizerPayloadFormatVersion: "2.0"
+  # ApiGatewayAuthorizer:
+  #   Type: AWS::ApiGatewayV2::Authorizer
+  #   Properties:
+  #     ApiId: !Ref ApiGateway
+  #     AuthorizerType: REQUEST
+  #     IdentitySource:
+  #       - $request.header.Authorization
+  #     Name: !Sub "pager-gateway-authorizer-${Environment}"
+  #     AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFunctionArn}/invocations
+  #     AuthorizerPayloadFormatVersion: "2.0"
 
   ApiGatewayAuthorizerPermission:
     Type: AWS::Lambda::Permission
@@ -37,12 +41,12 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/authorizers/${ApiGatewayAuthorizer}
 
-  ApiGatewayStage:
-    Type: AWS::ApiGatewayV2::Stage
-    Properties:
-      ApiId: !Ref ApiGateway
-      StageName: !Ref Environment
-      AutoDeploy: true
+  # ApiGatewayStage:
+  #   Type: AWS::ApiGatewayV2::Stage
+  #   Properties:
+  #     ApiId: !Ref ApiGateway
+  #     StageName: !Ref Environment
+  #     AutoDeploy: true
 
   ###########################################################################
   # ROUTES
