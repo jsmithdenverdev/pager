@@ -106,3 +106,5 @@ Outputs:
 
   ApiGatewayId:
     Value: !Ref ApiGateway
+    Export:
+      Name: ApiGatewayId
