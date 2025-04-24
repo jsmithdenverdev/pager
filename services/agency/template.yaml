@@ -28,6 +28,8 @@ Resources:
         Root:
           Type: HttpApi
           Properties:
+            Path: /
+            Method: ANY
             ApiId: !Ref Api
         Proxy:
           Type: HttpApi
