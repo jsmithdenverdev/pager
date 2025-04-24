@@ -25,10 +25,22 @@ Resources:
       Timeout: 10
       MemorySize: 128
       Events:
+        Root:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: ANY
+            ApiId: !Ref Api
         Proxy:
           Type: HttpApi
           Properties:
             Path: /{proxy+}
+            Method: ANY
+            ApiId: !Ref Api
+        AgenciesRoot:
+          Type: HttpApi
+          Properties:
+            Path: /agencies/{agencyid}
             Method: ANY
             ApiId: !Ref Api
         AgenciesProxy:
