@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 
-	"github.com/aws/aws-lambda-go/events"
+	"github.com/a-h/awsapigatewayv2handler"
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
@@ -19,16 +20,40 @@ func main() {
 
 func run(ctx context.Context) error {
 	loghandler := slog.NewJSONHandler(os.Stdout, nil)
-	lambda.Start(handler(loghandler))
+	lambda.Start(awsapigatewayv2handler.NewLambdaHandler(newServer(loghandler)))
 	return nil
 }
 
-func handler(loghandler slog.Handler) func(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
-	return func(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+func newServer(loghandler slog.Handler) http.Handler {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		logger := slog.New(loghandler)
-		logger.InfoContext(ctx, "request received", "event", event)
-		return events.APIGatewayV2HTTPResponse{
-			StatusCode: 200,
-		}, nil
-	}
+		logger.InfoContext(r.Context(), "request received", "event", r)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("list pages"))
+	})
+
+	mux.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
+		logger := slog.New(loghandler)
+		logger.InfoContext(r.Context(), "request received", "event", r)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("read page by id"))
+	})
+
+	mux.HandleFunc("GET /agencies/{agencyid}/pages", func(w http.ResponseWriter, r *http.Request) {
+		logger := slog.New(loghandler)
+		logger.InfoContext(r.Context(), "request received", "event", r)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("list pages by agency"))
+	})
+
+	mux.HandleFunc("GET /agencies/{agencyid}/pages/{pageid}", func(w http.ResponseWriter, r *http.Request) {
+		logger := slog.New(loghandler)
+		logger.InfoContext(r.Context(), "request received", "event", r)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("read page by agency and id"))
+	})
+
+	return mux
 }

@@ -1,3 +1,5 @@
+github.com/a-h/awsapigatewayv2handler v0.0.0-20220723235946-c45b98eb1b9e h1:HzXuiorRJtdTDWmI/DS/IRpwx9LvI/XhinY8iFwSDlY=
+github.com/a-h/awsapigatewayv2handler v0.0.0-20220723235946-c45b98eb1b9e/go.mod h1:JniHYfJXJDrzaIShRJC0yhUvtuKM0NfGkH1f3mDk67k=
 github.com/aws/aws-lambda-go v1.48.0 h1:1aZUYsrJu0yo5fC4z+Rba1KhNImXcJcvHu763BxoyIo=
 github.com/aws/aws-lambda-go v1.48.0/go.mod h1:dpMpZgvWx5vuQJfBt0zqBha60q7Dd7RfgJv23DymV8A=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
