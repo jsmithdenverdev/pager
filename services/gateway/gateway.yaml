@@ -8,8 +8,8 @@ Parameters:
     Description: Deployment environment (dev or prod)
   AuthorizerFunctionArn:
     Type: String
-  # AgencyServiceApiId:
-  #   Type: String
+  AgencyServiceApiId:
+    Type: String
 
 Resources:
   ApiGateway:
