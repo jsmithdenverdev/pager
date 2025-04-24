@@ -42,7 +42,7 @@ Resources:
       Location: ./services/agency/template.yaml
       Parameters:
         Environment: !Ref Environment
-        ApiGatewayId: !GetAtt GatewayService.Outputs.ApiGatewayId
+        ApiGatewayId: !ImportValue ApiGatewayId
 
   EndpointService:
     Type: AWS::Serverless::Application
