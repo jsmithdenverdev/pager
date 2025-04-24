@@ -1,11 +1,38 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Pager Page Service
+Description: Pager Agency Service
 
 Parameters:
   Environment:
     Type: String
 
 Resources:
-  NullResource:
-    Type: AWS::CloudFormation::WaitConditionHandle
+  Api:
+    Type: "AWS::Serverless::HttpApi"
+    Properties:
+      Name: !Sub "pager-page-api-${Environment}"
+      StageName: !Ref Environment
+
+  AppFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "pager-page-service-${Environment}"
+      Handler: bootstrap
+      Runtime: provided.al2023
+      CodeUri: ./cmd/app
+      Timeout: 10
+      MemorySize: 128
+      Events:
+        Proxy:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            ApiId: !Ref Api
+
+Outputs:
+  ApiId:
+    Description: Page API ID
+    Value: !Ref Api

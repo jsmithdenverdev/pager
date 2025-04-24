@@ -55,7 +55,8 @@ Resources:
       Parameters:
         Environment: !Ref Environment
         AuthorizerFunctionArn: !GetAtt IdentityService.Outputs.AuthorizerFunctionArn
-        AgencyServiceApiId: !GetAtt AgencyService.Outputs.AgencyApiId
+        AgencyServiceApiId: !GetAtt AgencyService.Outputs.ApiId
+        PageServiceApiId: !GetAtt PageService.Outputs.ApiId
 
 Outputs:
   ApiGatewayUrl:

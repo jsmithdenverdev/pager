@@ -7,13 +7,13 @@ Parameters:
     Type: String
 
 Resources:
-  AgencyApi:
+  Api:
     Type: "AWS::Serverless::HttpApi"
     Properties:
       Name: !Sub "pager-agency-api-${Environment}"
       StageName: !Ref Environment
 
-  AgencyFunction:
+  AppFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
@@ -33,6 +33,6 @@ Resources:
             ApiId: !Ref AgencyApi
 
 Outputs:
-  AgencyApiId:
+  ApiId:
     Description: Agency API ID
     Value: !Ref AgencyApi

@@ -10,6 +10,8 @@ Parameters:
     Type: String
   AgencyServiceApiId:
     Type: String
+  PageServiceApiId:
+    Type: String
 
 Resources:
   ApiGateway:
@@ -34,6 +36,21 @@ Resources:
       RouteKey: ANY /agencies/{proxy+}
       Target: !Sub integrations/${AgencyServiceRootIntegration}
 
+  # Agency Service Pages Sub Resource
+  PageServiceAgencyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: ANY /agencies/{agencyid}/pages/{proxy+}
+      Target: !Sub integrations/${PageServiceAgencyIntegration}
+
+  PageServiceRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: ANY /pages/{proxy+}
+      Target: !Sub integrations/${PageServiceRootIntegration}
+
   ###########################################################################
   # INTEGRATIONS
   ###########################################################################
@@ -44,7 +61,33 @@ Resources:
       ApiId: !Ref ApiGateway
       IntegrationType: HTTP_PROXY
       IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${AgencyServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+      IntegrationUri: !Sub https://${AgencyServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        overwrite:path: !Sub ${Environment}/${!request.path.proxy}
+        append:header.x-pager-userid: $context.authorizer.userid
+        append:header.x-pager-userinfo: $context.authorizer.userinfo
+
+  PageServiceAgencyIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        overwrite:path: !Sub ${Environment}/agencies/${!request.path.agencyid}/${!request.path.proxy}
+        append:header.x-pager-userid: $context.authorizer.userid
+        append:header.x-pager-userinfo: $context.authorizer.userinfo
+
+  PageServiceRootIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/
       PayloadFormatVersion: "1.0"
       RequestParameters:
         overwrite:path: !Sub ${Environment}/${!request.path.proxy}
