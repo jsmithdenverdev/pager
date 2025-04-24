@@ -30,9 +30,9 @@ Resources:
           Properties:
             Path: /{proxy+}
             Method: ANY
-            ApiId: !Ref AgencyApi
+            ApiId: !Ref Api
 
 Outputs:
   ApiId:
     Description: Agency API ID
-    Value: !Ref AgencyApi
+    Value: !Ref Api
