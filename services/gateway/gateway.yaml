@@ -149,7 +149,7 @@ Resources:
       IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
       PayloadFormatVersion: "1.0"
       RequestParameters:
-        overwrite:path: ${request.path.proxy}
+        overwrite:path: !Sub ${Environment}/${!request.path.proxy}
         append:header.x-pager-userid: $context.authorizer.userid
         append:header.x-pager-userinfo: $context.authorizer.userinfo
 
