@@ -115,8 +115,8 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 		response.PrincipalID = sub
 		response.PolicyDocument.Statement[0].Effect = "Allow"
 		response.Context = map[string]any{
-			"userid": sub,
-			"user":   string(userJSON),
+			"userid":   sub,
+			"userinfo": string(userJSON),
 		}
 
 		return response, nil
