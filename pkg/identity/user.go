@@ -8,7 +8,9 @@ type User struct {
 	Memberships map[string]Membership `json:"memberships"`
 }
 
-// Membership represents a binding between a user and an Agency.
+// Membership represents a binding between a user and an Agency. This
+// binding includes the Agencies ID, the Agencies Name, and the Role
+// of the User.
 type Membership struct {
 	AgencyID string `json:"agencyId"`
 	Name     string `json:"name"`
