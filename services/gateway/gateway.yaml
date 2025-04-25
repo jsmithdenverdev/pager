@@ -49,10 +49,10 @@ Resources:
             TableName: !Ref AgencyTableName
       Environment:
         Variables:
-          USER_TABLE_NAME: !Ref UserTableName
-          AGENCY_TABLE_NAME: !Ref AgencyTableName
           AUTH0_DOMAIN: !Ref Auth0Domain
           AUTH0_AUDIENCE: !Ref Auth0Audience
+          USER_TABLE_NAME: !Ref UserTableName
+          AGENCY_TABLE_NAME: !Ref AgencyTableName
 
   AuthorizerFunctionPermission:
     Type: AWS::Lambda::Permission

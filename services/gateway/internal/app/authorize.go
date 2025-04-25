@@ -61,8 +61,41 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 			return response, nil
 		}
 
+		userRecords, err := client.BatchGetItem(ctx, &dynamodb.BatchGetItemInput{
+			RequestItems: map[string]types.KeysAndAttributes{
+				config.UserTableName: {
+					Keys: []map[string]types.AttributeValue{
+						{
+							"pk": &types.AttributeValueMemberS{
+								Value: fmt.Sprintf("idpid#%s", sub),
+							},
+							"sk": &types.AttributeValueMemberS{
+								Value: fmt.Sprintf("idpid#%s", sub),
+							},
+						},
+					},
+				},
+				config.AgencyTableName: {
+					Keys: []map[string]types.AttributeValue{
+						{
+							"pk": &types.AttributeValueMemberS{
+								Value: fmt.Sprintf("idpid#%s", sub),
+							},
+						},
+					},
+				},
+			},
+		})
+
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to get user records", slog.String("error", err.Error()))
+			return response, nil
+		}
+
+		logger.InfoContext(ctx, "fetched user records", slog.Any("userRecords", userRecords))
+
 		userRecord, err := client.GetItem(ctx, &dynamodb.GetItemInput{
-			TableName: aws.String(config.TableName),
+			TableName: aws.String(config.UserTableName),
 			Key: map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("idpid#%s", sub),
