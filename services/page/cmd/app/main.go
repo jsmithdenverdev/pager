@@ -30,7 +30,7 @@ func run(ctx context.Context) error {
 	}
 
 	loghandler := slog.NewJSONHandler(os.Stdout, nil)
-	lambda.Start(awsapigatewayv2handler.NewLambdaHandler(newServer(config, loghandler)))
+	lambda.Start(awsapigatewayv2handler.NewLambdaHandler(newServer(conf, loghandler)))
 	return nil
 }
 
