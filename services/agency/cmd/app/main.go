@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/a-h/awsapigatewayv2handler"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
@@ -20,26 +20,16 @@ func main() {
 
 func run(ctx context.Context) error {
 	loghandler := slog.NewJSONHandler(os.Stdout, nil)
-	lambda.Start(awsapigatewayv2handler.NewLambdaHandler(newServer(loghandler)))
+	lambda.Start(handler(loghandler))
 	return nil
 }
 
-func newServer(loghandler slog.Handler) http.Handler {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		logger := slog.New(loghandler)
-		logger.InfoContext(r.Context(), "request received", slog.Any("request", r))
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("list agencies"))
-	})
-
-	mux.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
-		logger := slog.New(loghandler)
-		logger.InfoContext(r.Context(), "request received", slog.Any("request", r))
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("read agency by id"))
-	})
-
-	return mux
+func handler(loghandler slog.Handler) func(context.Context, events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	logger := slog.New(loghandler)
+	return func(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+		logger.InfoContext(ctx, "agency service request received", slog.Any("request", request))
+		return events.APIGatewayV2HTTPResponse{
+			StatusCode: http.StatusOK,
+		}, nil
+	}
 }
