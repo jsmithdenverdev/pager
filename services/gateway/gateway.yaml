@@ -29,6 +29,7 @@ Resources:
           ApiGatewayAuthorizer:
             AuthorizerPayloadFormatVersion: 2.0
             FunctionArn: !GetAtt AuthorizerFunction.Arn
+        DefaultAuthorizer: ApiGatewayAuthorizer
       StageName: !Ref Environment
 
   AuthorizerFunction:
