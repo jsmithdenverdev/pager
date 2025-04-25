@@ -108,10 +108,10 @@ Resources:
       ApiId: !Ref ApiGateway
       IntegrationType: HTTP_PROXY
       IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${AgencyServiceApiId}.execute-api.${AWS::Region}.amazonaws.com
+      IntegrationUri: !Sub https://${AgencyServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
       PayloadFormatVersion: "1.0"
       RequestParameters:
-        overwrite:path: !Sub ${Environment}/${!request.path.proxy}
+        overwrite:path: ${request.path.proxy}
         append:header.x-pager-userid: $context.authorizer.userid
         append:header.x-pager-userinfo: $context.authorizer.userinfo
 
@@ -121,16 +121,12 @@ Resources:
       ApiId: !Ref ApiGateway
       IntegrationType: HTTP_PROXY
       IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com
+      IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
       PayloadFormatVersion: "1.0"
       RequestParameters:
-        # TODO: Perhaps we should capture the agencyid as a header instead of
-        # a path parameter. That would allow us to do all agency lookups under
-        # a single route and switch the PK/SK based on the presence of an
-        # accountid header.
-        overwrite:path: !Sub ${Environment}/agencies/${!request.path.agencyid}
         append:header.x-pager-userid: $context.authorizer.userid
         append:header.x-pager-userinfo: $context.authorizer.userinfo
+        append:header.x-pager-agencyid: $request.path.agencyid
 
   PageRootRouteIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -150,10 +146,10 @@ Resources:
       ApiId: !Ref ApiGateway
       IntegrationType: HTTP_PROXY
       IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com
+      IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
       PayloadFormatVersion: "1.0"
       RequestParameters:
-        overwrite:path: !Sub ${Environment}/${!request.path.proxy}
+        overwrite:path: ${request.path.proxy}
         append:header.x-pager-userid: $context.authorizer.userid
         append:header.x-pager-userinfo: $context.authorizer.userinfo
 
