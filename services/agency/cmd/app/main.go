@@ -29,14 +29,14 @@ func newServer(loghandler slog.Handler) http.Handler {
 
 	mux.HandleFunc("GET /dev", func(w http.ResponseWriter, r *http.Request) {
 		logger := slog.New(loghandler)
-		logger.InfoContext(r.Context(), "request received", slog.Any("request", r))
+		logger.InfoContext(r.Context(), "request received", slog.Any("request.headers", r.Header))
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("list agencies"))
 	})
 
 	mux.HandleFunc("GET /dev/{id}", func(w http.ResponseWriter, r *http.Request) {
 		logger := slog.New(loghandler)
-		logger.InfoContext(r.Context(), "request received", slog.Any("request", r))
+		logger.InfoContext(r.Context(), "request received", slog.Any("request.headers", r.Header))
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("read agency by id"))
 	})
