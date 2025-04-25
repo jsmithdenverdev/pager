@@ -21,8 +21,6 @@ import (
 
 func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func(context.Context, events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
 	return func(ctx context.Context, request events.APIGatewayCustomAuthorizerRequestTypeRequest) (events.APIGatewayCustomAuthorizerResponse, error) {
-		logger.InfoContext(ctx, "authorizing request", slog.Any("request", request))
-
 		response := events.APIGatewayCustomAuthorizerResponse{
 			PrincipalID: "Anonymous",
 			PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
@@ -83,7 +81,13 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 			return response, nil
 		}
 
-		agencyRecords, err := client.Query(ctx, &dynamodb.QueryInput{
+		var user identity.User
+		if err := attributevalue.UnmarshalMap(userRecord.Item, &user); err != nil {
+			logger.ErrorContext(ctx, "failed to unmarshal user record", slog.String("error", err.Error()))
+			return response, nil
+		}
+
+		membershipRecords, err := client.Query(ctx, &dynamodb.QueryInput{
 			TableName:              aws.String(config.AgencyTableName),
 			KeyConditionExpression: aws.String("pk = :pk"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -94,17 +98,23 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 		})
 
 		if err != nil {
-			logger.ErrorContext(ctx, "failed to get agency records", slog.String("error", err.Error()))
+			logger.ErrorContext(ctx, "failed to get membership records", slog.String("error", err.Error()))
 			return response, nil
 		}
 
-		logger.InfoContext(ctx, "fetched agency records", slog.Any("agencyRecords", agencyRecords))
-
-		var user identity.User
-		if err := attributevalue.UnmarshalMap(userRecord.Item, &user); err != nil {
-			logger.ErrorContext(ctx, "failed to unmarshal user record", slog.String("error", err.Error()))
-			return response, nil
+		memberships := make(map[string]identity.Membership)
+		if membershipRecords.Items != nil {
+			for _, item := range membershipRecords.Items {
+				var membership identity.Membership
+				if err := attributevalue.UnmarshalMap(item, &membership); err != nil {
+					logger.ErrorContext(ctx, "failed to unmarshal membership record", slog.String("error", err.Error()))
+					return response, nil
+				}
+				memberships[membership.AgencyID] = membership
+			}
 		}
+
+		user.Memberships = memberships
 
 		userJSON, err := json.Marshal(user)
 		if err != nil {
