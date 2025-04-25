@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 
 	"github.com/caarlos0/env/v10"
-	"github.com/jsmithdenverdev/pager/services/identity/internal/app"
+	"github.com/jsmithdenverdev/pager/services/gateway/internal/app"
 )
 
 func main() {

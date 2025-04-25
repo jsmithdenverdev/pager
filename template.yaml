@@ -24,8 +24,6 @@ Resources:
       Location: ./services/identity/template.yaml
       Parameters:
         Environment: !Ref Environment
-        Auth0Domain: !Ref Auth0Domain
-        Auth0Audience: !Ref Auth0Audience
 
   AgencyService:
     Type: AWS::Serverless::Application
@@ -54,9 +52,12 @@ Resources:
       Location: ./services/gateway/gateway.yaml
       Parameters:
         Environment: !Ref Environment
-        AuthorizerFunctionArn: !GetAtt IdentityService.Outputs.AuthorizerFunctionArn
+        Auth0Domain: !Ref Auth0Domain
+        Auth0Audience: !Ref Auth0Audience
         AgencyServiceApiId: !GetAtt AgencyService.Outputs.ApiId
         PageServiceApiId: !GetAtt PageService.Outputs.ApiId
+        UserTableName: !GetAtt IdentityService.Outputs.UserTableName
+        AgencyTableName: !GetAtt AgencyService.Outputs.AgencyTableName
 
 Outputs:
   ApiGatewayUrl:

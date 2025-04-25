@@ -30,7 +30,26 @@ Resources:
           Properties:
             ApiId: !Ref Api
 
+  AgencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "pager-agency-agencies-${Environment}"
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
 Outputs:
   ApiId:
     Description: Agency API ID
     Value: !Ref Api
+  AgencyTableName:
+    Description: Agency Table Name
+    Value: !Ref AgencyTable

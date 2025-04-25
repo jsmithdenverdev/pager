@@ -3,42 +3,10 @@ Transform: AWS::Serverless-2016-10-31
 Description: Pager Identity Service
 
 Parameters:
-  Auth0Domain:
-    Type: String
-  Auth0Audience:
-    Type: String
   Environment:
     Type: String
 
 Resources:
-  AuthorizerFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "pager-identity-authorizer-${Environment}"
-      Handler: bootstrap
-      Runtime: provided.al2023
-      CodeUri: ./cmd/authorize
-      Timeout: 10
-      MemorySize: 128
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref UserTable
-      Environment:
-        Variables:
-          TABLE_NAME: !Ref UserTable
-          AUTH0_DOMAIN: !Ref Auth0Domain
-          AUTH0_AUDIENCE: !Ref Auth0Audience
-
-  AuthorizerFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt AuthorizerFunction.Arn
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*
-
   UserTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -59,6 +27,3 @@ Outputs:
   UserTableName:
     Description: User Table Name
     Value: !Ref UserTable
-  AuthorizerFunctionArn:
-    Description: Authorizer Lambda ARN
-    Value: !GetAtt AuthorizerFunction.Arn

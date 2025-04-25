@@ -6,11 +6,17 @@ Parameters:
   Environment:
     Type: String
     Description: Deployment environment (dev or prod)
-  AuthorizerFunctionArn:
+  Auth0Domain:
+    Type: String
+  Auth0Audience:
     Type: String
   AgencyServiceApiId:
     Type: String
   PageServiceApiId:
+    Type: String
+  UserTableName:
+    Type: String
+  AgencyTableName:
     Type: String
 
 Resources:
@@ -22,8 +28,39 @@ Resources:
         Authorizers:
           ApiGatewayAuthorizer:
             AuthorizerPayloadFormatVersion: 2.0
-            FunctionArn: !Ref AuthorizerFunctionArn
+            FunctionArn: !GetAtt AuthorizerFunction.Arn
       StageName: !Ref Environment
+
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "pager-gateway-authorizer-${Environment}"
+      Handler: bootstrap
+      Runtime: provided.al2023
+      CodeUri: ./cmd/authorize
+      Timeout: 10
+      MemorySize: 128
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UserTableName
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgencyTableName
+      Environment:
+        Variables:
+          USER_TABLE_NAME: !Ref UserTableName
+          AGENCY_TABLE_NAME: !Ref AgencyTableName
+          AUTH0_DOMAIN: !Ref Auth0Domain
+          AUTH0_AUDIENCE: !Ref Auth0Audience
+
+  AuthorizerFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt AuthorizerFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*
 
   ###########################################################################
   # ROUTES
@@ -49,13 +86,6 @@ Resources:
       ApiId: !Ref ApiGateway
       RouteKey: ANY /agencies/{agencyid}/pages
       Target: !Sub integrations/${AgencyPageRootRouteIntegration}
-
-  # AgencyPageProxyRoute:
-  #   Type: AWS::ApiGatewayV2::Route
-  #   Properties:
-  #     ApiId: !Ref ApiGateway
-  #     RouteKey: ANY /agencies/{agencyid}/pages/{proxy+}
-  #     Target: !Sub integrations/${AgencyPageProxyRouteIntegration}
 
   PageRootRoute:
     Type: AWS::ApiGatewayV2::Route
@@ -116,23 +146,6 @@ Resources:
         overwrite:path: !Sub ${Environment}/agencies/${!request.path.agencyid}
         append:header.x-pager-userid: $context.authorizer.userid
         append:header.x-pager-userinfo: $context.authorizer.userinfo
-
-  # AgencyPageProxyRouteIntegration:
-  #   Type: AWS::ApiGatewayV2::Integration
-  #   Properties:
-  #     ApiId: !Ref ApiGateway
-  #     IntegrationType: HTTP_PROXY
-  #     IntegrationMethod: ANY
-  #     IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com
-  #     PayloadFormatVersion: "1.0"
-  #     RequestParameters:
-  #       # TODO: Perhaps we should capture the agencyid as a header instead of
-  #       # a path parameter. That would allow us to do all agency lookups under
-  #       # a single route and switch the PK/SK based on the presence of an
-  #       # accountid header.
-  #       overwrite:path: !Sub ${Environment}/agencies/${!request.path.agencyid}/${!request.path.proxy}
-  #       append:header.x-pager-userid: $context.authorizer.userid
-  #       append:header.x-pager-userinfo: $context.authorizer.userinfo
 
   PageRootRouteIntegration:
     Type: AWS::ApiGatewayV2::Integration
