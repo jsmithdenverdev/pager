@@ -41,7 +41,7 @@ func newServer(loghandler slog.Handler) http.Handler {
 		w.Write([]byte("read page by id"))
 	})
 
-	mux.HandleFunc("GET /dev/agencies/{id}/pages", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /dev/agencies/{id}", func(w http.ResponseWriter, r *http.Request) {
 		logger := slog.New(loghandler)
 		logger.InfoContext(r.Context(), "request received", slog.Any("request", r))
 		w.WriteHeader(http.StatusOK)
