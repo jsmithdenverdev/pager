@@ -8,6 +8,8 @@ import (
 
 	"github.com/a-h/awsapigatewayv2handler"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/caarlos0/env/v11"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/app"
 )
@@ -26,7 +28,15 @@ func run(ctx context.Context) error {
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	handler := app.NewServer(conf, logger)
+
+	awsconf, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load default aws config: %w", err)
+	}
+
+	dynamoClient := dynamodb.NewFromConfig(awsconf)
+
+	handler := app.NewServer(conf, logger, dynamoClient)
 
 	lambda.Start(awsapigatewayv2handler.NewLambdaHandler(handler))
 
