@@ -1,139 +1,39 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Transform: "AWS::Serverless-2016-10-31"
-Description: AWS SAM template for the Pager Page service.
+Transform: AWS::Serverless-2016-10-31
+Description: Pager Agency Service
 
 Parameters:
-  PolicyStoreId:
+  Environment:
     Type: String
-    Description: "Amazon Verified Permissions Policy Store ID"
 
 Resources:
-  ###############################################
-  # API
-  ###############################################
-  PageApi:
-    Type: "AWS::Serverless::Api"
+  Api:
+    Type: "AWS::Serverless::HttpApi"
     Properties:
-      Name: "pager-page-api"
-      Description: "Page Microservice API"
-      StageName: prod
-  ###############################################
-  # FUNCTIONS
-  ###############################################
-  CreatePageFunction:
-    Type: "AWS::Serverless::Function"
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: "create-page"
-      Handler: bootstrap
-      Runtime: provided.al2023
-      CodeUri: cmd/create_page
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /
-            Method: POST
-            RestApiId: !Ref PageApi
-      Environment:
-        Variables:
-          POLICY_STORE_ID: !Ref PolicyStoreId
-          TABLE_NAME: !Ref PageTable
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - verifiedpermissions:IsAuthorized
-              Resource: !Sub arn:aws:verifiedpermissions::${AWS::AccountId}:policy-store/${PolicyStoreId}
-        - DynamoDBWritePolicy:
-            TableName: !Ref PageTable
+      Name: !Sub "pager-page-api-${Environment}"
+      StageName: !Ref Environment
 
-  ReadPageFunction:
-    Type: "AWS::Serverless::Function"
+  AppFunction:
+    Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: "read-page"
+      FunctionName: !Sub "pager-page-service-${Environment}"
       Handler: bootstrap
       Runtime: provided.al2023
-      CodeUri: cmd/read_page
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /{pageid}
-            Method: GET
-            RestApiId: !Ref PageApi
+      CodeUri: ./cmd/app
+      Timeout: 10
+      MemorySize: 128
       Environment:
         Variables:
-          POLICY_STORE_ID: !Ref PolicyStoreId
-          TABLE_NAME: !Ref PageTable
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - verifiedpermissions:IsAuthorized
-              Resource: !Sub arn:aws:verifiedpermissions::${AWS::AccountId}:policy-store/${PolicyStoreId}
-        - DynamoDBReadPolicy:
-            TableName: !Ref PageTable
+          ENVIRONMENT: !Ref Environment
+      Events:
+        HttpApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
 
-  ListAgenciesFunction:
-    Type: "AWS::Serverless::Function"
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: "list-pages"
-      Handler: bootstrap
-      Runtime: provided.al2023
-      CodeUri: cmd/list_pages
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /
-            Method: GET
-            RestApiId: !Ref PageApi
-      Environment:
-        Variables:
-          POLICY_STORE_ID: !Ref PolicyStoreId
-          TABLE_NAME: !Ref PageTable
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - verifiedpermissions:IsAuthorized
-              Resource: !Sub arn:aws:verifiedpermissions::${AWS::AccountId}:policy-store/${PolicyStoreId}
-        - DynamoDBReadPolicy:
-            TableName: !Ref PageTable
-  ###############################################
-  # DATABASE
-  ###############################################
-  PageTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      KeySchema:
-        - AttributeName: pk
-          KeyType: HASH
-        - AttributeName: sk
-          KeyType: RANGE
-      AttributeDefinitions:
-        - AttributeName: pk
-          AttributeType: S
-        - AttributeName: sk
-          AttributeType: S
-      BillingMode: PROVISIONED
-      TableName: pages
-      ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
-###############################################
-# OUTPUTS
-###############################################
 Outputs:
   ApiId:
-    Description: "API Gateway ID for Page API"
-    Value: !Ref PageApi
+    Description: Page API ID
+    Value: !Ref Api

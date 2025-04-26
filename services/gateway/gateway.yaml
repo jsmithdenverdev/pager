@@ -1,0 +1,198 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Pager Gateway Service
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment environment (dev or prod)
+  Auth0Domain:
+    Type: String
+  Auth0Audience:
+    Type: String
+  AgencyServiceApiId:
+    Type: String
+  PageServiceApiId:
+    Type: String
+  UserTableName:
+    Type: String
+  AgencyTableName:
+    Type: String
+
+Resources:
+  ApiGateway:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub "pager-gateway-${Environment}"
+      StageName: !Ref Environment
+
+  ApiGatewayAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref ApiGateway
+      AuthorizerType: REQUEST
+      IdentitySource:
+        - $request.header.Authorization
+      Name: !Sub "pager-gateway-authorizer-${Environment}"
+      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFunction.Arn}/invocations
+      AuthorizerPayloadFormatVersion: "2.0"
+
+  ###########################################################################
+  # ROUTES
+  ###########################################################################
+
+  AgencyRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: ANY /agencies
+      Target: !Sub integrations/${AgencyRootRouteIntegration}
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+
+  AgencyProxyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: ANY /agencies/{proxy+}
+      Target: !Sub integrations/${AgencyProxyRouteIntegration}
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+
+  AgencyPageRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: ANY /agencies/{agencyid}/pages
+      Target: !Sub integrations/${AgencyPageRootRouteIntegration}
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+
+  PageRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: ANY /pages
+      Target: !Sub integrations/${PageRootRouteIntegration}
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+
+  PageProxyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: ANY /pages/{proxy+}
+      Target: !Sub integrations/${PageProxyRouteIntegration}
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+
+  ###########################################################################
+  # INTEGRATIONS
+  ###########################################################################
+
+  AgencyRootRouteIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub https://${AgencyServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        append:header.x-pager-userid: $context.authorizer.userid
+        append:header.x-pager-userinfo: $context.authorizer.userinfo
+
+  AgencyProxyRouteIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub https://${AgencyServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        overwrite:path: !Sub ${Environment}/${!request.path.proxy}
+        append:header.x-pager-userid: $context.authorizer.userid
+        append:header.x-pager-userinfo: $context.authorizer.userinfo
+
+  AgencyPageRootRouteIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        append:header.x-pager-userid: $context.authorizer.userid
+        append:header.x-pager-userinfo: $context.authorizer.userinfo
+        append:header.x-pager-agencyid: $request.path.agencyid
+
+  PageRootRouteIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        append:header.x-pager-userid: $context.authorizer.userid
+        append:header.x-pager-userinfo: $context.authorizer.userinfo
+
+  PageProxyRouteIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        overwrite:path: !Sub ${Environment}/${!request.path.proxy}
+        append:header.x-pager-userid: $context.authorizer.userid
+        append:header.x-pager-userinfo: $context.authorizer.userinfo
+
+  ###########################################################################
+  # FUNCTIONS
+  ###########################################################################
+
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "pager-gateway-authorizer-${Environment}"
+      Handler: bootstrap
+      Runtime: provided.al2023
+      CodeUri: ./cmd/authorize
+      Timeout: 10
+      MemorySize: 128
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UserTableName
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgencyTableName
+      Environment:
+        Variables:
+          AUTH0_DOMAIN: !Ref Auth0Domain
+          AUTH0_AUDIENCE: !Ref Auth0Audience
+          USER_TABLE_NAME: !Ref UserTableName
+          AGENCY_TABLE_NAME: !Ref AgencyTableName
+
+  AuthorizerFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt AuthorizerFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*
+
+Outputs:
+  ApiGatewayUrl:
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+
+  ApiGatewayId:
+    Value: !Ref ApiGateway
+    Export:
+      Name: ApiGatewayId

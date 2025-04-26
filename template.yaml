@@ -1,255 +1,65 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: AWS SAM template for the Pager application.
+Description: Pager
+
+Parameters:
+  Auth0Domain:
+    Type: String
+    Default: auth0.com
+  Auth0Audience:
+    Type: String
+    Default: pager
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Deployment environment (dev or prod)
 
 Resources:
-  ##########################################################
-  # SERVICES
-  ##########################################################
-  AuthorizationService:
+  IdentityService:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./services/authorization/template.yaml
-  UserService:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: ./services/user/template.yaml
+      Location: ./services/identity/template.yaml
       Parameters:
-        PolicyStoreId: !GetAtt AuthorizationService.Outputs.PolicyStoreId
-  AuthenticationService:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: ./services/authentication/template.yaml
-      Parameters:
-        UserTableName: !GetAtt UserService.Outputs.TableName
+        Environment: !Ref Environment
+
   AgencyService:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/agency/template.yaml
       Parameters:
-        PolicyStoreId: !GetAtt AuthorizationService.Outputs.PolicyStoreId
+        Environment: !Ref Environment
+
+  EndpointService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./services/endpoint/template.yaml
+      Parameters:
+        Environment: !Ref Environment
+
   PageService:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/page/template.yaml
       Parameters:
-        PolicyStoreId: !GetAtt AuthorizationService.Outputs.PolicyStoreId
+        Environment: !Ref Environment
 
-  ##########################################################
-  # API
-  ##########################################################
-  RootApi:
-    Type: AWS::ApiGatewayV2::Api
+  GatewayService:
+    Type: AWS::Serverless::Application
     Properties:
-      Name: pager-federated-api
-      Description: Pager Federated API
-      ProtocolType: HTTP
-  ApiAuthorizer:
-    Type: AWS::ApiGatewayV2::Authorizer
-    Properties:
-      ApiId: !Ref RootApi
-      AuthorizerType: REQUEST
-      IdentitySource:
-        - $request.header.Authorization
-      Name: pager-api-authorizer
-      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticationService.Outputs.AuthorizerLambdaArn}/invocations
-      AuthorizerPayloadFormatVersion: '2.0'
-  ApiGatewayAuthorizerPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt AuthenticationService.Outputs.AuthorizerLambdaArn
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RootApi}/authorizers/${ApiAuthorizer}
-  ApiStage:
-    Type: AWS::ApiGatewayV2::Stage
-    Properties:
-      ApiId: !Ref RootApi
-      StageName: prod
-      AutoDeploy: true
+      Location: ./services/gateway/gateway.yaml
+      Parameters:
+        Environment: !Ref Environment
+        Auth0Domain: !Ref Auth0Domain
+        Auth0Audience: !Ref Auth0Audience
+        AgencyServiceApiId: !GetAtt AgencyService.Outputs.ApiId
+        PageServiceApiId: !GetAtt PageService.Outputs.ApiId
+        UserTableName: !GetAtt IdentityService.Outputs.UserTableName
+        AgencyTableName: !GetAtt AgencyService.Outputs.AgencyTableName
 
-  ##########################################################
-  # ROUTES
-  ##########################################################
-  UserServiceRootRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref RootApi
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref ApiAuthorizer
-      RouteKey: ANY /user
-      Target: !Sub integrations/${UserServiceRootIntegration}
-  UserServiceWildCardRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref RootApi
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref ApiAuthorizer
-      RouteKey: ANY /user/{proxy+}
-      Target: !Sub integrations/${UserServiceWildCardIntegration}
-  AgencyServiceRootRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref RootApi
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref ApiAuthorizer
-      RouteKey: ANY /agencies
-      Target: !Sub integrations/${AgencyServiceRootIntegration}
-  AgencyServiceWildCardRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref RootApi
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref ApiAuthorizer
-      RouteKey: ANY /agencies/{proxy+}
-      Target: !Sub integrations/${AgencyServiceWildCardIntegration}
-  PageServiceRootRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref RootApi
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref ApiAuthorizer
-      RouteKey: ANY /agencies/{agencyid}/pages
-      Target: !Sub integrations/${PageServiceRootIntegration}
-  PageServiceWildCardRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref RootApi
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref ApiAuthorizer
-      RouteKey: ANY /agencies/{agencyid}/pages/{proxy+}
-      Target: !Sub integrations/${PageServiceWildCardIntegration}
-
-  ##########################################################
-  # ROUTE INTEGRATIONS
-  ##########################################################
-  UserServiceRootIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref RootApi
-      Description: User API root proxy integration
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${UserService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/prod
-      PayloadFormatVersion: '1.0'
-      RequestParameters:
-        append:header.x-pager-userid: $context.authorizer.userid
-        append:header.x-pager-userinfo: $context.authorizer.userinfo
-  UserServiceWildCardIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref RootApi
-      Description: User API wild card proxy integration
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${UserService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/
-      PayloadFormatVersion: '1.0'
-      RequestParameters:
-        overwrite:path: prod/${request.path.proxy}
-        append:header.x-pager-userid: $context.authorizer.userid
-        append:header.x-pager-userinfo: $context.authorizer.userinfo
-  AgencyServiceRootIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref RootApi
-      Description: Agency API root proxy integration
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${AgencyService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/prod
-      PayloadFormatVersion: '1.0'
-      RequestParameters:
-        append:header.x-pager-userid: $context.authorizer.userid
-        append:header.x-pager-userinfo: $context.authorizer.userinfo
-  AgencyServiceWildCardIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref RootApi
-      Description: Agency API wild card proxy integration
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${AgencyService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/
-      PayloadFormatVersion: '1.0'
-      RequestParameters:
-        overwrite:path: prod/${request.path.proxy}
-        append:header.x-pager-userid: $context.authorizer.userid
-        append:header.x-pager-userinfo: $context.authorizer.userinfo
-  PageServiceRootIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref RootApi
-      Description: Page API root proxy integration
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${PageService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/prod
-      PayloadFormatVersion: '1.0'
-      RequestParameters:
-        append:header.x-pager-userid: $context.authorizer.userid
-        append:header.x-pager-userinfo: $context.authorizer.userinfo
-        append:header.x-pager-agencyid: $request.path.agencyid
-  PageServiceWildCardIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref RootApi
-      Description: Page API wild card proxy integration
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${PageService.Outputs.ApiId}.execute-api.${AWS::Region}.amazonaws.com/
-      PayloadFormatVersion: '1.0'
-      RequestParameters:
-        overwrite:path: prod/${request.path.proxy}
-        append:header.x-pager-userid: $context.authorizer.userid
-        append:header.x-pager-userinfo: $context.authorizer.userinfo
-        append:header.x-pager-agencyid: $request.path.agencyid
-  ##########################################################
-  # COGNITO
-  # Disabled for the time being in favor of Auth0
-  ##########################################################
-  # UserPool:
-  #   Type: AWS::Cognito::UserPool
-  #   Properties:
-  #     UserPoolName: pager-api-user-pool
-  #     AutoVerifiedAttributes:
-  #       - email
-  #     Schema:
-  #       - Name: name
-  #         AttributeDataType: String
-  #         Mutable: true
-  #         Required: true
-  #       - Name: email
-  #         AttributeDataType: String
-  #         Mutable: false
-  #         Required: true
-  # AuthAppClient:
-  #   Type: AWS::Cognito::UserPoolClient
-  #   Properties:
-  #     AllowedOAuthFlows:
-  #       - implicit
-  #     AllowedOAuthScopes:
-  #       - aws.cognito.signin.user.admin
-  #       - email
-  #       - openid
-  #       - profile
-  #     AllowedOAuthFlowsUserPoolClient: true
-  #     ClientName: pager-api-app-client
-  #     CallbackURLs:
-  #       - "https://your-app-url/callback" # Set your callback URL here.
-  #     LogoutURLs:
-  #       - "https://your-app-url/logout" # Set your logout URL here.
-  #     ExplicitAuthFlows:
-  #       - ALLOW_USER_PASSWORD_AUTH
-  #       - ALLOW_REFRESH_TOKEN_AUTH
-  #     UserPoolId: !Ref UserPool
-  #     SupportedIdentityProviders:
-  #       - COGNITO
-  # AuthHostedUI:
-  #   Type: AWS::Cognito::UserPoolDomain
-  #   Properties:
-  #     Domain: !Join
-  #       - "-"
-  #       - - !Ref RootApi
-  #         - !Ref AuthAppClient
-  #     UserPoolId: !Ref UserPool
 Outputs:
-  RootApiUrl:
-    Description: Root API Gateway URL
-    Value: !Sub https://${RootApi}.execute-api.${AWS::Region}.amazonaws.com/prod
+  ApiGatewayUrl:
+    Value: !GetAtt GatewayService.Outputs.ApiGatewayUrl
+    Description: API Gateway URL

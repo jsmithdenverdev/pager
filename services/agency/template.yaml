@@ -1,147 +1,58 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Transform: "AWS::Serverless-2016-10-31"
-Description: AWS SAM template for the Pager Agency service.
+Transform: AWS::Serverless-2016-10-31
+Description: Pager Agency Service
 
 Parameters:
-  PolicyStoreId:
+  Environment:
     Type: String
-    Description: "Amazon Verified Permissions Policy Store ID"
 
 Resources:
-  ###############################################
-  # API
-  ###############################################
-  AgencyApi:
-    Type: "AWS::Serverless::Api"
+  Api:
+    Type: "AWS::Serverless::HttpApi"
     Properties:
-      Name: "pager-agency-api"
-      Description: "Agency Microservice API"
-      StageName: prod
+      Name: !Sub "pager-agency-api-${Environment}"
+      StageName: !Ref Environment
 
-  ###############################################
-  # FUNCTIONS
-  ###############################################
-  CreateAgencyFunction:
-    Type: "AWS::Serverless::Function"
+  AppFunction:
+    Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: "create-agency"
+      FunctionName: !Sub "pager-agency-service-${Environment}"
       Handler: bootstrap
       Runtime: provided.al2023
-      CodeUri: cmd/create_agency
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /
-            Method: POST
-            RestApiId: !Ref AgencyApi
+      CodeUri: ./cmd/app
+      Timeout: 10
+      MemorySize: 128
       Environment:
         Variables:
-          POLICY_STORE_ID: !Ref PolicyStoreId
-          TABLE_NAME: !Ref AgencyTable
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - verifiedpermissions:IsAuthorized
-              Resource: !Sub arn:aws:verifiedpermissions::${AWS::AccountId}:policy-store/${PolicyStoreId}
-        - DynamoDBWritePolicy:
-            TableName: !Ref AgencyTable
-
-  ReadAgencyFunction:
-    Type: "AWS::Serverless::Function"
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: "read-agency"
-      Handler: bootstrap
-      Runtime: provided.al2023
-      CodeUri: cmd/read_agency
+          ENVIRONMENT: !Ref Environment
       Events:
-        Api:
-          Type: Api
+        HttpApi:
+          Type: HttpApi
           Properties:
-            Path: /{agencyid}
-            Method: GET
-            RestApiId: !Ref AgencyApi
-      Environment:
-        Variables:
-          POLICY_STORE_ID: !Ref PolicyStoreId
-          TABLE_NAME: !Ref AgencyTable
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - verifiedpermissions:IsAuthorized
-              Resource: !Sub arn:aws:verifiedpermissions::${AWS::AccountId}:policy-store/${PolicyStoreId}
-        - DynamoDBReadPolicy:
-            TableName: !Ref AgencyTable
+            ApiId: !Ref Api
 
-  ListAgenciesFunction:
-    Type: "AWS::Serverless::Function"
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: "list-agencies"
-      Handler: bootstrap
-      Runtime: provided.al2023
-      CodeUri: cmd/list_agencies
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /
-            Method: GET
-            RestApiId: !Ref AgencyApi
-      Environment:
-        Variables:
-          POLICY_STORE_ID: !Ref PolicyStoreId
-          TABLE_NAME: !Ref AgencyTable
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - verifiedpermissions:IsAuthorized
-              Resource: !Sub arn:aws:verifiedpermissions::${AWS::AccountId}:policy-store/${PolicyStoreId}
-        - DynamoDBReadPolicy:
-            TableName: !Ref AgencyTable
-
-  ###############################################
-  # DATABASE
-  ###############################################
   AgencyTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      KeySchema:
-        - AttributeName: pk
-          KeyType: HASH
-        - AttributeName: sk
-          KeyType: RANGE
+      TableName: !Sub "pager-agency-agencies-${Environment}"
       AttributeDefinitions:
         - AttributeName: pk
           AttributeType: S
         - AttributeName: sk
           AttributeType: S
-      BillingMode: PROVISIONED
-      TableName: agencies
-      ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
 
-###############################################
-# OUTPUTS
-###############################################
 Outputs:
   ApiId:
-    Description: "API Gateway ID for Agency API"
-    Value: !Ref AgencyApi
-  AgencyTableStreamArn:
-    Description: "DynamoDB Stream ARN for AgencyTable"
-    Value: !GetAtt AgencyTable.StreamArn
+    Description: Agency API ID
+    Value: !Ref Api
+  AgencyTableName:
+    Description: Agency Table Name
+    Value: !Ref AgencyTable
