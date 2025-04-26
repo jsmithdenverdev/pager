@@ -27,6 +27,7 @@ Resources:
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
+          AGENCY_TABLE_NAME: !Ref AgencyTable
       Events:
         HttpApi:
           Type: HttpApi
