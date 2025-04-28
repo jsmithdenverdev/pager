@@ -18,8 +18,9 @@ import (
 // listMyMemberships returns a list of agencies the calling user is a member of.
 func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
 	type listMyMembershipsResponse struct {
-		Results    []membershipResponse `json:"results"`
-		NextCursor string               `json:"nextCursor"`
+		Results     []membershipResponse `json:"results"`
+		NextCursor  string               `json:"nextCursor"`
+		HasNextPage bool                 `json:"hasNextPage"`
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -93,6 +94,7 @@ func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Clie
 
 		if result.LastEvaluatedKey != nil {
 			response.NextCursor = strings.Split(result.LastEvaluatedKey["sk"].(*types.AttributeValueMemberS).Value, "#")[1]
+			response.HasNextPage = true
 		}
 
 		if err := json.NewEncoder(w).Encode(response); err != nil {
