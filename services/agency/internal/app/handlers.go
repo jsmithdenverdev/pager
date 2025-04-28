@@ -115,8 +115,6 @@ func listAgencyMemberships(config Config, logger *slog.Logger, client *dynamodb.
 			agencyid    = r.PathValue("id")
 		)
 
-		logger.InfoContext(r.Context(), "listMyMemberships", slog.Any("url query", r.URL.Query()))
-
 		if firstStr != "" {
 			first, err = strconv.Atoi(firstStr)
 			if err != nil {
@@ -217,6 +215,12 @@ func readAgency(config Config, logger *slog.Logger, client *dynamodb.Client) htt
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		logger.InfoContext(
+			r.Context(),
+			"readAgency",
+			slog.Any("url query", r.URL.Query()),
+			slog.Any("user info", user))
 
 		if _, ok := user.Memberships[agencyid]; !ok {
 			w.WriteHeader(http.StatusForbidden)
