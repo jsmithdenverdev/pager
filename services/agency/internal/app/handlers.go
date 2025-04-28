@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -17,21 +18,50 @@ import (
 // listMyMemberships returns a list of agencies the calling user is a member of.
 func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
 	type listMyMembershipsResponse struct {
-		Memberships []membershipResponse `json:"agencies"`
+		Results    []membershipResponse `json:"results"`
+		NextCursor string               `json:"nextCursor"`
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		idpid := r.Header.Get("x-pager-userid")
+		var (
+			err      error
+			first    = 10
+			idpid    = r.Header.Get("x-pager-userid")
+			firstStr = r.URL.Query().Get("first")
+			cursor   = r.URL.Query().Get("cursor")
+		)
 
-		result, err := client.Query(r.Context(), &dynamodb.QueryInput{
+		if firstStr != "" {
+			first, err = strconv.Atoi(firstStr)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+
+		queryInput := &dynamodb.QueryInput{
 			TableName:              &config.AgencyTableName,
 			KeyConditionExpression: aws.String("pk = :idpid"),
+			Limit:                  aws.Int32(int32(first)),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":idpid": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("idpid#%s", idpid),
 				},
 			},
-		})
+		}
+
+		if cursor != "" {
+			queryInput.ExclusiveStartKey = map[string]types.AttributeValue{
+				"pk": &types.AttributeValueMemberS{
+					Value: fmt.Sprintf("idpid#%s", idpid),
+				},
+				"sk": &types.AttributeValueMemberS{
+					Value: fmt.Sprintf("agency#%s", cursor),
+				},
+			}
+		}
+
+		result, err := client.Query(r.Context(), queryInput)
 		if err != nil {
 			logger.ErrorContext(r.Context(), "failed to query agencies", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
@@ -54,11 +84,15 @@ func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Clie
 		response := new(listMyMembershipsResponse)
 
 		for _, membership := range memberships {
-			response.Memberships = append(response.Memberships, membershipResponse{
+			response.Results = append(response.Results, membershipResponse{
 				AgencyID: strings.Split(membership.SK, "#")[1],
 				UserID:   strings.Split(membership.PK, "#")[1],
 				Role:     membership.Role,
 			})
+		}
+
+		if result.LastEvaluatedKey != nil {
+			response.NextCursor = strings.Split(result.LastEvaluatedKey["sk"].(*types.AttributeValueMemberS).Value, "#")[1]
 		}
 
 		if err := json.NewEncoder(w).Encode(response); err != nil {
