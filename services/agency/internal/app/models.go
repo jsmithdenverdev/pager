@@ -54,3 +54,10 @@ type membershipResponse struct {
 	UserID   string `json:"userId"`
 	Role     string `json:"role"`
 }
+
+// listResponse represents a list of items with pagination.
+type listResponse[T any] struct {
+	Results     []T    `json:"results"`
+	NextCursor  string `json:"nextCursor"`
+	HasNextPage bool   `json:"hasNextPage"`
+}

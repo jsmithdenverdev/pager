@@ -17,12 +17,6 @@ import (
 
 // listMyMemberships returns a list of agencies the calling user is a member of.
 func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
-	type listMyMembershipsResponse struct {
-		Results     []membershipResponse `json:"results"`
-		NextCursor  string               `json:"nextCursor"`
-		HasNextPage bool                 `json:"hasNextPage"`
-	}
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			err      error
@@ -43,9 +37,9 @@ func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Clie
 		}
 
 		queryInput := &dynamodb.QueryInput{
-			TableName:              &config.AgencyTableName,
-			KeyConditionExpression: aws.String("pk = :idpid"),
+			TableName:              aws.String(config.AgencyTableName),
 			Limit:                  aws.Int32(int32(first)),
+			KeyConditionExpression: aws.String("pk = :idpid"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":idpid": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("idpid#%s", idpid),
@@ -84,7 +78,7 @@ func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Clie
 			}
 		}
 
-		response := new(listMyMembershipsResponse)
+		response := new(listResponse[membershipResponse])
 
 		for _, membership := range memberships {
 			response.Results = append(response.Results, membershipResponse{
@@ -110,16 +104,26 @@ func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Clie
 // listAgencyMemberships returns a list of memberships in the specified agency.
 // The calling user must have a membership in the specified agency.
 func listAgencyMemberships(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
-	type listAgencyMembershipsResponse struct {
-		Memberships []membershipResponse `json:"memberships"`
-	}
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
+			err         error
 			user        identity.User
+			first       = 10
+			firstStr    = r.URL.Query().Get("first")
+			cursor      = r.URL.Query().Get("cursor")
 			userinfostr = r.Header.Get("x-pager-userinfo")
 			agencyid    = r.PathValue("id")
 		)
+
+		logger.InfoContext(r.Context(), "listMyMemberships", slog.Any("url query", r.URL.Query()))
+
+		if firstStr != "" {
+			first, err = strconv.Atoi(firstStr)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
 
 		if err := json.Unmarshal([]byte(userinfostr), &user); err != nil {
 			logger.ErrorContext(r.Context(), "failed to unmarshal user info", slog.Any("error", err))
@@ -132,15 +136,29 @@ func listAgencyMemberships(config Config, logger *slog.Logger, client *dynamodb.
 			return
 		}
 
-		result, err := client.Query(r.Context(), &dynamodb.QueryInput{
-			TableName:              &config.AgencyTableName,
+		queryInput := &dynamodb.QueryInput{
+			TableName:              aws.String(config.AgencyTableName),
+			Limit:                  aws.Int32(int32(first)),
 			KeyConditionExpression: aws.String("pk = :agencyid"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":agencyid": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("agency#%s", agencyid),
 				},
 			},
-		})
+		}
+
+		if cursor != "" {
+			queryInput.ExclusiveStartKey = map[string]types.AttributeValue{
+				"pk": &types.AttributeValueMemberS{
+					Value: fmt.Sprintf("agency#%s", agencyid),
+				},
+				"sk": &types.AttributeValueMemberS{
+					Value: fmt.Sprintf("idpid#%s", cursor),
+				},
+			}
+		}
+
+		result, err := client.Query(r.Context(), queryInput)
 
 		if err != nil {
 			logger.ErrorContext(r.Context(), "failed to query agencies", slog.Any("error", err))
@@ -161,14 +179,19 @@ func listAgencyMemberships(config Config, logger *slog.Logger, client *dynamodb.
 			}
 		}
 
-		response := new(listAgencyMembershipsResponse)
+		response := new(listResponse[membershipResponse])
 
 		for _, membership := range memberships {
-			response.Memberships = append(response.Memberships, membershipResponse{
+			response.Results = append(response.Results, membershipResponse{
 				AgencyID: strings.Split(membership.PK, "#")[1],
 				UserID:   strings.Split(membership.SK, "#")[1],
 				Role:     membership.Role,
 			})
+		}
+
+		if result.LastEvaluatedKey != nil {
+			response.NextCursor = strings.Split(result.LastEvaluatedKey["sk"].(*types.AttributeValueMemberS).Value, "#")[1]
+			response.HasNextPage = true
 		}
 
 		if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -201,7 +224,7 @@ func readAgency(config Config, logger *slog.Logger, client *dynamodb.Client) htt
 		}
 
 		result, err := client.GetItem(r.Context(), &dynamodb.GetItemInput{
-			TableName: &config.AgencyTableName,
+			TableName: aws.String(config.AgencyTableName),
 			Key: map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("agency#%s", agencyid),
