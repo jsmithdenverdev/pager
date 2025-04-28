@@ -58,7 +58,7 @@ func listMemberships(config Config, logger *slog.Logger, client *dynamodb.Client
 		response := new(listMembershipsResponse)
 
 		for _, membership := range memberships {
-			id := strings.Split(membership.PK, "#")[1]
+			id := strings.Split(membership.SK, "#")[1]
 			response.Memberships = append(response.Memberships, membershipResponse{
 				ID:   id,
 				Name: membership.Name,
