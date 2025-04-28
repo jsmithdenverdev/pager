@@ -32,6 +32,8 @@ func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Clie
 			cursor   = r.URL.Query().Get("cursor")
 		)
 
+		logger.InfoContext(r.Context(), "listMyMemberships", slog.Any("url query", r.URL.Query()))
+
 		if firstStr != "" {
 			first, err = strconv.Atoi(firstStr)
 			if err != nil {
