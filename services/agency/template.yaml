@@ -24,9 +24,13 @@ Resources:
       CodeUri: ./cmd/app
       Timeout: 10
       MemorySize: 128
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgencyTable
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
+          AGENCY_TABLE_NAME: !Ref AgencyTable
       Events:
         HttpApi:
           Type: HttpApi

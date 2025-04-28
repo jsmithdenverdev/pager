@@ -4,17 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 
 	"github.com/a-h/awsapigatewayv2handler"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/caarlos0/env/v11"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/app"
 )
-
-type Config struct {
-	Environment string `env:"ENVIRONMENT"`
-}
 
 func main() {
 	if err := run(context.Background()); err != nil {
@@ -24,32 +22,23 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	var conf Config
+	var conf app.Config
 	if err := env.Parse(&conf); err != nil {
-		return fmt.Errorf("[in main.run] failed to load config from env: %w", err)
+		return fmt.Errorf("failed to load config from env: %w", err)
 	}
 
-	loghandler := slog.NewJSONHandler(os.Stdout, nil)
-	lambda.Start(awsapigatewayv2handler.NewLambdaHandler(newServer(conf, loghandler)))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	awsconf, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load default aws config: %w", err)
+	}
+
+	dynamoClient := dynamodb.NewFromConfig(awsconf)
+
+	handler := app.NewServer(conf, logger, dynamoClient)
+
+	lambda.Start(awsapigatewayv2handler.NewLambdaHandler(handler))
+
 	return nil
-}
-
-func newServer(config Config, loghandler slog.Handler) http.Handler {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc(fmt.Sprintf("GET /%s", config.Environment), func(w http.ResponseWriter, r *http.Request) {
-		logger := slog.New(loghandler)
-		logger.InfoContext(r.Context(), "request received", slog.Any("request.headers", r.Header))
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("list agencies"))
-	})
-
-	mux.HandleFunc(fmt.Sprintf("GET /%s/{id}", config.Environment), func(w http.ResponseWriter, r *http.Request) {
-		logger := slog.New(loghandler)
-		logger.InfoContext(r.Context(), "request received", slog.Any("request.headers", r.Header))
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("read agency by id"))
-	})
-
-	return mux
 }
