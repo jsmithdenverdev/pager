@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -31,7 +32,7 @@ func listMemberships(config Config, logger *slog.Logger, client *dynamodb.Client
 			KeyConditionExpression: aws.String("pk = :idpid"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":idpid": &types.AttributeValueMemberS{
-					Value: idpid,
+					Value: fmt.Sprintf("idpid#%s", idpid),
 				},
 			},
 		})
