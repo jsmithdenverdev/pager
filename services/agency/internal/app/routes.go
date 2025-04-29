@@ -9,6 +9,7 @@ import (
 )
 
 func addRoutes(mux *http.ServeMux, config Config, logger *slog.Logger, client *dynamodb.Client) {
-	mux.Handle(fmt.Sprintf("GET /%s", config.Environment), listMemberships(config, logger, client))
-	mux.Handle(fmt.Sprintf("GET /%s/{id}", config.Environment), readAgencyById(logger, client))
+	mux.Handle(fmt.Sprintf("GET /%s", config.Environment), listMyMemberships(config, logger, client))
+	mux.Handle(fmt.Sprintf("GET /%s/{id}", config.Environment), readAgency(config, logger, client))
+	mux.Handle(fmt.Sprintf("GET /%s/{id}/members", config.Environment), listAgencyMembers(config, logger, client))
 }

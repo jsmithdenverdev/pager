@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.42.4
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
-	github.com/jsmithdenverdev/pager/pkg/identity v1.2.0
+	github.com/jsmithdenverdev/pager/pkg/identity v1.3.0
 	github.com/lestrrat-go/jwx v1.2.31
 )
 
