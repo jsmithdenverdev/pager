@@ -105,12 +105,19 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 		memberships := make(map[string]identity.Membership)
 		if membershipRecords.Items != nil {
 			for _, item := range membershipRecords.Items {
-				var membership identity.Membership
-				if err := attributevalue.UnmarshalMap(item, &membership); err != nil {
+				var membershipRow struct {
+					SK   string `dynamodbav:"sk"`
+					Role string `dynamodbav:"role"`
+				}
+				if err := attributevalue.UnmarshalMap(item, &membershipRow); err != nil {
 					logger.ErrorContext(ctx, "failed to unmarshal membership record", slog.String("error", err.Error()))
 					return response, nil
 				}
-				memberships[membership.AgencyID] = membership
+				agencyID := strings.Split(membershipRow.SK, "#")[1]
+				memberships[agencyID] = identity.Membership{
+					AgencyID: agencyID,
+					Role:     membershipRow.Role,
+				}
 			}
 		}
 
