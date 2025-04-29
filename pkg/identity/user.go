@@ -13,6 +13,5 @@ type User struct {
 // of the User.
 type Membership struct {
 	AgencyID string `json:"agencyId"`
-	Name     string `json:"name"`
-	Role     string `json:"role"`
+	Role     Role   `json:"role"`
 }
