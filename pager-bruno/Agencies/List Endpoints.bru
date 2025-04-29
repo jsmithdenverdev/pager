@@ -1,0 +1,11 @@
+meta {
+  name: List Endpoints
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{BASE_URL}}/agencies/{{AGENCY_ID}}/endpoints
+  body: none
+  auth: inherit
+}
