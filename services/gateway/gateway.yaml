@@ -14,6 +14,8 @@ Parameters:
     Type: String
   PageServiceApiId:
     Type: String
+  EndpointServiceApiId:
+    Type: String
   UserTableName:
     Type: String
   AgencyTableName:
@@ -68,6 +70,15 @@ Resources:
       AuthorizationType: CUSTOM
       AuthorizerId: !Ref ApiGatewayAuthorizer
 
+  AgencyEndpointRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: ANY /agencies/{agencyid}/endpoints
+      Target: !Sub integrations/${AgencyEndpointRootRouteIntegration}
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+
   PageRootRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -83,6 +94,24 @@ Resources:
       ApiId: !Ref ApiGateway
       RouteKey: ANY /pages/{proxy+}
       Target: !Sub integrations/${PageProxyRouteIntegration}
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+
+  EndpointRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: ANY /endpoints
+      Target: !Sub integrations/${EndpointRootRouteIntegration}
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+
+  EndpointProxyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: ANY /endpoints/{proxy+}
+      Target: !Sub integrations/${EndpointProxyRouteIntegration}
       AuthorizationType: CUSTOM
       AuthorizerId: !Ref ApiGatewayAuthorizer
 
@@ -128,6 +157,19 @@ Resources:
         append:header.x-pager-userinfo: $context.authorizer.userinfo
         append:header.x-pager-agencyid: $request.path.agencyid
 
+  AgencyEndpointRootRouteIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub https://${EndpointServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        append:header.x-pager-userid: $context.authorizer.userid
+        append:header.x-pager-userinfo: $context.authorizer.userinfo
+        append:header.x-pager-agencyid: $request.path.agencyid
+
   PageRootRouteIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -147,6 +189,31 @@ Resources:
       IntegrationType: HTTP_PROXY
       IntegrationMethod: ANY
       IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        overwrite:path: !Sub ${Environment}/${!request.path.proxy}
+        append:header.x-pager-userid: $context.authorizer.userid
+        append:header.x-pager-userinfo: $context.authorizer.userinfo
+
+  EndpointRootRouteIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub https://${EndpointServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+      PayloadFormatVersion: "1.0"
+      RequestParameters:
+        append:header.x-pager-userid: $context.authorizer.userid
+        append:header.x-pager-userinfo: $context.authorizer.userinfo
+
+  EndpointProxyRouteIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub https://${EndpointServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
       PayloadFormatVersion: "1.0"
       RequestParameters:
         overwrite:path: !Sub ${Environment}/${!request.path.proxy}

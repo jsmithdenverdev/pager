@@ -56,6 +56,7 @@ Resources:
         Auth0Audience: !Ref Auth0Audience
         AgencyServiceApiId: !GetAtt AgencyService.Outputs.ApiId
         PageServiceApiId: !GetAtt PageService.Outputs.ApiId
+        EndpointServiceApiId: !GetAtt EndpointService.Outputs.ApiId
         UserTableName: !GetAtt IdentityService.Outputs.UserTableName
         AgencyTableName: !GetAtt AgencyService.Outputs.AgencyTableName
 
