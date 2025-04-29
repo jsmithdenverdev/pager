@@ -139,7 +139,7 @@ func listRegistrations(config Config, logger *slog.Logger, client *dynamodb.Clie
 		queryInput := &dynamodb.QueryInput{
 			TableName:              aws.String(config.EndpointTableName),
 			Limit:                  aws.Int32(int32(first)),
-			KeyConditionExpression: aws.String("pk = :agencyid"),
+			KeyConditionExpression: aws.String("pk = :agencyid AND begins_with(sk, :skprefix)"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":agencyid": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("agency#%s", agencyid),
