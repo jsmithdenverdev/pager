@@ -5,8 +5,36 @@ Description: Pager User Service
 Parameters:
   Environment:
     Type: String
+  EventsTopicArn:
+    Type: String
 
 Resources:
+  EventProcessorFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "pager-user-event-processor-${Environment}"
+      Handler: bootstrap
+      Runtime: provided.al2023
+      CodeUri: ./cmd/event-processor
+      Timeout: 10
+      MemorySize: 128
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserTable
+        - SQSPolicy:
+            QueueName: !Ref UserEventsQueue
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          USER_TABLE_NAME: !Ref UserTable
+      Events:
+        SQSEvent:
+          Type: SQSEvent
+          Properties:
+            QueueName: !Ref UserEventsQueue
+
   UserTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -22,6 +50,46 @@ Resources:
         - AttributeName: sk
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+
+  UserEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "pager-user-events-${Environment}"
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt UserEventsDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  UserEventsDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "pager-user-events-dlq-${Environment}"
+
+  UserEventsQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      QueueName: !Ref UserEventsQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: "sqs:SendMessage"
+            Resource: !Ref UserEventsQueue
+            Condition:
+              ArnEquals:
+                "aws:SourceArn": !Ref EventsTopicArn
+
+  UserEventsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref EventsTopicArn
+      Protocol: sqs
+      Endpoint: !Ref UserEventsQueue
+      FilterPolicy:
+        type:
+          - "agency.membership.created"
+          - "agency.membership.updated"
+          - "agency.membership.deleted"
 
 Outputs:
   UserTableName:

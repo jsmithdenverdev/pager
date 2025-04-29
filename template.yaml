@@ -18,12 +18,20 @@ Parameters:
     Description: Deployment environment (dev or prod)
 
 Resources:
+  EventsService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./services/events/template.yaml
+      Parameters:
+        Environment: !Ref Environment
+
   UserService:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./services/user/template.yaml
       Parameters:
         Environment: !Ref Environment
+        EventsTopicArn: !GetAtt EventsService.Outputs.TopicArn
 
   AgencyService:
     Type: AWS::Serverless::Application

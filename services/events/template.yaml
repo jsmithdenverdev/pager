@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Pager Events Service
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment environment (dev or prod)
+
+Resources:
+  EventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub pager-events-${Environment}
+
+Outputs:
+  TopicName:
+    Description: Events Topic Name
+    Value: !GetAtt EventsTopic.TopicName
+
+  TopicArn:
+    Description: Events Topic ARN
+    Value: !Ref EventsTopic
