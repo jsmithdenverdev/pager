@@ -39,7 +39,7 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 		queryInput := &dynamodb.QueryInput{
 			TableName:              aws.String(config.EndpointTableName),
 			Limit:                  aws.Int32(int32(first)),
-			KeyConditionExpression: aws.String("pk = :idpid"),
+			KeyConditionExpression: aws.String("pk = :idpid AND begins_with(sk, :skprefix)"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":idpid": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("idpid#%s", idpid),
