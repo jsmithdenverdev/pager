@@ -23,17 +23,17 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UserTable
-        - SQSPolicy:
-            QueueName: !Ref UserEventsQueue
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
           USER_TABLE_NAME: !Ref UserTable
       Events:
         SQSEvent:
-          Type: SQSEvent
+          Type: SQS
           Properties:
-            QueueName: !Ref UserEventsQueue
+            Queue: !GetAtt UserEventsQueue.Arn
+            BatchSize: 10
+            Enabled: true
 
   UserTable:
     Type: AWS::DynamoDB::Table
