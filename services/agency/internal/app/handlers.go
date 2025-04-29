@@ -101,9 +101,9 @@ func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Clie
 	})
 }
 
-// listAgencyMemberships returns a list of memberships in the specified agency.
+// listAgencyMembers returns a list of memberships in the specified agency.
 // The calling user must have a membership in the specified agency.
-func listAgencyMemberships(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
+func listAgencyMembers(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			err         error
