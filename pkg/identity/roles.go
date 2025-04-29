@@ -1,6 +1,6 @@
 package identity
 
-type Role string
+type Role = string
 
 const (
 	RoleReader = "reader"
