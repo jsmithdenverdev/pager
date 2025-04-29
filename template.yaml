@@ -18,10 +18,10 @@ Parameters:
     Description: Deployment environment (dev or prod)
 
 Resources:
-  IdentityService:
+  UserService:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./services/identity/template.yaml
+      Location: ./services/user/template.yaml
       Parameters:
         Environment: !Ref Environment
 
@@ -57,7 +57,7 @@ Resources:
         AgencyServiceApiId: !GetAtt AgencyService.Outputs.ApiId
         PageServiceApiId: !GetAtt PageService.Outputs.ApiId
         EndpointServiceApiId: !GetAtt EndpointService.Outputs.ApiId
-        UserTableName: !GetAtt IdentityService.Outputs.UserTableName
+        UserTableName: !GetAtt UserService.Outputs.UserTableName
         AgencyTableName: !GetAtt AgencyService.Outputs.AgencyTableName
 
 Outputs:

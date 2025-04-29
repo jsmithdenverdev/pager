@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Pager Identity Service
+Description: Pager User Service
 
 Parameters:
   Environment:
@@ -10,7 +10,7 @@ Resources:
   UserTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "pager-identity-users-${Environment}"
+      TableName: !Sub "pager-user-users-${Environment}"
       AttributeDefinitions:
         - AttributeName: pk
           AttributeType: S

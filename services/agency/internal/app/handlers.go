@@ -21,7 +21,7 @@ func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Clie
 		var (
 			err      error
 			first    = 10
-			idpid    = r.Header.Get("x-pager-userid")
+			userid   = r.Header.Get("x-pager-userid")
 			firstStr = r.URL.Query().Get("first")
 			cursor   = r.URL.Query().Get("cursor")
 		)
@@ -39,10 +39,10 @@ func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Clie
 		queryInput := &dynamodb.QueryInput{
 			TableName:              aws.String(config.AgencyTableName),
 			Limit:                  aws.Int32(int32(first)),
-			KeyConditionExpression: aws.String("pk = :idpid"),
+			KeyConditionExpression: aws.String("pk = :userid"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":idpid": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("idpid#%s", idpid),
+				":userid": &types.AttributeValueMemberS{
+					Value: fmt.Sprintf("user#%s", userid),
 				},
 			},
 		}
@@ -50,7 +50,7 @@ func listMyMemberships(config Config, logger *slog.Logger, client *dynamodb.Clie
 		if cursor != "" {
 			queryInput.ExclusiveStartKey = map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("idpid#%s", idpid),
+					Value: fmt.Sprintf("user#%s", userid),
 				},
 				"sk": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("agency#%s", cursor),
@@ -142,7 +142,7 @@ func listAgencyMembers(config Config, logger *slog.Logger, client *dynamodb.Clie
 				":agencyid": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("agency#%s", agencyid),
 				},
-				":skprefix": &types.AttributeValueMemberS{Value: "idpid#"},
+				":skprefix": &types.AttributeValueMemberS{Value: "user#"},
 			},
 		}
 
@@ -152,7 +152,7 @@ func listAgencyMembers(config Config, logger *slog.Logger, client *dynamodb.Clie
 					Value: fmt.Sprintf("agency#%s", agencyid),
 				},
 				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("idpid#%s", cursor),
+					Value: fmt.Sprintf("user#%s", cursor),
 				},
 			}
 		}

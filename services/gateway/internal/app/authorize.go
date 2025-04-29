@@ -63,10 +63,10 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 			TableName: aws.String(config.UserTableName),
 			Key: map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("idpid#%s", sub),
+					Value: fmt.Sprintf("user#%s", sub),
 				},
 				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("idpid#%s", sub),
+					Value: fmt.Sprintf("user#%s", sub),
 				},
 			},
 		})
@@ -92,7 +92,7 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 			KeyConditionExpression: aws.String("pk = :pk"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("idpid#%s", sub),
+					Value: fmt.Sprintf("user#%s", sub),
 				},
 			},
 		})
