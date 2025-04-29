@@ -85,7 +85,7 @@ Resources:
     Properties:
       TopicArn: !Ref EventsTopicArn
       Protocol: sqs
-      Endpoint: !Ref UserEventsQueue
+      Endpoint: !GetAtt UserEventsQueue.Arn
       FilterPolicy:
         type:
           - "agency.membership.created"
