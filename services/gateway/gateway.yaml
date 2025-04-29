@@ -153,9 +153,9 @@ Resources:
       IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
       PayloadFormatVersion: "1.0"
       RequestParameters:
+        overwrite:path: !Sub ${Environment}/assignments/agencies/${!request.path.agencyid}
         append:header.x-pager-userid: $context.authorizer.userid
         append:header.x-pager-userinfo: $context.authorizer.userinfo
-        append:header.x-pager-agencyid: $request.path.agencyid
 
   AgencyEndpointRootRouteIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -166,9 +166,9 @@ Resources:
       IntegrationUri: !Sub https://${EndpointServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
       PayloadFormatVersion: "1.0"
       RequestParameters:
+        overwrite:path: !Sub ${Environment}/registrations/agencies/${!request.path.agencyid}
         append:header.x-pager-userid: $context.authorizer.userid
         append:header.x-pager-userinfo: $context.authorizer.userinfo
-        append:header.x-pager-agencyid: $request.path.agencyid
 
   PageRootRouteIntegration:
     Type: AWS::ApiGatewayV2::Integration

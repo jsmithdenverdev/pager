@@ -217,12 +217,6 @@ func readAgency(config Config, logger *slog.Logger, client *dynamodb.Client) htt
 			return
 		}
 
-		logger.InfoContext(
-			r.Context(),
-			"readAgency",
-			slog.Any("url query", r.URL.Query()),
-			slog.Any("user info", user))
-
 		if _, ok := user.Memberships[agencyid]; !ok {
 			w.WriteHeader(http.StatusForbidden)
 			return
