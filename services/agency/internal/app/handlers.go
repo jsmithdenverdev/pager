@@ -137,11 +137,12 @@ func listAgencyMemberships(config Config, logger *slog.Logger, client *dynamodb.
 		queryInput := &dynamodb.QueryInput{
 			TableName:              aws.String(config.AgencyTableName),
 			Limit:                  aws.Int32(int32(first)),
-			KeyConditionExpression: aws.String("pk = :agencyid"),
+			KeyConditionExpression: aws.String("pk = :agencyid AND begins_with(sk, :skprefix)"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":agencyid": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("agency#%s", agencyid),
 				},
+				":skprefix": &types.AttributeValueMemberS{Value: "idpid#"},
 			},
 		}
 
