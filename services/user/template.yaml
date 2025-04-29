@@ -67,14 +67,15 @@ Resources:
   UserEventsQueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
-      QueueName: !Ref UserEventsQueue
+      Queues:
+        - !Ref UserEventsQueue
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal: "*"
             Action: "sqs:SendMessage"
-            Resource: !Ref UserEventsQueue
+            Resource: !GetAtt UserEventsQueue.Arn
             Condition:
               ArnEquals:
                 "aws:SourceArn": !Ref EventsTopicArn
