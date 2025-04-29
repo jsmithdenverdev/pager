@@ -1,0 +1,11 @@
+meta {
+  name: List Pages
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{BASE_URL}}/agencies/{{AGENCY_ID}}/pages
+  body: none
+  auth: inherit
+}
