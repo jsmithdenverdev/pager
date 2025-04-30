@@ -68,12 +68,6 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			return
 		}
 
-		if err != nil {
-			logger.ErrorContext(r.Context(), "failed to marshal agency user membership", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
 		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
 			TableName: aws.String(config.AgencyTableName),
 			Item:      invitationAV,

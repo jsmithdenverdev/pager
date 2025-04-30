@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	dynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
-	"github.com/aws/aws-sdk-go-v2/service/sns/types"
 	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
 )
 
@@ -43,7 +42,7 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			logger.ErrorContext(ctx, "failed to query user", slog.Any("error", err))
 			return err
 		}
-		if userLookupResult.Items == nil || len(userLookupResult.Items) == 0 {
+		if len(userLookupResult.Items) == 0 {
 			logger.ErrorContext(ctx, "user doesn't exist (auth0 invites not implemented)", slog.Any("email", message.Email))
 			return nil
 		}
@@ -58,8 +57,8 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 		snsClient.Publish(ctx, &sns.PublishInput{
 			TopicArn: aws.String(config.EventsTopicARN),
 			Message:  aws.String(fmt.Sprintf(`{"email": "%s", "agencyId": "%s", "userId": "%s"}`, message.Email, message.AgencyID, strings.Split(userLookup.SK, "#")[1])),
-			MessageAttributes: map[string]types.MessageAttributeValue{
-				"type": snstypes.MessageAttributeValue{
+			MessageAttributes: map[string]snstypes.MessageAttributeValue{
+				"type": {
 					DataType:    aws.String("String"),
 					StringValue: aws.String("user.user.invited"),
 				},
