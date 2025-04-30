@@ -12,7 +12,7 @@ type agency struct {
 	SK         string    `dynamodbav:"sk"`
 	Type       string    `dynamodbav:"type"`
 	Name       string    `dynamodbav:"name"`
-	Status     string    `dynamodbav:"status"`
+	Status     status    `dynamodbav:"status"`
 	Created    time.Time `dynamodbav:"created"`
 	Modified   time.Time `dynamodbav:"modified"`
 	CreatedBy  string    `dynamodbav:"createdBy"`
@@ -23,7 +23,7 @@ type agency struct {
 type agencyResponse struct {
 	ID         string    `json:"pk"`
 	Name       string    `json:"name"`
-	Status     string    `json:"status"`
+	Status     status    `json:"status"`
 	Created    time.Time `json:"created"`
 	Modified   time.Time `json:"modified"`
 	CreatedBy  string    `json:"createdBy"`
@@ -48,7 +48,7 @@ func (r createAgencyRequest) valid(ctx context.Context) map[string]string {
 // createAgencyResponse represents a response to a request to create a new
 // agency.
 type createAgencyResponse struct {
-	ID string `json:"pk"`
+	ID string `json:"id"`
 }
 
 func toAgencyResponse(agency agency) agencyResponse {
