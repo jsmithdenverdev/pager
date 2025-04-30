@@ -23,12 +23,15 @@ func main() {
 }
 
 func run(ctx context.Context, stdout io.Writer, getenv func(string) string) error {
-	logger := slog.New(slog.NewJSONHandler(stdout, nil))
 
 	conf := app.Config{}
 	if err := env.Parse(&conf); err != nil {
 		return fmt.Errorf("[in main.run] failed to load config from env: %w", err)
 	}
+
+	logger := slog.New(slog.NewJSONHandler(stdout, &slog.HandlerOptions{
+		Level: conf.LogLevel,
+	}))
 
 	awsconf, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {

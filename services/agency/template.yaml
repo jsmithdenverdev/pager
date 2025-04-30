@@ -5,6 +5,15 @@ Description: Pager Agency Service
 Parameters:
   Environment:
     Type: String
+  LogLevel:
+    Type: String
+    Default: ERROR
+    AllowedValues:
+      - DEBUG
+      - INFO
+      - WARN
+      - ERROR
+    Description: Log level (DEBUG, INFO, WARN, ERROR)
   EventsTopicArn:
     Type: String
 

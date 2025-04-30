@@ -6,6 +6,15 @@ Parameters:
   Environment:
     Type: String
     Description: Deployment environment (dev or prod)
+  LogLevel:
+    Type: String
+    Default: ERROR
+    AllowedValues:
+      - DEBUG
+      - INFO
+      - WARN
+      - ERROR
+    Description: Log level (DEBUG, INFO, WARN, ERROR)
   Auth0Domain:
     Type: String
   Auth0Audience:
@@ -242,6 +251,7 @@ Resources:
             TableName: !Ref AgencyTableName
       Environment:
         Variables:
+          LOG_LEVEL: !Ref LogLevel
           AUTH0_DOMAIN: !Ref Auth0Domain
           AUTH0_AUDIENCE: !Ref Auth0Audience
           USER_TABLE_NAME: !Ref UserTableName
