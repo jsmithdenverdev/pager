@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/caarlos0/env/v11"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/app"
 )
@@ -35,8 +36,9 @@ func run(ctx context.Context) error {
 	}
 
 	dynamoClient := dynamodb.NewFromConfig(awsconf)
+	snsClient := sns.NewFromConfig(awsconf)
 
-	handler := app.NewServer(conf, logger, dynamoClient)
+	handler := app.NewServer(conf, logger, dynamoClient, snsClient)
 
 	lambda.Start(awsapigatewayv2handler.NewLambdaHandler(handler))
 
