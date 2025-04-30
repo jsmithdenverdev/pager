@@ -31,5 +31,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.15 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
-	github.com/jsmithdenverdev/pager/pkg/identity v1.5.0
+	github.com/jsmithdenverdev/pager/pkg/identity v1.6.0
 )

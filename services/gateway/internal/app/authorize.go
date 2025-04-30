@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -81,47 +82,37 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 			return response, nil
 		}
 
-		var user identity.User
-		if err := attributevalue.UnmarshalMap(userRecord.Item, &user); err != nil {
+		var userRow struct {
+			PK           string                   `dynamodbav:"pk"`
+			SK           string                   `dynamodbav:"sk"`
+			Email        string                   `dynamodbav:"email"`
+			Status       identity.Status          `dynamodbav:"status"`
+			Name         string                   `dynamodbav:"name"`
+			Entitlements []identity.Entitlement   `dynamodbav:"entitlements"`
+			Memberships  map[string]identity.Role `dynamodbav:"memberships"`
+			Created      time.Time                `dynamodbav:"created"`
+			Modified     time.Time                `dynamodbav:"modified"`
+			CreatedBy    string                   `dynamodbav:"createdBy"`
+			ModifiedBy   string                   `dynamodbav:"modifiedBy"`
+		}
+
+		if err := attributevalue.UnmarshalMap(userRecord.Item, &userRow); err != nil {
 			logger.ErrorContext(ctx, "failed to unmarshal user record", slog.String("error", err.Error()))
 			return response, nil
 		}
 
-		membershipRecords, err := client.Query(ctx, &dynamodb.QueryInput{
-			TableName:              aws.String(config.AgencyTableName),
-			KeyConditionExpression: aws.String("pk = :pk"),
-			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("user#%s", sub),
-				},
-			},
-		})
-
-		if err != nil {
-			logger.ErrorContext(ctx, "failed to get membership records", slog.String("error", err.Error()))
-			return response, nil
+		user := identity.User{
+			ID:           strings.Split(userRow.PK, "#")[1],
+			Email:        userRow.Email,
+			Status:       userRow.Status,
+			Name:         userRow.Name,
+			Entitlements: userRow.Entitlements,
+			Memberships:  userRow.Memberships,
+			Created:      userRow.Created,
+			Modified:     userRow.Modified,
+			CreatedBy:    userRow.CreatedBy,
+			ModifiedBy:   userRow.ModifiedBy,
 		}
-
-		memberships := make(map[string]identity.Membership)
-		if membershipRecords.Items != nil {
-			for _, item := range membershipRecords.Items {
-				var membershipRow struct {
-					SK   string `dynamodbav:"sk"`
-					Role string `dynamodbav:"role"`
-				}
-				if err := attributevalue.UnmarshalMap(item, &membershipRow); err != nil {
-					logger.ErrorContext(ctx, "failed to unmarshal membership record", slog.String("error", err.Error()))
-					return response, nil
-				}
-				agencyID := strings.Split(membershipRow.SK, "#")[1]
-				memberships[agencyID] = identity.Membership{
-					AgencyID: agencyID,
-					Role:     membershipRow.Role,
-				}
-			}
-		}
-
-		user.Memberships = memberships
 
 		userJSON, err := json.Marshal(user)
 		if err != nil {
@@ -135,6 +126,8 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 			"userid":   sub,
 			"userinfo": string(userJSON),
 		}
+
+		slog.DebugContext(ctx, "authorized user", slog.String("sub", sub), slog.Any("user", user))
 
 		return response, nil
 	}
