@@ -39,6 +39,7 @@ Resources:
       Location: ./services/agency/template.yaml
       Parameters:
         Environment: !Ref Environment
+        EventsTopicArn: !GetAtt EventsService.Outputs.TopicArn
 
   EndpointService:
     Type: AWS::Serverless::Application
