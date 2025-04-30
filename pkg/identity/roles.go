@@ -3,6 +3,6 @@ package identity
 type Role = string
 
 const (
-	RoleReader = "reader"
-	RoleWriter = "writer"
+	RoleReader = "READER"
+	RoleWriter = "WRITER"
 )

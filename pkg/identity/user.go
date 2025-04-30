@@ -3,9 +3,10 @@ package identity
 // User represents a user. This representation is used for authorization
 // decisions.
 type User struct {
-	ID          string                `json:"id"`
-	Email       string                `json:"email"`
-	Memberships map[string]Membership `json:"memberships"`
+	ID            string                `json:"id"`
+	Email         string                `json:"email"`
+	Entitlements []Entitlement			`json:"entitlements,omitempty"`
+	Memberships   map[string]Membership `json:"memberships,omitempty"`
 }
 
 // Membership represents a binding between a user and an Agency. This
