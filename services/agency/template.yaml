@@ -129,8 +129,10 @@ Resources:
       Endpoint: !GetAtt AgencyEventsQueue.Arn
       FilterPolicy:
         type:
+          # Events
           - "user.user.modified"
           - "user.user.deleted"
+          - "user.user.invited"
 
 Outputs:
   ApiId:

@@ -9,6 +9,10 @@ import (
 	"github.com/jsmithdenverdev/pager/pkg/identity"
 )
 
+//-----------------------------------------------------------------------------
+// AGENCY
+//-----------------------------------------------------------------------------
+
 // agency represents an agency in the database.
 type agency struct {
 	PK         string       `dynamodbav:"pk"`
@@ -38,6 +42,7 @@ type createAgencyRequest struct {
 	Name string `json:"name"`
 }
 
+// valid returns a map of validation problems for the request.
 func (r createAgencyRequest) valid(ctx context.Context) map[string]string {
 	problems := make(map[string]string)
 
@@ -54,6 +59,7 @@ type createAgencyResponse struct {
 	ID string `json:"id"`
 }
 
+// toAgencyResponse converts an agency to a response.
 func toAgencyResponse(agency agency) agencyResponse {
 	return agencyResponse{
 		ID:         strings.Split(agency.PK, "#")[1],
@@ -66,11 +72,15 @@ func toAgencyResponse(agency agency) agencyResponse {
 	}
 }
 
+//-----------------------------------------------------------------------------
+// MEMBERSHIP
+//-----------------------------------------------------------------------------
+
 // membership represents a users membership in an agency including their role.
 type membership struct {
 	PK         string           `dynamodbav:"pk"`
 	SK         string           `dynamodbav:"sk"`
-	Type       string           `dynamodbav:"type"`
+	Type       entityType       `dynamodbav:"type"`
 	Status     membershipStatus `dynamodbav:"status"`
 	Role       identity.Role    `dynamodbav:"role"`
 	Created    time.Time        `dynamodbav:"created"`
@@ -79,6 +89,7 @@ type membership struct {
 	ModifiedBy string           `dynamodbav:"modifiedBy"`
 }
 
+// membershipResponse represents a single membership by ID.
 type membershipResponse struct {
 	AgencyID   string           `json:"agencyId"`
 	UserID     string           `json:"userId"`
@@ -90,21 +101,35 @@ type membershipResponse struct {
 	ModifiedBy string           `json:"modifiedBy"`
 }
 
-type createMembershipRequest struct {
-	AgencyID string        `json:"agencyId"`
-	UserID   string        `json:"userId"`
-	Role     identity.Role `json:"role"`
+//-----------------------------------------------------------------------------
+// INVITATION
+//-----------------------------------------------------------------------------
+
+// invitation represents an invitation to join an agency.
+type invitation struct {
+	PK         string           `dynamodbav:"pk"`
+	SK         string           `dynamodbav:"sk"`
+	Type       entityType       `dynamodbav:"type"`
+	Status     invitationStatus `dynamodbav:"status"`
+	Role       identity.Role    `dynamodbav:"role"`
+	Created    time.Time        `dynamodbav:"created"`
+	Modified   time.Time        `dynamodbav:"modified"`
+	CreatedBy  string           `dynamodbav:"createdBy"`
+	ModifiedBy string           `dynamodbav:"modifiedBy"`
 }
 
-func (r createMembershipRequest) valid(ctx context.Context) map[string]string {
+// createInvitationRequest represents a request to create a new invitation.
+type createInvitationRequest struct {
+	Email string        `json:"email"`
+	Role  identity.Role `json:"role"`
+}
+
+// valid returns a map of validation problems for the request.
+func (r createInvitationRequest) valid(ctx context.Context) map[string]string {
 	problems := make(map[string]string)
 
-	if r.AgencyID == "" {
-		problems["AgencyID"] = "agencyId is required"
-	}
-
-	if r.UserID == "" {
-		problems["UserID"] = "userId is required"
+	if r.Email == "" {
+		problems["Email"] = "email is required"
 	}
 
 	if r.Role == "" {
@@ -118,16 +143,22 @@ func (r createMembershipRequest) valid(ctx context.Context) map[string]string {
 	return problems
 }
 
-type createMembershipResponse struct {
+// createInvitationResponse represents a response to a request to create a new
+// invitation.
+type createInvitationResponse struct {
 	AgencyID   string           `json:"agencyId"`
-	UserID     string           `json:"userId"`
+	Email      string           `json:"email"`
 	Role       identity.Role    `json:"role"`
-	Status     membershipStatus `json:"status"`
+	Status     invitationStatus `json:"status"`
 	Created    time.Time        `json:"created"`
 	Modified   time.Time        `json:"modified"`
 	CreatedBy  string           `json:"createdBy"`
 	ModifiedBy string           `json:"modifiedBy"`
 }
+
+//-----------------------------------------------------------------------------
+// LIST RESPONSE
+//-----------------------------------------------------------------------------
 
 // listResponse represents a list of items with pagination.
 type listResponse[T any] struct {

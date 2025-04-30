@@ -97,9 +97,12 @@ Resources:
       Endpoint: !GetAtt UserEventsQueue.Arn
       FilterPolicy:
         type:
+          # Events
           - "agency.membership.created"
           - "agency.membership.updated"
           - "agency.membership.deleted"
+          # Commands
+          - "user.user.invite"
 
 Outputs:
   UserTableName:

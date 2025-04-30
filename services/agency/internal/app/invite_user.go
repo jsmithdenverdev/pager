@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	dynamotypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
@@ -34,7 +33,7 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			return
 		}
 
-		req, problems, err := decodeValid[createMembershipRequest](r)
+		req, problems, err := decodeValid[createInvitationRequest](r)
 		if err != nil {
 			if len(problems) > 0 {
 				w.WriteHeader(http.StatusBadRequest)
@@ -51,12 +50,12 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 
 		now := time.Now()
 
-		userAgencyMembershipAV, err := attributevalue.MarshalMap(membership{
-			PK:         fmt.Sprintf("user#%s", req.UserID),
+		invitationAV, err := attributevalue.MarshalMap(invitation{
+			PK:         fmt.Sprintf("email#%s", req.Email),
 			SK:         fmt.Sprintf("agency#%s", agencyID),
-			Type:       entityTypeMembership,
+			Type:       entityTypeInvitation,
 			Role:       req.Role,
-			Status:     membershipStatusPending,
+			Status:     invitationStatusPending,
 			Created:    now,
 			Modified:   now,
 			CreatedBy:  user.ID,
@@ -69,56 +68,44 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			return
 		}
 
-		agencyUserMembershipAV, err := attributevalue.MarshalMap(membership{
-			PK:         fmt.Sprintf("agency#%s", agencyID),
-			SK:         fmt.Sprintf("user#%s", req.UserID),
-			Type:       entityTypeMembership,
-			Role:       req.Role,
-			Status:     membershipStatusPending,
-			Created:    now,
-			Modified:   now,
-			CreatedBy:  user.ID,
-			ModifiedBy: user.ID,
-		})
-
 		if err != nil {
 			logger.ErrorContext(r.Context(), "failed to marshal agency user membership", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		dynamoInput := &dynamodb.TransactWriteItemsInput{
-			TransactItems: []dynamotypes.TransactWriteItem{
-				{
-					Put: &dynamotypes.Put{
-						TableName: aws.String(config.AgencyTableName),
-						Item:      userAgencyMembershipAV,
-					},
-				},
-				{
-					Put: &dynamotypes.Put{
-						TableName: aws.String(config.AgencyTableName),
-						Item:      agencyUserMembershipAV,
-					},
-				},
-			},
-		}
-
-		_, err = dynamoClient.TransactWriteItems(r.Context(), dynamoInput)
+		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
+			TableName: aws.String(config.AgencyTableName),
+			Item:      invitationAV,
+		})
 
 		if err != nil {
-			logger.ErrorContext(r.Context(), "failed to write memberships", slog.Any("error", err))
+			logger.ErrorContext(r.Context(), "failed to write invitation", slog.Any("error", err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		messageBody, err := json.Marshal(struct {
+			Email    string `json:"email"`
+			AgencyID string `json:"agencyId"`
+		}{
+			Email:    req.Email,
+			AgencyID: agencyID,
+		})
+
+		if err != nil {
+			logger.ErrorContext(r.Context(), "failed to marshal SNS message", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		if _, err = snsClient.Publish(r.Context(), &sns.PublishInput{
 			TopicArn: aws.String(config.EventsTopicARN),
-			Message:  aws.String(fmt.Sprintf("User %s invited to agency %s", req.UserID, agencyID)),
+			Message:  aws.String(string(messageBody)),
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
 				"type": {
 					DataType:    aws.String("String"),
-					StringValue: aws.String("membership.invite"),
+					StringValue: aws.String("user.user.invited"),
 				},
 			},
 		}); err != nil {
@@ -127,11 +114,11 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			return
 		}
 
-		if err = encode(w, r, http.StatusCreated, createMembershipResponse{
+		if err = encode(w, r, http.StatusCreated, createInvitationResponse{
 			AgencyID:   agencyID,
-			UserID:     req.UserID,
+			Email:      req.Email,
 			Role:       req.Role,
-			Status:     membershipStatusPending,
+			Status:     invitationStatusPending,
 			Created:    now,
 			Modified:   now,
 			CreatedBy:  user.ID,
