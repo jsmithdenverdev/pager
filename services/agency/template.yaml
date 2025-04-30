@@ -5,6 +5,8 @@ Description: Pager Agency Service
 Parameters:
   Environment:
     Type: String
+  EventsTopicArn:
+    Type: String
 
 Resources:
   Api:
