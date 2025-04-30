@@ -56,7 +56,7 @@ func createAgency(config Config, logger *slog.Logger, client *dynamodb.Client) h
 			SK:         fmt.Sprintf("agency#%s", id),
 			Type:       entityTypeAgency,
 			Name:       req.Name,
-			Status:     statusActive,
+			Status:     agencyStatusActive,
 			Created:    time.Now(),
 			Modified:   time.Now(),
 			CreatedBy:  user.ID,

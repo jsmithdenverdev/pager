@@ -14,4 +14,5 @@ func addRoutes(mux *http.ServeMux, config Config, logger *slog.Logger, client *d
 	mux.Handle(fmt.Sprintf("GET /%s/{id}/members", config.Environment), listMemberships(config, logger, client))
 
 	mux.Handle(fmt.Sprintf("POST /%s", config.Environment), createAgency(config, logger, client))
+	mux.Handle(fmt.Sprintf("POST /%s/{id}/members", config.Environment), createMembership(config, logger, client))
 }

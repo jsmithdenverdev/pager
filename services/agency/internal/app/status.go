@@ -1,8 +1,16 @@
 package app
 
-type status = string
+type agencyStatus = string
 
 const (
-	statusActive   = "ACTIVE"
-	statusInactive = "INACTIVE"
+	agencyStatusActive   = "ACTIVE"
+	agencyStatusInactive = "INACTIVE"
+)
+
+type membershipStatus = string
+
+const (
+	membershipStatusPending  = "PENDING"
+	membershipStatusActive   = "ACTIVE"
+	membershipStatusInactive = "INACTIVE"
 )
