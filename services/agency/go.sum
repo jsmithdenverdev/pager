@@ -42,8 +42,10 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/google/go-cmp v0.5.6 h1:BKbKCqvP6I+rmFHt06ZmyQtvB8xAkWdhFyr0ZUNZcxQ=
 github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
-github.com/jsmithdenverdev/pager/pkg/identity v1.2.0 h1:uqVNhQCvjku5A2lK5FHYSexLbydjSpWHFKGPZOdgTa4=
-github.com/jsmithdenverdev/pager/pkg/identity v1.2.0/go.mod h1:1c7uiWrk1DmqW6fgbdZydP8XAvVNDT+FqMgdB+BIYVo=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/jsmithdenverdev/pager/pkg/identity v1.5.0 h1:86Ws0iAiQk5BpVYfJHUp9w3cUZUdXIAqZd2+Bf+G9I8=
+github.com/jsmithdenverdev/pager/pkg/identity v1.5.0/go.mod h1:1c7uiWrk1DmqW6fgbdZydP8XAvVNDT+FqMgdB+BIYVo=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=

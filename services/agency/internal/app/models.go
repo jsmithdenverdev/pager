@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"strings"
 	"time"
 )
@@ -27,6 +28,27 @@ type agencyResponse struct {
 	Modified   time.Time `json:"modified"`
 	CreatedBy  string    `json:"createdBy"`
 	ModifiedBy string    `json:"modifiedBy"`
+}
+
+// createAgencyRequest represents a request to create a new agency.
+type createAgencyRequest struct {
+	Name string `json:"name"`
+}
+
+func (r createAgencyRequest) valid(ctx context.Context) map[string]string {
+	problems := make(map[string]string)
+
+	if r.Name == "" {
+		problems["Name"] = "name is required"
+	}
+
+	return problems
+}
+
+// createAgencyResponse represents a response to a request to create a new
+// agency.
+type createAgencyResponse struct {
+	ID string `json:"pk"`
 }
 
 func toAgencyResponse(agency agency) agencyResponse {
