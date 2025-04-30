@@ -1,0 +1,17 @@
+meta {
+  name: Create
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{BASE_URL}}/agencies
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Jakes Test Agency"
+  }
+}
