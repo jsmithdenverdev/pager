@@ -42,6 +42,7 @@ Resources:
         Environment: !Ref Environment
         LogLevel: !Ref LogLevel
         EventsTopicArn: !GetAtt EventsService.Outputs.TopicArn
+        EventsTopicName: !GetAtt EventsService.Outputs.TopicName
 
   AgencyService:
     Type: AWS::Serverless::Application
@@ -51,6 +52,7 @@ Resources:
         Environment: !Ref Environment
         LogLevel: !Ref LogLevel
         EventsTopicArn: !GetAtt EventsService.Outputs.TopicArn
+        EventsTopicName: !GetAtt EventsService.Outputs.TopicName
 
   EndpointService:
     Type: AWS::Serverless::Application
@@ -81,7 +83,6 @@ Resources:
         PageServiceApiId: !GetAtt PageService.Outputs.ApiId
         EndpointServiceApiId: !GetAtt EndpointService.Outputs.ApiId
         UserTableName: !GetAtt UserService.Outputs.UserTableName
-        AgencyTableName: !GetAtt AgencyService.Outputs.AgencyTableName
 
 Outputs:
   ApiGatewayUrl:

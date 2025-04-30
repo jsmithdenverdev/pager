@@ -16,6 +16,8 @@ Parameters:
     Description: Log level (DEBUG, INFO, WARN, ERROR)
   EventsTopicArn:
     Type: String
+  EventsTopicName:
+    Type: String
 
 Resources:
   EventProcessorFunction:
@@ -32,6 +34,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UserTable
+        - SNSPublishMessagePolicy:
+            TopicName: !Ref EventsTopicName
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment

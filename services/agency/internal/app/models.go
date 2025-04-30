@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -129,15 +130,17 @@ func (r createInvitationRequest) valid(ctx context.Context) map[string]string {
 	problems := make(map[string]string)
 
 	if r.Email == "" {
-		problems["Email"] = "email is required"
+		problems["email"] = "email is required"
 	}
 
 	if r.Role == "" {
-		problems["Role"] = "role is required"
+		problems["role"] = "role is required"
 	}
 
-	if !slices.Contains([]string{identity.RoleReader, identity.RoleWriter}, r.Role) {
-		problems["Role"] = "role must be reader or writer"
+	validRoles := []identity.Role{identity.RoleReader, identity.RoleWriter}
+
+	if !slices.Contains(validRoles, r.Role) {
+		problems["role"] = fmt.Sprintf("role must be one of %s", strings.Join(validRoles, ", "))
 	}
 
 	return problems

@@ -16,6 +16,8 @@ Parameters:
     Description: Log level (DEBUG, INFO, WARN, ERROR)
   EventsTopicArn:
     Type: String
+  EventsTopicName:
+    Type: String
 
 Resources:
   Api:
@@ -38,6 +40,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref AgencyTable
+        - SNSPublishMessagePolicy:
+            TopicName: !Ref EventsTopicName
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
@@ -63,6 +67,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref AgencyTable
+        - SNSPublishMessagePolicy:
+            TopicName: !Ref EventsTopicName
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
