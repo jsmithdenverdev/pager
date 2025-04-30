@@ -8,15 +8,15 @@ import (
 
 // agency represents an agency in the database.
 type agency struct {
-	PK         string    `dynamodbav:"pk"`
-	SK         string    `dynamodbav:"sk"`
-	Type       string    `dynamodbav:"type"`
-	Name       string    `dynamodbav:"name"`
-	Status     status    `dynamodbav:"status"`
-	Created    time.Time `dynamodbav:"created"`
-	Modified   time.Time `dynamodbav:"modified"`
-	CreatedBy  string    `dynamodbav:"createdBy"`
-	ModifiedBy string    `dynamodbav:"modifiedBy"`
+	PK         string     `dynamodbav:"pk"`
+	SK         string     `dynamodbav:"sk"`
+	Type       entityType `dynamodbav:"type"`
+	Name       string     `dynamodbav:"name"`
+	Status     status     `dynamodbav:"status"`
+	Created    time.Time  `dynamodbav:"created"`
+	Modified   time.Time  `dynamodbav:"modified"`
+	CreatedBy  string     `dynamodbav:"createdBy"`
+	ModifiedBy string     `dynamodbav:"modifiedBy"`
 }
 
 // agencyResponse represents a single agency by ID.
