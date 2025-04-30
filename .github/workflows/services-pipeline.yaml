@@ -198,7 +198,7 @@ jobs:
             --region ${{ vars.AWS_REGION }} \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --parameter-overrides Auth0Domain=${{ vars.AUTH0_DOMAIN }} Auth0Audience=${{ vars.AUTH0_AUDIENCE }} Environment=dev
+            --parameter-overrides Auth0Domain=${{ vars.AUTH0_DOMAIN }} Auth0Audience=${{ vars.AUTH0_AUDIENCE }} Environment=dev LogLevel=${{ vars.LOG_LEVEL }}
 
   deploy-prod:
     needs: build-prod
@@ -234,7 +234,7 @@ jobs:
             --region ${{ vars.AWS_REGION }} \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --parameter-overrides Auth0Domain=${{ vars.AUTH0_DOMAIN }} Auth0Audience=${{ vars.AUTH0_AUDIENCE }} Environment=dev
+            --parameter-overrides Auth0Domain=${{ vars.AUTH0_DOMAIN }} Auth0Audience=${{ vars.AUTH0_AUDIENCE }} Environment=dev LogLevel=${{ vars.LOG_LEVEL }
 
   # This job ensures branch protection rules work with matrix jobs
   pipeline-status:
