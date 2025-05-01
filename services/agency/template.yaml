@@ -71,6 +71,7 @@ Resources:
             TopicName: !Ref EventsTopicName
       Environment:
         Variables:
+          LOG_LEVEL: !Ref LogLevel
           ENVIRONMENT: !Ref Environment
           AGENCY_TABLE_NAME: !Ref AgencyTable
           EVENTS_TOPIC_ARN: !Ref EventsTopicArn
