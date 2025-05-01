@@ -54,7 +54,9 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			return err
 		}
 
-		snsClient.Publish(ctx, &sns.PublishInput{
+		logger.DebugContext(ctx, "user invited")
+
+		_, err = snsClient.Publish(ctx, &sns.PublishInput{
 			TopicArn: aws.String(config.EventsTopicARN),
 			Message:  aws.String(fmt.Sprintf(`{"email": "%s", "agencyId": "%s", "userId": "%s"}`, message.Email, message.AgencyID, strings.Split(userLookup.SK, "#")[1])),
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
@@ -64,6 +66,14 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 				},
 			},
 		})
+
+		logger.DebugContext(ctx, "published event", slog.String("type", "agency.membership.create"))
+
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to publish event", slog.Any("error", err))
+			return err
+		}
+
 		return nil
 	}
 }
