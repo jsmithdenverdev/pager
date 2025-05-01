@@ -3,30 +3,41 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
+	"github.com/caarlos0/env/v11"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/app"
 )
 
 func main() {
-	if err := run(context.Background(), os.Stdout); err != nil {
+	if err := run(context.Background()); err != nil {
 		fmt.Fprintf(os.Stderr, "run failed: %s", err.Error())
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, stdout io.Writer) error {
-	logger := slog.New(slog.NewJSONHandler(stdout, nil))
-	lambda.Start(handler(logger))
-	return nil
-}
-
-func handler(logger *slog.Logger) func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
-	return func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
-		logger.InfoContext(ctx, "user event processor", slog.Any("event", event))
-		return events.SQSEventResponse{}, nil
+func run(ctx context.Context) error {
+	var conf app.Config
+	if err := env.Parse(&conf); err != nil {
+		return fmt.Errorf("failed to load config from env: %w", err)
 	}
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	awsconf, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load default aws config: %w", err)
+	}
+
+	dynamoClient := dynamodb.NewFromConfig(awsconf)
+	snsClient := sns.NewFromConfig(awsconf)
+
+	lambda.Start(app.EventProcessor(conf, logger, dynamoClient, snsClient))
+
+	return nil
 }

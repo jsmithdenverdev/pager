@@ -138,7 +138,8 @@ Resources:
           # Events
           - "user.user.modified"
           - "user.user.deleted"
-          - "user.user.invited"
+          # Commands
+          - "agency.membership.create"
 
 Outputs:
   ApiId:
