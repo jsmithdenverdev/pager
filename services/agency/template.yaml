@@ -82,6 +82,8 @@ Resources:
             Queue: !GetAtt AgencyEventsQueue.Arn
             BatchSize: 10
             Enabled: true
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
   AgencyTable:
     Type: AWS::DynamoDB::Table
