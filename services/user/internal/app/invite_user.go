@@ -49,7 +49,7 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 
 		if len(emailLookupResult.Items) == 0 {
 			logger.ErrorContext(ctx, "user doesn't exist (auth0 invite not implemented)", slog.Any("messageId", record.MessageID))
-			return nil
+			return fmt.Errorf("user doesn't exist (auth0 invite not implemented)")
 		}
 
 		var emailLookup lookup
