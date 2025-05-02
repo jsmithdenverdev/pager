@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -29,8 +30,10 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 		}
 
 		if role, ok := user.Memberships[agencyID]; !ok || role != identity.RoleWriter {
-			w.WriteHeader(http.StatusForbidden)
-			return
+			if !slices.Contains(user.Entitlements, identity.EntitlementPlatformAdmin) {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
 		}
 
 		req, problems, err := decodeValid[createInvitationRequest](r)
