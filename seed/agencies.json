@@ -1,0 +1,101 @@
+[
+  {
+    "PutRequest": {
+      "Item": {
+        "role": {
+          "S": "WRITER"
+        },
+        "status": {
+          "S": "COMPLETED"
+        },
+        "created": {
+          "S": "2025-05-02T23:04:03.161418235Z"
+        },
+        "sk": {
+          "S": "agency#963e34cc-020b-459d-bd36-a499915d2bba"
+        },
+        "pk": {
+          "S": "email#sar-writer@pager.com"
+        },
+        "createdBy": {
+          "S": "auth0|6606e16332edd5a3975a6e9f"
+        },
+        "modified": {
+          "S": "2025-05-02T23:04:03.161418235Z"
+        },
+        "modifiedBy": {
+          "S": "auth0|6606e16332edd5a3975a6e9f"
+        },
+        "type": {
+          "S": "INVITATION"
+        }
+      }
+    }
+  },
+  {
+    "PutRequest": {
+      "Item": {
+        "status": {
+          "S": "ACTIVE"
+        },
+        "created": {
+          "S": "2025-05-02T22:55:25.383361881Z"
+        },
+        "sk": {
+          "S": "agency#963e34cc-020b-459d-bd36-a499915d2bba"
+        },
+        "pk": {
+          "S": "agency#963e34cc-020b-459d-bd36-a499915d2bba"
+        },
+        "createdBy": {
+          "S": "auth0|6606e16332edd5a3975a6e9f"
+        },
+        "name": {
+          "S": "Alpine Rescue Team"
+        },
+        "modified": {
+          "S": "2025-05-02T22:55:25.383362014Z"
+        },
+        "modifiedBy": {
+          "S": "auth0|6606e16332edd5a3975a6e9f"
+        },
+        "type": {
+          "S": "AGENCY"
+        }
+      }
+    }
+  },
+  {
+    "PutRequest": {
+      "Item": {
+        "role": {
+          "S": "WRITER"
+        },
+        "status": {
+          "S": "ACTIVE"
+        },
+        "created": {
+          "S": "2025-05-02T23:04:05.176432974Z"
+        },
+        "sk": {
+          "S": "agency#963e34cc-020b-459d-bd36-a499915d2bba"
+        },
+        "pk": {
+          "S": "user#auth0|66199504eddfc16953adc92e"
+        },
+        "createdBy": {
+          "S": "auth0|6606e16332edd5a3975a6e9f"
+        },
+        "modified": {
+          "S": "2025-05-02T23:04:05.176433034Z"
+        },
+        "modifiedBy": {
+          "S": "auth0|6606e16332edd5a3975a6e9f"
+        },
+        "type": {
+          "S": "MEMBERSHIP"
+        }
+      }
+    }
+  }
+]
