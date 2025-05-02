@@ -1,6 +1,7 @@
 package app
 
 import (
+	"strings"
 	"time"
 
 	"github.com/jsmithdenverdev/pager/pkg/identity"
@@ -20,8 +21,15 @@ type user struct {
 	ModifiedBy   string                   `dynamodbav:"modifiedBy"`
 }
 
-type userLookup struct {
+// lookup is a record used to lookup a user by various attributes. It consists
+// of a pk which is the type of lookup (e.g. email), and a sk which is the users
+// id.
+type lookup struct {
 	PK   string     `dynamodbav:"pk"`
 	SK   string     `dynamodbav:"sk"`
 	Type entityType `dynamodbav:"type"`
+}
+
+func (l *lookup) UserID() string {
+	return strings.Split(l.SK, "#")[1]
 }
