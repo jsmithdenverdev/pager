@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -13,7 +14,15 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 	return func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
 		var batchItemFailures []events.SQSBatchItemFailure
 		for _, record := range event.Records {
-			logger.DebugContext(ctx, "user event processor", slog.Any("record", record))
+			var recordBody any
+			if err := json.Unmarshal([]byte(record.Body), &recordBody); err != nil {
+				logger.ErrorContext(ctx, "failed to unmarshal record body", slog.Any("error", err))
+				batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
+					ItemIdentifier: record.MessageId,
+				})
+				continue
+			}
+			logger.DebugContext(ctx, "user event processor", slog.Any("recordBody", recordBody))
 			switch record.Attributes["type"] {
 			case "user.user.invite":
 				if err := inviteUser(config, logger, dynamoClient, snsClient)(ctx, record); err != nil {
