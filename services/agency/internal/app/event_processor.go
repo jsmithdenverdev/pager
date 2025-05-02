@@ -28,7 +28,7 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
 			case "agency.membership.create":
-				if err := createMembership(config, logger, dynamoClient, snsClient)(ctx, record); err != nil {
+				if err := createMembership(config, logger, dynamoClient, snsClient)(ctx, snsRecord); err != nil {
 					logger.ErrorContext(ctx, "failed to create membership", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
