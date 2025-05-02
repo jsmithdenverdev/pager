@@ -49,6 +49,8 @@ Resources:
             Queue: !GetAtt UserEventsQueue.Arn
             BatchSize: 10
             Enabled: true
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
   UserTable:
     Type: AWS::DynamoDB::Table
