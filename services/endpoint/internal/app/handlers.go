@@ -23,7 +23,7 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 		var (
 			err      error
 			first    = 10
-			idpid    = r.Header.Get("x-pager-userid")
+			userid   = r.Header.Get("x-pager-userid")
 			firstStr = r.URL.Query().Get("first")
 			cursor   = r.URL.Query().Get("cursor")
 		)
@@ -39,10 +39,10 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 		queryInput := &dynamodb.QueryInput{
 			TableName:              aws.String(config.EndpointTableName),
 			Limit:                  aws.Int32(int32(first)),
-			KeyConditionExpression: aws.String("pk = :idpid AND begins_with(sk, :skprefix)"),
+			KeyConditionExpression: aws.String("pk = :userid AND begins_with(sk, :skprefix)"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":idpid": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("idpid#%s", idpid),
+				":userid": &types.AttributeValueMemberS{
+					Value: fmt.Sprintf("user#%s", userid),
 				},
 				":skprefix": &types.AttributeValueMemberS{Value: "endpoint#"},
 			},
@@ -51,7 +51,7 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 		if cursor != "" {
 			queryInput.ExclusiveStartKey = map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("idpid#%s", idpid),
+					Value: fmt.Sprintf("user#%s", userid),
 				},
 				"sk": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("endpoint#%s", cursor),
@@ -84,7 +84,7 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 		for _, endpoint := range endpoints {
 			response.Results = append(response.Results, endpointResponse{
 				ID:           strings.Split(endpoint.SK, "#")[1],
-				IDPID:        strings.Split(endpoint.PK, "#")[1],
+				UserID:       strings.Split(endpoint.PK, "#")[1],
 				EndpointType: endpoint.EndpointType,
 				Name:         endpoint.Name,
 				URL:          endpoint.URL,
@@ -185,7 +185,7 @@ func listRegistrations(config Config, logger *slog.Logger, client *dynamodb.Clie
 			response.Results = append(response.Results, registrationResponse{
 				AccountID:  strings.Split(registration.PK, "#")[1],
 				EndpointID: strings.Split(registration.SK, "#")[1],
-				IDPID:      registration.IDPID,
+				UserID:     registration.UserID,
 			})
 		}
 

@@ -3,12 +3,6 @@ Transform: AWS::Serverless-2016-10-31
 Description: Pager
 
 Parameters:
-  Auth0Domain:
-    Type: String
-    Default: auth0.com
-  Auth0Audience:
-    Type: String
-    Default: pager
   Environment:
     Type: String
     Default: dev
@@ -16,14 +10,39 @@ Parameters:
       - dev
       - prod
     Description: Deployment environment (dev or prod)
+  LogLevel:
+    Type: String
+    Default: ERROR
+    AllowedValues:
+      - DEBUG
+      - INFO
+      - WARN
+      - ERROR
+    Description: Log level (DEBUG, INFO, WARN, ERROR)
+  Auth0Domain:
+    Type: String
+    Default: auth0.com
+  Auth0Audience:
+    Type: String
+    Default: pager
 
 Resources:
-  IdentityService:
+  EventsService:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./services/identity/template.yaml
+      Location: ./services/events/template.yaml
       Parameters:
         Environment: !Ref Environment
+
+  UserService:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./services/user/template.yaml
+      Parameters:
+        Environment: !Ref Environment
+        LogLevel: !Ref LogLevel
+        EventsTopicArn: !GetAtt EventsService.Outputs.TopicArn
+        EventsTopicName: !GetAtt EventsService.Outputs.TopicName
 
   AgencyService:
     Type: AWS::Serverless::Application
@@ -31,6 +50,9 @@ Resources:
       Location: ./services/agency/template.yaml
       Parameters:
         Environment: !Ref Environment
+        LogLevel: !Ref LogLevel
+        EventsTopicArn: !GetAtt EventsService.Outputs.TopicArn
+        EventsTopicName: !GetAtt EventsService.Outputs.TopicName
 
   EndpointService:
     Type: AWS::Serverless::Application
@@ -38,6 +60,7 @@ Resources:
       Location: ./services/endpoint/template.yaml
       Parameters:
         Environment: !Ref Environment
+        LogLevel: !Ref LogLevel
 
   PageService:
     Type: AWS::Serverless::Application
@@ -45,6 +68,7 @@ Resources:
       Location: ./services/page/template.yaml
       Parameters:
         Environment: !Ref Environment
+        LogLevel: !Ref LogLevel
 
   GatewayService:
     Type: AWS::Serverless::Application
@@ -52,13 +76,13 @@ Resources:
       Location: ./services/gateway/gateway.yaml
       Parameters:
         Environment: !Ref Environment
+        LogLevel: !Ref LogLevel
         Auth0Domain: !Ref Auth0Domain
         Auth0Audience: !Ref Auth0Audience
         AgencyServiceApiId: !GetAtt AgencyService.Outputs.ApiId
         PageServiceApiId: !GetAtt PageService.Outputs.ApiId
         EndpointServiceApiId: !GetAtt EndpointService.Outputs.ApiId
-        UserTableName: !GetAtt IdentityService.Outputs.UserTableName
-        AgencyTableName: !GetAtt AgencyService.Outputs.AgencyTableName
+        UserTableName: !GetAtt UserService.Outputs.UserTableName
 
 Outputs:
   ApiGatewayUrl:

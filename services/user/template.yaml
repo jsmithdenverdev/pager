@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Pager Agency Service
+Description: Pager User Service
 
 Parameters:
   Environment:
@@ -20,45 +20,12 @@ Parameters:
     Type: String
 
 Resources:
-  Api:
-    Type: "AWS::Serverless::HttpApi"
-    Properties:
-      Name: !Sub "pager-agency-api-${Environment}"
-      StageName: !Ref Environment
-
-  AppFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: go1.x
-    Properties:
-      FunctionName: !Sub "pager-agency-service-${Environment}"
-      Handler: bootstrap
-      Runtime: provided.al2023
-      CodeUri: ./cmd/app
-      Timeout: 10
-      MemorySize: 128
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref AgencyTable
-        - SNSPublishMessagePolicy:
-            TopicName: !Ref EventsTopicName
-      Environment:
-        Variables:
-          ENVIRONMENT: !Ref Environment
-          AGENCY_TABLE_NAME: !Ref AgencyTable
-          EVENTS_TOPIC_ARN: !Ref EventsTopicArn
-      Events:
-        HttpApi:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref Api
-
   EventProcessorFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: !Sub "pager-agency-event-processor-${Environment}"
+      FunctionName: !Sub "pager-user-event-processor-${Environment}"
       Handler: bootstrap
       Runtime: provided.al2023
       CodeUri: ./cmd/event-processor
@@ -66,27 +33,27 @@ Resources:
       MemorySize: 128
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref AgencyTable
+            TableName: !Ref UserTable
         - SNSPublishMessagePolicy:
             TopicName: !Ref EventsTopicName
       Environment:
         Variables:
           LOG_LEVEL: !Ref LogLevel
           ENVIRONMENT: !Ref Environment
-          AGENCY_TABLE_NAME: !Ref AgencyTable
+          USER_TABLE_NAME: !Ref UserTable
           EVENTS_TOPIC_ARN: !Ref EventsTopicArn
       Events:
         SQSEvent:
           Type: SQS
           Properties:
-            Queue: !GetAtt AgencyEventsQueue.Arn
+            Queue: !GetAtt UserEventsQueue.Arn
             BatchSize: 10
             Enabled: true
 
-  AgencyTable:
+  UserTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "pager-agency-agencies-${Environment}"
+      TableName: !Sub "pager-user-users-${Environment}"
       AttributeDefinitions:
         - AttributeName: pk
           AttributeType: S
@@ -99,53 +66,51 @@ Resources:
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
 
-  AgencyEventsQueue:
+  UserEventsQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub "pager-agency-events-${Environment}"
+      QueueName: !Sub "pager-user-events-${Environment}"
       RedrivePolicy:
-        deadLetterTargetArn: !GetAtt AgencyEventsDeadLetterQueue.Arn
+        deadLetterTargetArn: !GetAtt UserEventsDeadLetterQueue.Arn
         maxReceiveCount: 5
 
-  AgencyEventsDeadLetterQueue:
+  UserEventsDeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub "pager-agency-events-dlq-${Environment}"
+      QueueName: !Sub "pager-user-events-dlq-${Environment}"
 
-  AgencyEventsQueuePolicy:
+  UserEventsQueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
       Queues:
-        - !Ref AgencyEventsQueue
+        - !Ref UserEventsQueue
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal: "*"
             Action: "sqs:SendMessage"
-            Resource: !GetAtt AgencyEventsQueue.Arn
+            Resource: !GetAtt UserEventsQueue.Arn
             Condition:
               ArnEquals:
                 "aws:SourceArn": !Ref EventsTopicArn
 
-  AgencyEventsSubscription:
+  UserEventsSubscription:
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Ref EventsTopicArn
       Protocol: sqs
-      Endpoint: !GetAtt AgencyEventsQueue.Arn
+      Endpoint: !GetAtt UserEventsQueue.Arn
       FilterPolicy:
         type:
           # Events
-          - "user.user.modified"
-          - "user.user.deleted"
+          - "agency.membership.created"
+          - "agency.membership.updated"
+          - "agency.membership.deleted"
           # Commands
-          - "agency.membership.create"
+          - "user.user.invite"
 
 Outputs:
-  ApiId:
-    Description: Agency API ID
-    Value: !Ref Api
-  AgencyTableName:
-    Description: Agency Table Name
-    Value: !Ref AgencyTable
+  UserTableName:
+    Description: User Table Name
+    Value: !Ref UserTable

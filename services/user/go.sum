@@ -1,5 +1,3 @@
-github.com/a-h/awsapigatewayv2handler v0.0.0-20220723235946-c45b98eb1b9e h1:HzXuiorRJtdTDWmI/DS/IRpwx9LvI/XhinY8iFwSDlY=
-github.com/a-h/awsapigatewayv2handler v0.0.0-20220723235946-c45b98eb1b9e/go.mod h1:JniHYfJXJDrzaIShRJC0yhUvtuKM0NfGkH1f3mDk67k=
 github.com/aws/aws-lambda-go v1.48.0 h1:1aZUYsrJu0yo5fC4z+Rba1KhNImXcJcvHu763BxoyIo=
 github.com/aws/aws-lambda-go v1.48.0/go.mod h1:dpMpZgvWx5vuQJfBt0zqBha60q7Dd7RfgJv23DymV8A=
 github.com/aws/aws-sdk-go-v2 v1.36.3 h1:mJoei2CxPutQVxaATCzDUjcZEjVRdpsiiXi2o38yqWM=
@@ -8,8 +6,8 @@ github.com/aws/aws-sdk-go-v2/config v1.29.14 h1:f+eEi/2cKCg9pqKBoAIwRGzVb70MRKqW
 github.com/aws/aws-sdk-go-v2/config v1.29.14/go.mod h1:wVPHWcIFv3WO89w0rE10gzf17ZYy+UVS1Geq8Iei34g=
 github.com/aws/aws-sdk-go-v2/credentials v1.17.67 h1:9KxtdcIA/5xPNQyZRgUSpYOE6j9Bc4+D7nZua0KGYOM=
 github.com/aws/aws-sdk-go-v2/credentials v1.17.67/go.mod h1:p3C44m+cfnbv763s52gCqrjaqyPikj9Sg47kUVaNZQQ=
-github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.18.13 h1:i4Ynl6Y/HhNajB3E5UStwNpJjqopr+6TDU+YpZLJkuo=
-github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.18.13/go.mod h1:VlHydRtvtdo0onShlKNZN23pzPUgYCc+hlzehmIy5To=
+github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.19.0 h1:F3W0YqWZrpCcelbvXMP9LWSTOI620aAq1+8fZ/71TBg=
+github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.19.0/go.mod h1:34X+UzFJwsQfyk5U1hYiCO/gv9ZVL+Hh8w+bJQ6+HbU=
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 h1:x793wxmUWVDhshP8WW2mlnXuFrO4cOd3HLBroh1paFw=
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30/go.mod h1:Jpne2tDnYiFascUEs2AWHJL9Yp7A5ZVy3TNyxaAjD6M=
 github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.34 h1:ZK5jHhnrioRkUNOc+hOgQKlUL5JeC3S6JgLxtQ+Rm0Q=
@@ -18,8 +16,8 @@ github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.34 h1:SZwFm17ZUNNg5Np0io
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.34/go.mod h1:dFZsC0BLo346mvKQLWmoJxT+Sjp+qcVR1tRVHQGOH9Q=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 h1:bIqFDwgGXXN1Kpp99pDOdKMTTb5d2KyU5X/BZxjOkRo=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3/go.mod h1:H5O/EsxDWyU+LP/V8i5sm8cxoZgc2fdNR9bxlOFrQTo=
-github.com/aws/aws-sdk-go-v2/service/dynamodb v1.43.0 h1:w0Evr7ssE6gP/EjN6UpAvLyWEdv9NGPbW6awu5OGQc0=
-github.com/aws/aws-sdk-go-v2/service/dynamodb v1.43.0/go.mod h1:yYaWRnVSPyAmexW5t7G3TcuYoalYfT+xQwzWsvtUQ7M=
+github.com/aws/aws-sdk-go-v2/service/dynamodb v1.43.1 h1:YYjNTAyPL0425ECmq6Xm48NSXdT6hDVQmLOJZxyhNTM=
+github.com/aws/aws-sdk-go-v2/service/dynamodb v1.43.1/go.mod h1:yYaWRnVSPyAmexW5t7G3TcuYoalYfT+xQwzWsvtUQ7M=
 github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.25.3 h1:GHC1WTF3ZBZy+gvz2qtYB6ttALVx35hlwc4IzOIUY7g=
 github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.25.3/go.mod h1:lUqWdw5/esjPTkITXhN4C66o1ltwDq2qQ12j3SOzhVg=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 h1:eAh2A4b5IzM/lum78bZ590jy36+d/aFLgKF/4Vd1xPE=
@@ -42,10 +40,6 @@ github.com/caarlos0/env/v11 v11.3.1 h1:cArPWC15hWmEt+gWk7YBi7lEXTXCvpaSdCiZE2X5m
 github.com/caarlos0/env/v11 v11.3.1/go.mod h1:qupehSf/Y0TUTsxKywqRt/vJjN5nz6vauiYEUUr8P4U=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/google/go-cmp v0.5.6 h1:BKbKCqvP6I+rmFHt06ZmyQtvB8xAkWdhFyr0ZUNZcxQ=
-github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
-github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
-github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/jsmithdenverdev/pager/pkg/identity v1.6.0 h1:7aWTw6uTkjVv5BrR2w64D5ohh2a57At5baxhxEbP8H0=
 github.com/jsmithdenverdev/pager/pkg/identity v1.6.0/go.mod h1:1c7uiWrk1DmqW6fgbdZydP8XAvVNDT+FqMgdB+BIYVo=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

@@ -8,7 +8,9 @@ require (
 	github.com/a-h/awsapigatewayv2handler v0.0.0-20220723235946-c45b98eb1b9e
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.18.13
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.43.0
+	github.com/aws/aws-sdk-go-v2/service/sns v1.34.4
 	github.com/caarlos0/env/v11 v11.3.1
+	github.com/google/uuid v1.6.0
 )
 
 require (
@@ -30,5 +32,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.15 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
-	github.com/jsmithdenverdev/pager/pkg/identity v1.2.0
+	github.com/jsmithdenverdev/pager/pkg/identity v1.6.0
 )

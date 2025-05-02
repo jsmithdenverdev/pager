@@ -1,0 +1,133 @@
+[
+  {
+    "PutRequest": {
+      "Item": {
+        "nickname": {
+          "S": "pager-admin"
+        },
+        "sk": {
+          "S": "user#auth0|6606e16332edd5a3975a6e9f"
+        },
+        "pk": {
+          "S": "user#auth0|6606e16332edd5a3975a6e9f"
+        },
+        "email": {
+          "S": "pager-admin@pager.com"
+        },
+        "name": {
+          "S": "pager-admin@pager.com"
+        },
+        "entitlements": {
+          "L": [
+            {
+              "S": "PLATFORM_ADMIN"
+            }
+          ]
+        },
+        "modified": {
+          "S": "2025-04-30T21:11:40.365Z"
+        },
+        "type": {
+          "S": "USER"
+        }
+      }
+    }
+  },
+  {
+    "PutRequest": {
+      "Item": {
+        "pk": {
+          "S": "email#sar-writer@pager.com"
+        },
+        "sk": {
+          "S": "user#auth0|66199504eddfc16953adc92e"
+        },
+        "type": {
+          "S": "USER_LOOKUP"
+        }
+      }
+    }
+  },
+  {
+    "PutRequest": {
+      "Item": {
+        "pk": {
+          "S": "email#pager-admin@pager.com"
+        },
+        "sk": {
+          "S": "user#auth0|6606e16332edd5a3975a6e9f"
+        },
+        "type": {
+          "S": "USER_LOOKUP"
+        }
+      }
+    }
+  },
+  {
+    "PutRequest": {
+      "Item": {
+        "memberships": {
+          "M": {}
+        },
+        "sk": {
+          "S": "user#auth0|6619959f91e0011a88bfbcd2"
+        },
+        "pk": {
+          "S": "user#auth0|6619959f91e0011a88bfbcd2"
+        },
+        "email": {
+          "S": "sar-reader@pager.com"
+        },
+        "name": {
+          "S": "sar-reader@pager.com"
+        },
+        "type": {
+          "S": "USER"
+        }
+      }
+    }
+  },
+  {
+    "PutRequest": {
+      "Item": {
+        "memberships": {
+          "M": {
+            "25dc328c-4013-4e5a-a9b6-8546532ea1a9": {
+              "S": "WRITER"
+            }
+          }
+        },
+        "sk": {
+          "S": "user#auth0|66199504eddfc16953adc92e"
+        },
+        "pk": {
+          "S": "user#auth0|66199504eddfc16953adc92e"
+        },
+        "email": {
+          "S": "sar-writer@pager.com"
+        },
+        "name": {
+          "S": "sar-writer@pager.com"
+        },
+        "type": {
+          "S": "USER"
+        }
+      }
+    }
+  },
+  {
+    "PutRequest": {
+      "Item": {
+        "pk": {
+          "S": "email#sar-reader@pager.com"
+        },
+        "sk": {
+          "S": "user#auth0|6619959f91e0011a88bfbcd2"
+        },
+        "type": {
+          "S": "USER_LOOKUP"
+        }
+      }
+    }
+  }
+]

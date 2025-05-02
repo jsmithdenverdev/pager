@@ -6,6 +6,15 @@ Parameters:
   Environment:
     Type: String
     Description: Deployment environment (dev or prod)
+  LogLevel:
+    Type: String
+    Default: ERROR
+    AllowedValues:
+      - DEBUG
+      - INFO
+      - WARN
+      - ERROR
+    Description: Log level (DEBUG, INFO, WARN, ERROR)
   Auth0Domain:
     Type: String
   Auth0Audience:
@@ -17,8 +26,6 @@ Parameters:
   EndpointServiceApiId:
     Type: String
   UserTableName:
-    Type: String
-  AgencyTableName:
     Type: String
 
 Resources:
@@ -238,14 +245,12 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref UserTableName
-        - DynamoDBReadPolicy:
-            TableName: !Ref AgencyTableName
       Environment:
         Variables:
+          LOG_LEVEL: !Ref LogLevel
           AUTH0_DOMAIN: !Ref Auth0Domain
           AUTH0_AUDIENCE: !Ref Auth0Audience
           USER_TABLE_NAME: !Ref UserTableName
-          AGENCY_TABLE_NAME: !Ref AgencyTableName
 
   AuthorizerFunctionPermission:
     Type: AWS::Lambda::Permission

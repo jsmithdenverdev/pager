@@ -12,7 +12,7 @@ type endpoint struct {
 	PK           string       `dynamodbav:"pk"`
 	SK           string       `dynamodbav:"sk"`
 	Type         string       `dynamodbav:"type"`
-	IDPID        string       `dynamodbav:"idpid"`
+	UserID       string       `dynamodbav:"userId"`
 	EndpointType endpointType `dynamodbav:"endpointType"`
 	Name         string       `dynamodbav:"name"`
 	URL          string       `dynamodbav:"url"`
@@ -21,7 +21,7 @@ type endpoint struct {
 type endpointResponse struct {
 	ID           string       `json:"id"`
 	AgencyID     string       `json:"agencyId"`
-	IDPID        string       `json:"idpid,omitempty"`
+	UserID       string       `json:"userId,omitempty"`
 	EndpointType endpointType `json:"endpointType,omitempty"`
 	Name         string       `json:"name,omitempty"`
 	URL          string       `json:"url,omitempty"`
@@ -30,16 +30,16 @@ type endpointResponse struct {
 // registration represents a registration of an endpoint to an account. The
 // endpoint must be registered to an account before it can be used.
 type registration struct {
-	PK    string `dynamodbav:"pk"`
-	SK    string `dynamodbav:"sk"`
-	Type  string `dynamodbav:"type"`
-	IDPID string `dynamodbav:"idpid"`
+	PK     string `dynamodbav:"pk"`
+	SK     string `dynamodbav:"sk"`
+	Type   string `dynamodbav:"type"`
+	UserID string `dynamodbav:"userId"`
 }
 
 type registrationResponse struct {
 	EndpointID string `json:"endpointId"`
 	AccountID  string `json:"accountId"`
-	IDPID      string `json:"idpid"`
+	UserID     string `json:"userId"`
 }
 
 // listResponse represents a list of items with pagination.

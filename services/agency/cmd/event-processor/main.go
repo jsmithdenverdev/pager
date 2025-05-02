@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/a-h/awsapigatewayv2handler"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -28,7 +27,9 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to load config from env: %w", err)
 	}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.Level(conf.LogLevel),
+	}))
 
 	awsconf, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -38,9 +39,7 @@ func run(ctx context.Context) error {
 	dynamoClient := dynamodb.NewFromConfig(awsconf)
 	snsClient := sns.NewFromConfig(awsconf)
 
-	handler := app.NewServer(conf, logger, dynamoClient, snsClient)
-
-	lambda.Start(awsapigatewayv2handler.NewLambdaHandler(handler))
+	lambda.Start(app.EventProcessor(conf, logger, dynamoClient, snsClient))
 
 	return nil
 }

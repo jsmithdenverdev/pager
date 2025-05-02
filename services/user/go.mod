@@ -1,14 +1,14 @@
-module github.com/jsmithdenverdev/pager/services/endpoint
+module github.com/jsmithdenverdev/pager/services/user
 
 go 1.24.2
 
 require (
-	github.com/a-h/awsapigatewayv2handler v0.0.0-20220723235946-c45b98eb1b9e
 	github.com/aws/aws-lambda-go v1.48.0
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.14
-	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.18.14
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.19.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.43.1
+	github.com/aws/aws-sdk-go-v2/service/sns v1.34.4
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/jsmithdenverdev/pager/pkg/identity v1.6.0
 )
