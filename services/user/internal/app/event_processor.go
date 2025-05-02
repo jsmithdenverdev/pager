@@ -14,16 +14,19 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 	return func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
 		var batchItemFailures []events.SQSBatchItemFailure
 		for _, record := range event.Records {
-			var recordBody any
-			if err := json.Unmarshal([]byte(record.Body), &recordBody); err != nil {
+			// Unmarshal the record body into a SNSEntity
+			var snsRecord events.SNSEntity
+			if err := json.Unmarshal([]byte(record.Body), &snsRecord); err != nil {
 				logger.ErrorContext(ctx, "failed to unmarshal record body", slog.Any("error", err))
 				batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 					ItemIdentifier: record.MessageId,
 				})
 				continue
 			}
-			logger.DebugContext(ctx, "user event processor", slog.Any("recordBody", recordBody))
-			switch record.Attributes["type"] {
+
+			eventType := snsRecord.MessageAttributes["type"].(struct{ Value string }).Value
+			// Use a type attribute on the message to determine the event type
+			switch eventType {
 			case "user.user.invite":
 				if err := inviteUser(config, logger, dynamoClient, snsClient)(ctx, record); err != nil {
 					logger.ErrorContext(ctx, "failed to invite user", slog.Any("error", err))
@@ -35,7 +38,7 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 				logger.ErrorContext(
 					ctx,
 					"unknown event type",
-					slog.String("type", record.Attributes["type"]),
+					slog.Any("type", snsRecord.MessageAttributes["type"]),
 					slog.String("messageId", record.MessageId))
 
 				batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
