@@ -24,7 +24,7 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 				continue
 			}
 
-			eventType := snsRecord.MessageAttributes["type"].(map[string]interface{})["Value"].(string)
+			eventType := snsRecord.MessageAttributes["type"].(map[string]any)["Value"].(string)
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
 			case "user.user.invite":
