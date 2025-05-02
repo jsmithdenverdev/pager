@@ -101,7 +101,10 @@ func createMembership(config Config, logger *slog.Logger, dynamoClient *dynamodb
 					Value: fmt.Sprintf("agency#%s", message.AgencyID),
 				},
 			},
-			UpdateExpression: aws.String("set status = :status"),
+			UpdateExpression: aws.String("set #status = :status"),
+			ExpressionAttributeNames: map[string]string{
+				"#status": "status",
+			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":status": &types.AttributeValueMemberS{
 					Value: "COMPLETED",
