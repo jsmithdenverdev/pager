@@ -27,6 +27,8 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			return err
 		}
 
+		logger.DebugContext(ctx, "looking up user", slog.Any("record", record), slog.Any("message", message))
+
 		emailLookupResult, err := dynamoClient.Query(ctx, &dynamodb.QueryInput{
 			TableName:              aws.String(config.UserTableName),
 			KeyConditionExpression: aws.String("pk = :pk AND begins_with(sk, :skprefix)"),
