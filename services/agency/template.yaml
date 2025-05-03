@@ -141,6 +141,7 @@ Resources:
           # Events
           - "user.user.modified"
           - "user.user.deleted"
+          - "user.user.ensure_failed"
           # Commands
           - "agency.membership.create"
 

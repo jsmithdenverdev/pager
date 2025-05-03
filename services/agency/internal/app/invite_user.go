@@ -102,7 +102,7 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
 				"type": {
 					DataType:    aws.String("String"),
-					StringValue: aws.String("user.user.invite"),
+					StringValue: aws.String("user.user.ensure"),
 				},
 			},
 		}); err != nil {
