@@ -14,6 +14,7 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 	return func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
 		var batchItemFailures []events.SQSBatchItemFailure
 		for _, record := range event.Records {
+			logger.DebugContext(ctx, "processing record", slog.Any("record", record))
 			// Unmarshal the record body into a SNSEntity
 			var snsRecord events.SNSEntity
 			if err := json.Unmarshal([]byte(record.Body), &snsRecord); err != nil {
