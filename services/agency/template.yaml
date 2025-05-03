@@ -14,6 +14,8 @@ Parameters:
       - WARN
       - ERROR
     Description: Log level (DEBUG, INFO, WARN, ERROR)
+  EventRetryCount:
+    Type: Number
   EventsTopicArn:
     Type: String
   EventsTopicName:
@@ -107,7 +109,7 @@ Resources:
       QueueName: !Sub "pager-agency-events-${Environment}"
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt AgencyEventsDeadLetterQueue.Arn
-        maxReceiveCount: 5
+        maxReceiveCount: !Ref EventRetryCount
 
   AgencyEventsDeadLetterQueue:
     Type: AWS::SQS::Queue

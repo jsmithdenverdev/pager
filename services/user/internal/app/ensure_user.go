@@ -24,7 +24,7 @@ func ensureUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 
 		if err := json.Unmarshal([]byte(record.Message), &message); err != nil {
 			logger.ErrorContext(ctx, "failed to unmarshal message", slog.Any("error", err))
-			if retryCount >= config.MaxRetryCount {
+			if retryCount >= config.EventRetryCount {
 				if _, err := snsClient.Publish(ctx, &sns.PublishInput{
 					TopicArn: aws.String(config.EventsTopicARN),
 					Message:  aws.String(fmt.Sprintf(`{"email": "%s", "agencyId": "%s"}`, message.Email, message.AgencyID)),
@@ -57,7 +57,7 @@ func ensureUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 
 		if err != nil {
 			logger.ErrorContext(ctx, "failed to query user", slog.Any("error", err))
-			if retryCount >= config.MaxRetryCount {
+			if retryCount >= config.EventRetryCount {
 				if _, err := snsClient.Publish(ctx, &sns.PublishInput{
 					TopicArn: aws.String(config.EventsTopicARN),
 					Message:  aws.String(fmt.Sprintf(`{"email": "%s", "agencyId": "%s"}`, message.Email, message.AgencyID)),
@@ -78,7 +78,7 @@ func ensureUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 		// TODO: create a user in auth0 if they don't exist
 		if len(ensureResult.Items) == 0 {
 			logger.ErrorContext(ctx, "user doesn't exist (auth0 invite not implemented)", slog.Any("messageId", record.MessageID))
-			if retryCount >= config.MaxRetryCount {
+			if retryCount >= config.EventRetryCount {
 				if _, err := snsClient.Publish(ctx, &sns.PublishInput{
 					TopicArn: aws.String(config.EventsTopicARN),
 					Message:  aws.String(fmt.Sprintf(`{"email": "%s", "agencyId": "%s"}`, message.Email, message.AgencyID)),
@@ -100,7 +100,7 @@ func ensureUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 
 		if err := attributevalue.UnmarshalMap(ensureResult.Items[0], &emailLookup); err != nil {
 			logger.ErrorContext(ctx, "failed to unmarshal email lookup", slog.Any("error", err))
-			if retryCount >= config.MaxRetryCount {
+			if retryCount >= config.EventRetryCount {
 				if _, err := snsClient.Publish(ctx, &sns.PublishInput{
 					TopicArn: aws.String(config.EventsTopicARN),
 					Message:  aws.String(fmt.Sprintf(`{"email": "%s", "agencyId": "%s"}`, message.Email, message.AgencyID)),
@@ -131,7 +131,7 @@ func ensureUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 
 		if err != nil {
 			logger.ErrorContext(ctx, "failed to publish event", slog.Any("error", err))
-			if retryCount >= config.MaxRetryCount {
+			if retryCount >= config.EventRetryCount {
 				if _, err := snsClient.Publish(ctx, &sns.PublishInput{
 					TopicArn: aws.String(config.EventsTopicARN),
 					Message:  aws.String(fmt.Sprintf(`{"email": "%s", "agencyId": "%s"}`, message.Email, message.AgencyID)),
