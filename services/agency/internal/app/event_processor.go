@@ -34,6 +34,13 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 						ItemIdentifier: record.MessageId,
 					})
 				}
+			case "user.user.ensure_failed":
+				if err := failInvite(config, logger, dynamoClient, snsClient)(ctx, snsRecord); err != nil {
+					logger.ErrorContext(ctx, "failed to fail invite", slog.Any("error", err))
+					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
+						ItemIdentifier: record.MessageId,
+					})
+				}
 			default:
 				logger.ErrorContext(
 					ctx,

@@ -14,6 +14,8 @@ Parameters:
       - WARN
       - ERROR
     Description: Log level (DEBUG, INFO, WARN, ERROR)
+  EventRetryCount:
+    Type: Number
   EventsTopicArn:
     Type: String
   EventsTopicName:
@@ -40,6 +42,7 @@ Resources:
         Variables:
           LOG_LEVEL: !Ref LogLevel
           ENVIRONMENT: !Ref Environment
+          EVENT_RETRY_COUNT: !Ref EventRetryCount
           USER_TABLE_NAME: !Ref UserTable
           EVENTS_TOPIC_ARN: !Ref EventsTopicArn
       Events:
@@ -74,7 +77,7 @@ Resources:
       QueueName: !Sub "pager-user-events-${Environment}"
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt UserEventsDeadLetterQueue.Arn
-        maxReceiveCount: 5
+        maxReceiveCount: !Ref EventRetryCount
 
   UserEventsDeadLetterQueue:
     Type: AWS::SQS::Queue
@@ -110,7 +113,7 @@ Resources:
           - "agency.membership.updated"
           - "agency.membership.deleted"
           # Commands
-          - "user.user.invite"
+          - "user.user.ensure"
 
 Outputs:
   UserTableName:

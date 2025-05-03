@@ -19,13 +19,15 @@ Parameters:
       - WARN
       - ERROR
     Description: Log level (DEBUG, INFO, WARN, ERROR)
+  EventRetryCount:
+    Type: Number
+    Default: 5
   Auth0Domain:
     Type: String
     Default: auth0.com
   Auth0Audience:
     Type: String
     Default: pager
-
 Resources:
   EventsService:
     Type: AWS::Serverless::Application
@@ -41,6 +43,7 @@ Resources:
       Parameters:
         Environment: !Ref Environment
         LogLevel: !Ref LogLevel
+        EventRetryCount: !Ref EventRetryCount
         EventsTopicArn: !GetAtt EventsService.Outputs.TopicArn
         EventsTopicName: !GetAtt EventsService.Outputs.TopicName
 
@@ -51,6 +54,7 @@ Resources:
       Parameters:
         Environment: !Ref Environment
         LogLevel: !Ref LogLevel
+        EventRetryCount: !Ref EventRetryCount
         EventsTopicArn: !GetAtt EventsService.Outputs.TopicArn
         EventsTopicName: !GetAtt EventsService.Outputs.TopicName
 
