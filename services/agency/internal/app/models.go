@@ -160,6 +160,56 @@ type createInvitationResponse struct {
 }
 
 //-----------------------------------------------------------------------------
+// ENDPOINT REGISTRATION
+//-----------------------------------------------------------------------------
+
+// endpointRegistration represents a endpointRegistration between and endpoint and an agency.
+type endpointRegistration struct {
+	PK         string             `dynamodbav:"pk"`
+	SK         string             `dynamodbav:"sk"`
+	Type       entityType         `dynamodbav:"type"`
+	Status     registrationStatus `dynamodbav:"status"`
+	EndpointID string             `dynamodbav:"endpointId"`
+	Created    time.Time          `dynamodbav:"created"`
+	Modified   time.Time          `dynamodbav:"modified"`
+	CreatedBy  string             `dynamodbav:"createdBy"`
+	ModifiedBy string             `dynamodbav:"modifiedBy"`
+}
+
+// registerEndpointRequest represents a request to create a new registration.
+type registerEndpointRequest struct {
+	AgencyID         string `json:"agencyId"`
+	RegistrationCode string `json:"registrationCode"`
+}
+
+// valid returns a map of validation problems for the request.
+func (r registerEndpointRequest) valid(ctx context.Context) map[string]string {
+	problems := make(map[string]string)
+
+	if r.AgencyID == "" {
+		problems["agencyId"] = "agencyId is required"
+	}
+
+	if r.RegistrationCode == "" {
+		problems["registrationCode"] = "registrationCode is required"
+	}
+
+	return problems
+}
+
+// registerEndpointResponse represents a response to a request to create a new
+// registration.
+type registerEndpointResponse struct {
+	AgencyID         string             `json:"agencyId"`
+	RegistrationCode string             `json:"registrationCode"`
+	Status           registrationStatus `json:"status"`
+	Created          time.Time          `json:"created"`
+	Modified         time.Time          `json:"modified"`
+	CreatedBy        string             `json:"createdBy"`
+	ModifiedBy       string             `json:"modifiedBy"`
+}
+
+//-----------------------------------------------------------------------------
 // LIST RESPONSE
 //-----------------------------------------------------------------------------
 

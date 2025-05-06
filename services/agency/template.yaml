@@ -144,6 +144,7 @@ Resources:
           - "user.user.modified"
           - "user.user.deleted"
           - "user.user.ensure_failed"
+          - "endpoint.endpoint.ensured_and_registered"
           # Commands
           - "agency.membership.create"
 

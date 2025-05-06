@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/jsmithdenverdev/pager/pkg/identity"
 )
 
 // listEndpoints returns a list of endpoints. If an account ID is provided the
@@ -104,100 +103,100 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 	})
 }
 
-// listRegistrations returns a list of registrations for the specified agency.
-func listRegistrations(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var (
-			err         error
-			user        identity.User
-			first       = 10
-			userinfostr = r.Header.Get("x-pager-userinfo")
-			firstStr    = r.URL.Query().Get("first")
-			cursor      = r.URL.Query().Get("cursor")
-			agencyid    = r.PathValue("agencyid")
-		)
+// // listRegistrations returns a list of registrations for the specified agency.
+// func listRegistrations(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		var (
+// 			err         error
+// 			user        identity.User
+// 			first       = 10
+// 			userinfostr = r.Header.Get("x-pager-userinfo")
+// 			firstStr    = r.URL.Query().Get("first")
+// 			cursor      = r.URL.Query().Get("cursor")
+// 			agencyid    = r.PathValue("agencyid")
+// 		)
 
-		if firstStr != "" {
-			first, err = strconv.Atoi(firstStr)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-		}
+// 		if firstStr != "" {
+// 			first, err = strconv.Atoi(firstStr)
+// 			if err != nil {
+// 				w.WriteHeader(http.StatusBadRequest)
+// 				return
+// 			}
+// 		}
 
-		if err := json.Unmarshal([]byte(userinfostr), &user); err != nil {
-			logger.ErrorContext(r.Context(), "failed to unmarshal user info", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+// 		if err := json.Unmarshal([]byte(userinfostr), &user); err != nil {
+// 			logger.ErrorContext(r.Context(), "failed to unmarshal user info", slog.Any("error", err))
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 			return
+// 		}
 
-		if _, ok := user.Memberships[agencyid]; !ok {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
+// 		if _, ok := user.Memberships[agencyid]; !ok {
+// 			w.WriteHeader(http.StatusForbidden)
+// 			return
+// 		}
 
-		queryInput := &dynamodb.QueryInput{
-			TableName:              aws.String(config.EndpointTableName),
-			Limit:                  aws.Int32(int32(first)),
-			KeyConditionExpression: aws.String("pk = :agencyid AND begins_with(sk, :skprefix)"),
-			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":agencyid": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("agency#%s", agencyid),
-				},
-				":skprefix": &types.AttributeValueMemberS{Value: "endpoint#"},
-			},
-		}
+// 		queryInput := &dynamodb.QueryInput{
+// 			TableName:              aws.String(config.EndpointTableName),
+// 			Limit:                  aws.Int32(int32(first)),
+// 			KeyConditionExpression: aws.String("pk = :agencyid AND begins_with(sk, :skprefix)"),
+// 			ExpressionAttributeValues: map[string]types.AttributeValue{
+// 				":agencyid": &types.AttributeValueMemberS{
+// 					Value: fmt.Sprintf("agency#%s", agencyid),
+// 				},
+// 				":skprefix": &types.AttributeValueMemberS{Value: "endpoint#"},
+// 			},
+// 		}
 
-		if cursor != "" {
-			queryInput.ExclusiveStartKey = map[string]types.AttributeValue{
-				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("agency#%s", agencyid),
-				},
-				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("endpoint#%s", cursor),
-				},
-			}
-		}
+// 		if cursor != "" {
+// 			queryInput.ExclusiveStartKey = map[string]types.AttributeValue{
+// 				"pk": &types.AttributeValueMemberS{
+// 					Value: fmt.Sprintf("agency#%s", agencyid),
+// 				},
+// 				"sk": &types.AttributeValueMemberS{
+// 					Value: fmt.Sprintf("endpoint#%s", cursor),
+// 				},
+// 			}
+// 		}
 
-		result, err := client.Query(r.Context(), queryInput)
-		if err != nil {
-			logger.ErrorContext(r.Context(), "failed to query endpoints", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+// 		result, err := client.Query(r.Context(), queryInput)
+// 		if err != nil {
+// 			logger.ErrorContext(r.Context(), "failed to query endpoints", slog.Any("error", err))
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 			return
+// 		}
 
-		var registrations []registration
-		if result.Items != nil {
-			for _, item := range result.Items {
-				var registration registration
-				if err := attributevalue.UnmarshalMap(item, &registration); err != nil {
-					logger.ErrorContext(r.Context(), "failed to unmarshal registration record", slog.Any("error", err))
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-				registrations = append(registrations, registration)
-			}
-		}
+// 		var registrations []registration
+// 		if result.Items != nil {
+// 			for _, item := range result.Items {
+// 				var registration registration
+// 				if err := attributevalue.UnmarshalMap(item, &registration); err != nil {
+// 					logger.ErrorContext(r.Context(), "failed to unmarshal registration record", slog.Any("error", err))
+// 					w.WriteHeader(http.StatusInternalServerError)
+// 					return
+// 				}
+// 				registrations = append(registrations, registration)
+// 			}
+// 		}
 
-		response := new(listResponse[registrationResponse])
+// 		response := new(listResponse[registrationResponse])
 
-		for _, registration := range registrations {
-			response.Results = append(response.Results, registrationResponse{
-				AccountID:  strings.Split(registration.PK, "#")[1],
-				EndpointID: strings.Split(registration.SK, "#")[1],
-				UserID:     registration.UserID,
-			})
-		}
+// 		for _, registration := range registrations {
+// 			response.Results = append(response.Results, registrationResponse{
+// 				AccountID:  strings.Split(registration.PK, "#")[1],
+// 				EndpointID: strings.Split(registration.SK, "#")[1],
+// 				UserID:     registration.UserID,
+// 			})
+// 		}
 
-		if result.LastEvaluatedKey != nil {
-			response.NextCursor = strings.Split(result.LastEvaluatedKey["sk"].(*types.AttributeValueMemberS).Value, "#")[1]
-			response.HasNextPage = true
-		}
+// 		if result.LastEvaluatedKey != nil {
+// 			response.NextCursor = strings.Split(result.LastEvaluatedKey["sk"].(*types.AttributeValueMemberS).Value, "#")[1]
+// 			response.HasNextPage = true
+// 		}
 
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			logger.ErrorContext(r.Context(), "failed to encode response", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	})
-}
+// 		if err := json.NewEncoder(w).Encode(response); err != nil {
+// 			logger.ErrorContext(r.Context(), "failed to encode response", slog.Any("error", err))
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 			return
+// 		}
+// 	})
+// }

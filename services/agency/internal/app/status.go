@@ -23,3 +23,12 @@ const (
 	invitationStatusDeclined = "DECLINED"
 	invitationStatusExpired  = "EXPIRED"
 )
+
+type registrationStatus = string
+
+const (
+	registrationStatusPending  = "PENDING"
+	registrationStatusComplete = "COMPLETE"
+	registrationStatusDeclined = "DECLINED"
+	registrationStatusExpired  = "EXPIRED"
+)

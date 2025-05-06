@@ -81,9 +81,38 @@ func createMembership(config Config, logger *slog.Logger, dynamoClient *dynamodb
 			return err
 		}
 
-		_, err = dynamoClient.PutItem(ctx, &dynamodb.PutItemInput{
-			TableName: aws.String(config.AgencyTableName),
-			Item:      membershipAV,
+		membershipInverseAV, err := attributevalue.MarshalMap(membership{
+			PK:         fmt.Sprintf("agency#%s", message.AgencyID),
+			SK:         fmt.Sprintf("user#%s", message.UserID),
+			Type:       entityTypeMembership,
+			Role:       invite.Role,
+			Status:     membershipStatusActive,
+			Created:    time.Now(),
+			Modified:   time.Now(),
+			CreatedBy:  invite.CreatedBy,
+			ModifiedBy: invite.ModifiedBy,
+		})
+
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to marshal membership", slog.Any("error", err))
+			return err
+		}
+
+		_, err = dynamoClient.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
+			RequestItems: map[string][]types.WriteRequest{
+				config.AgencyTableName: {
+					{
+						PutRequest: &types.PutRequest{
+							Item: membershipAV,
+						},
+					},
+					{
+						PutRequest: &types.PutRequest{
+							Item: membershipInverseAV,
+						},
+					},
+				},
+			},
 		})
 
 		if err != nil {
