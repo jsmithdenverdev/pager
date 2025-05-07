@@ -31,7 +31,11 @@ func createMembership(config Config, logger *slog.Logger, dynamoClient *dynamodb
 
 		queryInviteResult, err := dynamoClient.Query(ctx, &dynamodb.QueryInput{
 			TableName:              aws.String(config.AgencyTableName),
-			KeyConditionExpression: aws.String("pk = :pk AND sk = :sk"),
+			KeyConditionExpression: aws.String("#pk = :pk AND #sk = :sk"),
+			ExpressionAttributeNames: map[string]string{
+				"#pk": "pk",
+				"#sk": "sk",
+			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":pk": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("email#%s", message.Email),
