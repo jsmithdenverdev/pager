@@ -178,17 +178,12 @@ type endpointRegistration struct {
 
 // registerEndpointRequest represents a request to create a new registration.
 type registerEndpointRequest struct {
-	AgencyID         string `json:"agencyId"`
 	RegistrationCode string `json:"registrationCode"`
 }
 
 // valid returns a map of validation problems for the request.
 func (r registerEndpointRequest) valid(ctx context.Context) map[string]string {
 	problems := make(map[string]string)
-
-	if r.AgencyID == "" {
-		problems["agencyId"] = "agencyId is required"
-	}
 
 	if r.RegistrationCode == "" {
 		problems["registrationCode"] = "registrationCode is required"
