@@ -49,38 +49,41 @@ func newAuditableFields(userID string, timestamp time.Time) auditableFields {
 type endpoint struct {
 	keyFields
 	auditableFields
-	EndpointType  endpointType `dynamodbav:"endpointType"`
-	Name          string       `dynamodbav:"name"`
-	URL           string       `dynamodbav:"url"`
-	Registrations []string     `dynamodbav:"registrations"`
-	UserID        string       `dynamodbav:"userId"`
+	EndpointType     endpointType `dynamodbav:"endpointType"`
+	Name             string       `dynamodbav:"name"`
+	URL              string       `dynamodbav:"url"`
+	Registrations    []string     `dynamodbav:"registrations"`
+	UserID           string       `dynamodbav:"userId"`
+	RegistrationCode string       `dynamodbav:"registrationCode"`
 }
 
 type endpointResponse struct {
-	ID            string       `json:"id"`
-	UserID        string       `json:"userId"`
-	EndpointType  endpointType `json:"endpointType"`
-	Name          string       `json:"name"`
-	URL           string       `json:"url"`
-	Registrations []string     `json:"registrations"`
-	Created       time.Time    `json:"created"`
-	Modified      time.Time    `json:"modified"`
-	CreatedBy     string       `json:"createdBy"`
-	ModifiedBy    string       `json:"modifiedBy"`
+	ID               string       `json:"id"`
+	UserID           string       `json:"userId"`
+	EndpointType     endpointType `json:"endpointType"`
+	Name             string       `json:"name"`
+	URL              string       `json:"url"`
+	Registrations    []string     `json:"registrations"`
+	RegistrationCode string       `json:"registrationCode"`
+	Created          time.Time    `json:"created"`
+	Modified         time.Time    `json:"modified"`
+	CreatedBy        string       `json:"createdBy"`
+	ModifiedBy       string       `json:"modifiedBy"`
 }
 
 func toEndpointResponse(endpoint endpoint) endpointResponse {
 	return endpointResponse{
-		ID:            strings.Split(endpoint.PK, "#")[1],
-		UserID:        endpoint.UserID,
-		EndpointType:  endpoint.EndpointType,
-		Name:          endpoint.Name,
-		URL:           endpoint.URL,
-		Registrations: endpoint.Registrations,
-		Created:       endpoint.Created,
-		Modified:      endpoint.Modified,
-		CreatedBy:     endpoint.CreatedBy,
-		ModifiedBy:    endpoint.ModifiedBy,
+		ID:               strings.Split(endpoint.PK, "#")[1],
+		UserID:           endpoint.UserID,
+		EndpointType:     endpoint.EndpointType,
+		Name:             endpoint.Name,
+		URL:              endpoint.URL,
+		Registrations:    endpoint.Registrations,
+		RegistrationCode: endpoint.RegistrationCode,
+		Created:          endpoint.Created,
+		Modified:         endpoint.Modified,
+		CreatedBy:        endpoint.CreatedBy,
+		ModifiedBy:       endpoint.ModifiedBy,
 	}
 }
 

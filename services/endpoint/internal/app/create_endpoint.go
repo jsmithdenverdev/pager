@@ -69,18 +69,20 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 
 		now := time.Now()
 		id := uuid.New().String()
+		rc := fmt.Sprintf("%x", sha256.Sum256([]byte(id)))
 
-		dynamoInput, err := attributevalue.MarshalMap(endpoint{
+		endpointAV, err := attributevalue.MarshalMap(endpoint{
 			keyFields: keyFields{
 				PK:   fmt.Sprintf("endpoint#%s", id),
 				SK:   "meta",
 				Type: entityTypeEndpoint,
 			},
-			auditableFields: newAuditableFields(user.ID, now),
-			UserID:          user.ID,
-			Name:            req.Name,
-			EndpointType:    req.EndpointType,
-			URL:             req.URL,
+			auditableFields:  newAuditableFields(user.ID, now),
+			UserID:           user.ID,
+			Name:             req.Name,
+			EndpointType:     req.EndpointType,
+			RegistrationCode: rc,
+			URL:              req.URL,
 		})
 		if err != nil {
 			logger.ErrorContext(r.Context(), "failed to marshal endpoint", slog.Any("error", err))
@@ -88,9 +90,9 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			return
 		}
 
-		registrationCodeDynamoInput, err := attributevalue.MarshalMap(registrationCode{
+		registrationCodeAV, err := attributevalue.MarshalMap(registrationCode{
 			keyFields: keyFields{
-				PK:   fmt.Sprintf("rc#%x", sha256.Sum256([]byte(id))),
+				PK:   fmt.Sprintf("rc#%s", rc),
 				SK:   "registrationcode",
 				Type: entityTypeRegistrationCode,
 			},
@@ -104,7 +106,7 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			return
 		}
 
-		ownershipLinkDynamoInput, err := attributevalue.MarshalMap(ownershipLink{
+		ownershipLinkAV, err := attributevalue.MarshalMap(ownershipLink{
 			keyFields: keyFields{
 				PK:   fmt.Sprintf("user#%s", user.ID),
 				SK:   fmt.Sprintf("endpoint#%s", id),
@@ -124,19 +126,19 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 				{
 					Put: &types.Put{
 						TableName: aws.String(config.EndpointTableName),
-						Item:      dynamoInput,
+						Item:      endpointAV,
 					},
 				},
 				{
 					Put: &types.Put{
 						TableName: aws.String(config.EndpointTableName),
-						Item:      registrationCodeDynamoInput,
+						Item:      registrationCodeAV,
 					},
 				},
 				{
 					Put: &types.Put{
 						TableName: aws.String(config.EndpointTableName),
-						Item:      ownershipLinkDynamoInput,
+						Item:      ownershipLinkAV,
 					},
 				},
 			},
