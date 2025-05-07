@@ -67,7 +67,7 @@ func Authorize(config Config, logger *slog.Logger, client *dynamodb.Client) func
 					Value: fmt.Sprintf("user#%s", sub),
 				},
 				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("user#%s", sub),
+					Value: "meta",
 				},
 			},
 		})
