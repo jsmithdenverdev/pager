@@ -18,8 +18,8 @@ import (
 func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, snsRecord events.SNSEntity) error {
 	return func(ctx context.Context, snsRecord events.SNSEntity) error {
 		var message struct {
-			RegistrationCode string `json:"registrationCode"`
 			AgencyID         string `json:"agencyId"`
+			RegistrationCode string `json:"registrationCode"`
 		}
 
 		if err := json.Unmarshal([]byte(snsRecord.Message), &message); err != nil {
@@ -29,7 +29,7 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 
 		queryRegistrationCodeResult, err := dynamoClient.Query(ctx, &dynamodb.QueryInput{
 			TableName:              aws.String(config.EndpointTableName),
-			KeyConditionExpression: aws.String("#pk = :pk AND begins_with(#sk, :sk)"),
+			KeyConditionExpression: aws.String("#pk = :pk AND #sk = :sk"),
 			ExpressionAttributeNames: map[string]string{
 				"#pk": "pk",
 				"#sk": "sk",
@@ -39,13 +39,13 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 					Value: fmt.Sprintf("rc#%s", message.RegistrationCode),
 				},
 				":sk": &types.AttributeValueMemberS{
-					Value: "endpoint#",
+					Value: "registrationcode",
 				},
 			},
 		})
 
 		if err != nil {
-			logger.ErrorContext(ctx, "failed to query endpoint", slog.Any("error", err))
+			logger.ErrorContext(ctx, "failed to query registration code", slog.Any("error", err))
 			return err
 		}
 
@@ -70,10 +70,10 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("user#%s", rc.UserID()),
+					Value: fmt.Sprintf("endpoint#%s", rc.EndpointID),
 				},
 				":sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("endpoint#%s", rc.EndpointID()),
+					Value: "meta",
 				},
 			},
 		})
@@ -84,7 +84,7 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 		}
 
 		if len(queryEndpointResult.Items) == 0 {
-			logger.ErrorContext(ctx, "endpoint doesn't exist", slog.Any("userId", rc.UserID()), slog.Any("endpointId", rc.EndpointID()))
+			logger.ErrorContext(ctx, "endpoint doesn't exist", slog.Any("userId", rc.UserID), slog.Any("endpointId", rc.EndpointID))
 			return fmt.Errorf("endpoint doesn't exist")
 		}
 
@@ -101,10 +101,10 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 			TableName: aws.String(config.EndpointTableName),
 			Key: map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("user#%s", rc.UserID()),
+					Value: fmt.Sprintf("endpoint#%s", rc.EndpointID),
 				},
 				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("endpoint#%s", rc.EndpointID()),
+					Value: "meta",
 				},
 			},
 			UpdateExpression: aws.String("SET #registrations = :registrations"),
@@ -130,7 +130,7 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 		}{
 			RegistrationCode: message.RegistrationCode,
 			AgencyID:         message.AgencyID,
-			EndpointID:       rc.EndpointID(),
+			EndpointID:       rc.EndpointID,
 		})
 
 		if err != nil {

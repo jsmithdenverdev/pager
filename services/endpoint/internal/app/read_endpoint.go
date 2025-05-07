@@ -25,10 +25,10 @@ func readEndpoint(config Config, logger *slog.Logger, client *dynamodb.Client) h
 			TableName: aws.String(config.EndpointTableName),
 			Key: map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("user#%s", userid),
+					Value: fmt.Sprintf("endpoint#%s", endpointid),
 				},
 				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("endpoint#%s", endpointid),
+					Value: "meta",
 				},
 			},
 		})
@@ -46,6 +46,18 @@ func readEndpoint(config Config, logger *slog.Logger, client *dynamodb.Client) h
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+		}
+
+		// Ensure the endpoint belongs to the calling user. This means we're doing
+		// a read no matter what which isn't ideal, but it's the only way to
+		// enforce this.
+		// We could also store the endpoint using the userid as the primary key,
+		// which would force us to only return the endpoint if it belongs to the
+		// user, but that breaks away from the Unauthorized pattern we use for
+		// other reads.
+		if endpoint.UserID != userid {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
 		}
 
 		if err := json.NewEncoder(w).Encode(endpoint); err != nil {

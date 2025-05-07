@@ -38,12 +38,18 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 		queryInput := &dynamodb.QueryInput{
 			TableName:              aws.String(config.EndpointTableName),
 			Limit:                  aws.Int32(int32(first)),
-			KeyConditionExpression: aws.String("pk = :userid AND begins_with(sk, :skprefix)"),
+			KeyConditionExpression: aws.String("#pk = :pk AND begins_with(#sk, :sk)"),
+			ExpressionAttributeNames: map[string]string{
+				"#pk": "pk",
+				"#sk": "sk",
+			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":userid": &types.AttributeValueMemberS{
+				":pk": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("user#%s", userid),
 				},
-				":skprefix": &types.AttributeValueMemberS{Value: "endpoint#"},
+				":sk": &types.AttributeValueMemberS{
+					Value: "endpoint#",
+				},
 			},
 		}
 
@@ -65,28 +71,25 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 			return
 		}
 
-		var endpoints []endpoint
+		var links []ownershipLink
 		if result.Items != nil {
 			for _, item := range result.Items {
-				var endpoint endpoint
-				if err := attributevalue.UnmarshalMap(item, &endpoint); err != nil {
-					logger.ErrorContext(r.Context(), "failed to unmarshal endpoint record", slog.Any("error", err))
+				var link ownershipLink
+				if err := attributevalue.UnmarshalMap(item, &link); err != nil {
+					logger.ErrorContext(r.Context(), "failed to unmarshal ownership link record", slog.Any("error", err))
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-				endpoints = append(endpoints, endpoint)
+				links = append(links, link)
 			}
 		}
 
-		response := new(listResponse[endpointResponse])
+		response := new(listResponse[ownershipLinkResponse])
 
-		for _, endpoint := range endpoints {
-			response.Results = append(response.Results, endpointResponse{
-				ID:           strings.Split(endpoint.SK, "#")[1],
-				UserID:       strings.Split(endpoint.PK, "#")[1],
-				EndpointType: endpoint.EndpointType,
-				Name:         endpoint.Name,
-				URL:          endpoint.URL,
+		for _, link := range links {
+			response.Results = append(response.Results, ownershipLinkResponse{
+				UserID:     strings.Split(link.PK, "#")[1],
+				EndpointID: strings.Split(link.SK, "#")[1],
 			})
 		}
 

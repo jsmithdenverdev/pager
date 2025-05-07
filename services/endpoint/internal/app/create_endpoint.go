@@ -69,16 +69,16 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 		id := uuid.New().String()
 
 		dynamoInput, err := attributevalue.MarshalMap(endpoint{
-			PK:           fmt.Sprintf("user#%s", user.ID),
-			SK:           fmt.Sprintf("endpoint#%s", id),
-			Type:         entityTypeEndpoint,
-			Name:         req.Name,
-			EndpointType: req.EndpointType,
-			URL:          req.URL,
-			Created:      now,
-			Modified:     now,
-			CreatedBy:    user.ID,
-			ModifiedBy:   user.ID,
+			keyFields: keyFields{
+				PK:   fmt.Sprintf("endpoint#%s", id),
+				SK:   "meta",
+				Type: entityTypeEndpoint,
+			},
+			auditableFields: newAuditableFields(user.ID, now),
+			UserID:          user.ID,
+			Name:            req.Name,
+			EndpointType:    req.EndpointType,
+			URL:             req.URL,
 		})
 
 		if err != nil {
@@ -86,6 +86,7 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
 		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
 			TableName: aws.String(config.EndpointTableName),
 			Item:      dynamoInput,
@@ -98,8 +99,14 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 		}
 
 		registrationCodeDynamoInput, err := attributevalue.MarshalMap(registrationCode{
-			PK: fmt.Sprintf("rc#%x", sha256.Sum256([]byte(id))),
-			SK: fmt.Sprintf("endpoint#%s#user#%s", id, user.ID),
+			keyFields: keyFields{
+				PK:   fmt.Sprintf("rc#%x", sha256.Sum256([]byte(id))),
+				SK:   "registrationcode",
+				Type: entityTypeRegistrationCode,
+			},
+			auditableFields: newAuditableFields(user.ID, now),
+			EndpointID:      id,
+			UserID:          user.ID,
 		})
 
 		if err != nil {
@@ -107,6 +114,7 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
 		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
 			TableName: aws.String(config.EndpointTableName),
 			Item:      registrationCodeDynamoInput,
@@ -114,6 +122,32 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 
 		if err != nil {
 			logger.ErrorContext(r.Context(), "failed to put registration code", slog.Any("error", err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		ownershipLinkDynamoInput, err := attributevalue.MarshalMap(ownershipLink{
+			keyFields: keyFields{
+				PK:   fmt.Sprintf("user#%s", user.ID),
+				SK:   fmt.Sprintf("endpoint#%s", id),
+				Type: entityTypeOwnershipLink,
+			},
+			auditableFields: newAuditableFields(user.ID, now),
+		})
+
+		if err != nil {
+			logger.ErrorContext(r.Context(), "failed to marshal ownership link", slog.Any("error", err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
+			TableName: aws.String(config.EndpointTableName),
+			Item:      ownershipLinkDynamoInput,
+		})
+
+		if err != nil {
+			logger.ErrorContext(r.Context(), "failed to put ownership link", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

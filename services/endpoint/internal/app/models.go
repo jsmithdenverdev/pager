@@ -15,32 +15,58 @@ const (
 )
 
 //-----------------------------------------------------------------------------
+// FIELDS
+//-----------------------------------------------------------------------------
+
+type keyFields struct {
+	PK   string     `dynamodbav:"pk"`
+	SK   string     `dynamodbav:"sk"`
+	Type entityType `dynamodbav:"type"`
+}
+
+type auditableFields struct {
+	Created    time.Time `dynamodbav:"created"`
+	Modified   time.Time `dynamodbav:"modified"`
+	CreatedBy  string    `dynamodbav:"createdBy"`
+	ModifiedBy string    `dynamodbav:"modifiedBy"`
+}
+
+func newAuditableFields(userID string, timestamp time.Time) auditableFields {
+	return auditableFields{
+		Created:    timestamp,
+		Modified:   timestamp,
+		CreatedBy:  userID,
+		ModifiedBy: userID,
+	}
+}
+
+//-----------------------------------------------------------------------------
 // ENDPOINT
 //-----------------------------------------------------------------------------
 
 // endpoint represents an endpoint that can be used to send notifications.
 // Endpoints are registered to an agency.
 type endpoint struct {
-	PK            string       `dynamodbav:"pk"`
-	SK            string       `dynamodbav:"sk"`
-	Type          entityType   `dynamodbav:"type"`
+	keyFields
+	auditableFields
 	EndpointType  endpointType `dynamodbav:"endpointType"`
 	Name          string       `dynamodbav:"name"`
 	URL           string       `dynamodbav:"url"`
 	Registrations []string     `dynamodbav:"registrations"`
-	Created       time.Time    `dynamodbav:"created"`
-	Modified      time.Time    `dynamodbav:"modified"`
-	CreatedBy     string       `dynamodbav:"createdBy"`
-	ModifiedBy    string       `dynamodbav:"modifiedBy"`
+	UserID        string       `dynamodbav:"userId"`
 }
 
 type endpointResponse struct {
 	ID            string       `json:"id"`
-	UserID        string       `json:"userId,omitempty"`
-	EndpointType  endpointType `json:"endpointType,omitempty"`
-	Name          string       `json:"name,omitempty"`
-	URL           string       `json:"url,omitempty"`
-	Registrations []string     `json:"registrations,omitempty"`
+	UserID        string       `json:"userId"`
+	EndpointType  endpointType `json:"endpointType"`
+	Name          string       `json:"name"`
+	URL           string       `json:"url"`
+	Registrations []string     `json:"registrations"`
+	Created       time.Time    `json:"created"`
+	Modified      time.Time    `json:"modified"`
+	CreatedBy     string       `json:"createdBy"`
+	ModifiedBy    string       `json:"modifiedBy"`
 }
 
 type createEndpointRequest struct {
@@ -82,18 +108,27 @@ type createEndpointResponse struct {
 // registrationCode represents a registration of an endpoint to an account. The
 // endpoint must be registered to an account before it can be used.
 type registrationCode struct {
-	PK string `dynamodbav:"pk"`
-	SK string `dynamodbav:"sk"`
+	keyFields
+	auditableFields
+	EndpointID string `dynamodbav:"endpointId"`
+	UserID     string `dynamodbav:"userId"`
 }
 
-// EndpointID returns the endpoint ID from the registration code.
-func (r registrationCode) EndpointID() string {
-	return strings.Split(r.SK, "#")[1]
+//-----------------------------------------------------------------------------
+// OWNERSHIP LINK
+//-----------------------------------------------------------------------------
+
+// ownershipLink represents the ownershipLink of an endpoint by a user.
+// The model is a simple relationship binding that doesn't include other
+// metadata. The relationship is encoded within the pk and sk.
+type ownershipLink struct {
+	keyFields
+	auditableFields
 }
 
-// UserID returns the user ID from the registration code.
-func (r registrationCode) UserID() string {
-	return strings.Split(r.PK, "#")[3]
+type ownershipLinkResponse struct {
+	UserID     string `json:"userId"`
+	EndpointID string `json:"endpointId"`
 }
 
 //-----------------------------------------------------------------------------
