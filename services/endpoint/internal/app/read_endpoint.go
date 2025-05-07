@@ -56,7 +56,7 @@ func readEndpoint(config Config, logger *slog.Logger, client *dynamodb.Client) h
 		// user, but that breaks away from the Unauthorized pattern we use for
 		// other reads.
 		if endpoint.UserID != userid {
-			w.WriteHeader(http.StatusUnauthorized)
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
