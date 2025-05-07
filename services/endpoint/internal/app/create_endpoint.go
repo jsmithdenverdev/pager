@@ -1,0 +1,128 @@
+package app
+
+import (
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"slices"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
+	"github.com/google/uuid"
+	"github.com/jsmithdenverdev/pager/pkg/identity"
+)
+
+func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var (
+			user        identity.User
+			userinfostr = r.Header.Get("x-pager-userinfo")
+		)
+
+		if err := json.Unmarshal([]byte(userinfostr), &user); err != nil {
+			logger.ErrorContext(r.Context(), "failed to unmarshal user info", slog.Any("error", err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Platform Admins cannot create endpoints for themselves, they do not
+		// belong to an agency
+		if slices.Contains(user.Entitlements, identity.EntitlementPlatformAdmin) {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		// A user can only create an endpoint if they have a membership in an agency
+		if len(user.Memberships) == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			if err := json.NewEncoder(w).Encode(map[string]string{
+				"error": "you must have at least one agency membership to create an endpoint",
+			}); err != nil {
+				logger.ErrorContext(r.Context(), "failed to encode response", slog.Any("error", err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+
+		req, problems, err := decodeValid[createEndpointRequest](r)
+		if err != nil {
+			if len(problems) > 0 {
+				w.WriteHeader(http.StatusBadRequest)
+				if err := json.NewEncoder(w).Encode(problems); err != nil {
+					logger.ErrorContext(r.Context(), "failed to encode response", slog.Any("error", err))
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				return
+			}
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		now := time.Now()
+		id := uuid.New().String()
+
+		dynamoInput, err := attributevalue.MarshalMap(endpoint{
+			PK:           fmt.Sprintf("user#%s", user.ID),
+			SK:           fmt.Sprintf("endpoint#%s", id),
+			Type:         entityTypeEndpoint,
+			Name:         req.Name,
+			EndpointType: req.EndpointType,
+			URL:          req.URL,
+			Created:      now,
+			Modified:     now,
+			CreatedBy:    user.ID,
+			ModifiedBy:   user.ID,
+		})
+
+		if err != nil {
+			logger.ErrorContext(r.Context(), "failed to marshal endpoint", slog.Any("error", err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
+			TableName: aws.String(config.EndpointTableName),
+			Item:      dynamoInput,
+		})
+
+		if err != nil {
+			logger.ErrorContext(r.Context(), "failed to put endpoint", slog.Any("error", err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		registrationCodeDynamoInput, err := attributevalue.MarshalMap(registrationCode{
+			PK: fmt.Sprintf("rc#%x", sha256.Sum256([]byte(id))),
+			SK: fmt.Sprintf("endpoint#%s#user#%s", id, user.ID),
+		})
+
+		if err != nil {
+			logger.ErrorContext(r.Context(), "failed to marshal registration code", slog.Any("error", err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
+			TableName: aws.String(config.EndpointTableName),
+			Item:      registrationCodeDynamoInput,
+		})
+
+		if err != nil {
+			logger.ErrorContext(r.Context(), "failed to put registration code", slog.Any("error", err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		if err = encode(w, r, int(http.StatusCreated), createEndpointResponse{ID: id}); err != nil {
+			logger.ErrorContext(r.Context(), "failed to encode response", slog.Any("error", err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	})
+}
