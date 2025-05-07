@@ -69,6 +69,21 @@ type endpointResponse struct {
 	ModifiedBy    string       `json:"modifiedBy"`
 }
 
+func toEndpointResponse(endpoint endpoint) endpointResponse {
+	return endpointResponse{
+		ID:            strings.Split(endpoint.PK, "#")[1],
+		UserID:        endpoint.UserID,
+		EndpointType:  endpoint.EndpointType,
+		Name:          endpoint.Name,
+		URL:           endpoint.URL,
+		Registrations: endpoint.Registrations,
+		Created:       endpoint.Created,
+		Modified:      endpoint.Modified,
+		CreatedBy:     endpoint.CreatedBy,
+		ModifiedBy:    endpoint.ModifiedBy,
+	}
+}
+
 type createEndpointRequest struct {
 	URL          string       `json:"url"`
 	Name         string       `json:"name"`

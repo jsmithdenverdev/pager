@@ -60,7 +60,7 @@ func readEndpoint(config Config, logger *slog.Logger, client *dynamodb.Client) h
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(endpoint); err != nil {
+		if err := json.NewEncoder(w).Encode(toEndpointResponse(endpoint)); err != nil {
 			logger.ErrorContext(r.Context(), "failed to encode response", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
