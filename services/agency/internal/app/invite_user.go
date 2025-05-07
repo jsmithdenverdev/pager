@@ -85,9 +85,11 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 		messageBody, err := json.Marshal(struct {
 			Email    string `json:"email"`
 			AgencyID string `json:"agencyId"`
+			Role     string `json:"role"`
 		}{
 			Email:    req.Email,
 			AgencyID: agencyID,
+			Role:     req.Role,
 		})
 
 		if err != nil {
@@ -102,7 +104,7 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
 				"type": {
 					DataType:    aws.String("String"),
-					StringValue: aws.String("user.user.ensure"),
+					StringValue: aws.String("user.user.ensure_and_invite"),
 				},
 			},
 		}); err != nil {

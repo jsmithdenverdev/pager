@@ -38,7 +38,7 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			retryCount := recieveCount + 1
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
-			case "user.user.ensure":
+			case "user.user.ensure_and_invite":
 				if err := ensureUser(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to ensure user", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{

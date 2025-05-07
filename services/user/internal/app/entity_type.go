@@ -4,5 +4,5 @@ type entityType string
 
 const (
 	EntityTypeUser       entityType = "USER"
-	EntityTypeUserLookup entityType = "EMAIL_LOOKUP"
+	EntityTypeUserLookup entityType = "USER_LOOKUP"
 )
