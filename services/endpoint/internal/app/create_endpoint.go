@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/google/uuid"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
@@ -38,6 +39,7 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 		}
 
 		// A user can only create an endpoint if they have a membership in an agency
+		// TODO: what about agency status?
 		if len(user.Memberships) == 0 {
 			w.WriteHeader(http.StatusBadRequest)
 			if err := json.NewEncoder(w).Encode(map[string]string{
@@ -80,20 +82,8 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			EndpointType:    req.EndpointType,
 			URL:             req.URL,
 		})
-
 		if err != nil {
 			logger.ErrorContext(r.Context(), "failed to marshal endpoint", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
-			TableName: aws.String(config.EndpointTableName),
-			Item:      dynamoInput,
-		})
-
-		if err != nil {
-			logger.ErrorContext(r.Context(), "failed to put endpoint", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -108,20 +98,8 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			EndpointID:      id,
 			UserID:          user.ID,
 		})
-
 		if err != nil {
 			logger.ErrorContext(r.Context(), "failed to marshal registration code", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
-			TableName: aws.String(config.EndpointTableName),
-			Item:      registrationCodeDynamoInput,
-		})
-
-		if err != nil {
-			logger.ErrorContext(r.Context(), "failed to put registration code", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -134,20 +112,38 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			},
 			auditableFields: newAuditableFields(user.ID, now),
 		})
-
 		if err != nil {
 			logger.ErrorContext(r.Context(), "failed to marshal ownership link", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
-			TableName: aws.String(config.EndpointTableName),
-			Item:      ownershipLinkDynamoInput,
+		// Use DynamoDB TransactWriteItems for atomic creation
+		_, err = dynamoClient.TransactWriteItems(r.Context(), &dynamodb.TransactWriteItemsInput{
+			TransactItems: []types.TransactWriteItem{
+				{
+					Put: &types.Put{
+						TableName: aws.String(config.EndpointTableName),
+						Item:      dynamoInput,
+					},
+				},
+				{
+					Put: &types.Put{
+						TableName: aws.String(config.EndpointTableName),
+						Item:      registrationCodeDynamoInput,
+					},
+				},
+				{
+					Put: &types.Put{
+						TableName: aws.String(config.EndpointTableName),
+						Item:      ownershipLinkDynamoInput,
+					},
+				},
+			},
 		})
 
 		if err != nil {
-			logger.ErrorContext(r.Context(), "failed to put ownership link", slog.Any("error", err))
+			logger.ErrorContext(r.Context(), "failed to transact write endpoint entities", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
