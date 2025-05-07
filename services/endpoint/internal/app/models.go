@@ -11,7 +11,7 @@ import (
 type endpointType = string
 
 const (
-	endpointTypePush endpointType = "push"
+	endpointTypePush endpointType = "PUSH"
 )
 
 //-----------------------------------------------------------------------------
@@ -109,7 +109,7 @@ func (r createEndpointRequest) valid(ctx context.Context) map[string]string {
 	}
 
 	if !slices.Contains([]endpointType{endpointTypePush}, r.EndpointType) {
-		problems["endpointType"] = fmt.Sprintf("endpointType must be one of %s", strings.Join([]endpointType{endpointTypePush}, ", "))
+		problems["endpointType"] = fmt.Sprintf("endpointType must be one of: %s", strings.Join([]endpointType{endpointTypePush}, ", "))
 	}
 
 	return problems
