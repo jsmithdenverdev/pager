@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"slices"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -16,7 +15,7 @@ import (
 	"github.com/jsmithdenverdev/pager/pkg/identity"
 )
 
-func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
+func registerEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			user     identity.User
@@ -30,13 +29,11 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 		}
 
 		if role, ok := user.Memberships[agencyID]; !ok || role != identity.RoleWriter {
-			if !slices.Contains(user.Entitlements, identity.EntitlementPlatformAdmin) {
-				w.WriteHeader(http.StatusForbidden)
-				return
-			}
+			w.WriteHeader(http.StatusForbidden)
+			return
 		}
 
-		req, problems, err := decodeValid[createInvitationRequest](r)
+		req, problems, err := decodeValid[registerEndpointRequest](r)
 		if err != nil {
 			if len(problems) > 0 {
 				w.WriteHeader(http.StatusBadRequest)
@@ -53,12 +50,11 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 
 		now := time.Now()
 
-		invitationAV, err := attributevalue.MarshalMap(invitation{
-			PK:         fmt.Sprintf("email#%s", req.Email),
-			SK:         fmt.Sprintf("agency#%s", agencyID),
-			Type:       entityTypeInvitation,
-			Role:       req.Role,
-			Status:     invitationStatusPending,
+		registrationAV, err := attributevalue.MarshalMap(endpointRegistration{
+			PK:         fmt.Sprintf("agency#%s", agencyID),
+			SK:         fmt.Sprintf("registration#%s", req.RegistrationCode),
+			Type:       entityTypeRegistration,
+			Status:     registrationStatusPending,
 			Created:    now,
 			Modified:   now,
 			CreatedBy:  user.ID,
@@ -66,30 +62,28 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 		})
 
 		if err != nil {
-			logger.ErrorContext(r.Context(), "failed to marshal user agency membership", slog.Any("error", err))
+			logger.ErrorContext(r.Context(), "failed to write registration", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		_, err = dynamoClient.PutItem(r.Context(), &dynamodb.PutItemInput{
 			TableName: aws.String(config.AgencyTableName),
-			Item:      invitationAV,
+			Item:      registrationAV,
 		})
 
 		if err != nil {
-			logger.ErrorContext(r.Context(), "failed to write invitation", slog.Any("error", err))
+			logger.ErrorContext(r.Context(), "failed to write registration", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		messageBody, err := json.Marshal(struct {
-			Email    string `json:"email"`
-			AgencyID string `json:"agencyId"`
-			Role     string `json:"role"`
+			AgencyID         string `json:"agencyId"`
+			RegistrationCode string `json:"registrationCode"`
 		}{
-			Email:    req.Email,
-			AgencyID: agencyID,
-			Role:     req.Role,
+			AgencyID:         agencyID,
+			RegistrationCode: req.RegistrationCode,
 		})
 
 		if err != nil {
@@ -104,7 +98,7 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
 				"type": {
 					DataType:    aws.String("String"),
-					StringValue: aws.String("user.user.ensure_and_invite"),
+					StringValue: aws.String("endpoint.endpoint.ensure_and_register"),
 				},
 			},
 		}); err != nil {
@@ -113,15 +107,14 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			return
 		}
 
-		if err = encode(w, r, http.StatusCreated, createInvitationResponse{
-			AgencyID:   agencyID,
-			Email:      req.Email,
-			Role:       req.Role,
-			Status:     invitationStatusPending,
-			Created:    now,
-			Modified:   now,
-			CreatedBy:  user.ID,
-			ModifiedBy: user.ID,
+		if err = encode(w, r, http.StatusCreated, registerEndpointResponse{
+			RegistrationCode: req.RegistrationCode,
+			AgencyID:         agencyID,
+			Status:           registrationStatusPending,
+			Created:          now,
+			Modified:         now,
+			CreatedBy:        user.ID,
+			ModifiedBy:       user.ID,
 		}); err != nil {
 			logger.ErrorContext(r.Context(), "failed to encode response", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)

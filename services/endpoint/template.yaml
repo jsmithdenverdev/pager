@@ -14,6 +14,12 @@ Parameters:
       - WARN
       - ERROR
     Description: Log level (DEBUG, INFO, WARN, ERROR)
+  EventRetryCount:
+    Type: Number
+  EventsTopicArn:
+    Type: String
+  EventsTopicName:
+    Type: String
 
 Resources:
   Api:
@@ -46,6 +52,38 @@ Resources:
           Properties:
             ApiId: !Ref Api
 
+  EventProcessorFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "pager-endpoint-event-processor-${Environment}"
+      Handler: bootstrap
+      Runtime: provided.al2023
+      CodeUri: ./cmd/event-processor
+      Timeout: 10
+      MemorySize: 128
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EndpointTable
+        - SNSPublishMessagePolicy:
+            TopicName: !Ref EventsTopicName
+      Environment:
+        Variables:
+          LOG_LEVEL: !Ref LogLevel
+          ENVIRONMENT: !Ref Environment
+          ENDPOINT_TABLE_NAME: !Ref EndpointTable
+          EVENTS_TOPIC_ARN: !Ref EventsTopicArn
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt EndpointEventsQueue.Arn
+            BatchSize: 10
+            Enabled: true
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+
   EndpointTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -61,6 +99,46 @@ Resources:
         - AttributeName: sk
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+
+  EndpointEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "pager-endpoint-events-${Environment}"
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt EndpointEventsDeadLetterQueue.Arn
+        maxReceiveCount: !Ref EventRetryCount
+
+  EndpointEventsDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "pager-endpoint-events-dlq-${Environment}"
+
+  EndpointEventsQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref EndpointEventsQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: "sqs:SendMessage"
+            Resource: !GetAtt EndpointEventsQueue.Arn
+            Condition:
+              ArnEquals:
+                "aws:SourceArn": !Ref EventsTopicArn
+
+  EndpointEventsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref EventsTopicArn
+      Protocol: sqs
+      Endpoint: !GetAtt EndpointEventsQueue.Arn
+      FilterPolicy:
+        type:
+          # Events
+          - "endpoint.endpoint.ensure_and_register"
 
 Outputs:
   ApiId:

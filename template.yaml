@@ -65,6 +65,9 @@ Resources:
       Parameters:
         Environment: !Ref Environment
         LogLevel: !Ref LogLevel
+        EventRetryCount: !Ref EventRetryCount
+        EventsTopicArn: !GetAtt EventsService.Outputs.TopicArn
+        EventsTopicName: !GetAtt EventsService.Outputs.TopicName
 
   PageService:
     Type: AWS::Serverless::Application

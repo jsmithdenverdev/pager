@@ -34,9 +34,16 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 						ItemIdentifier: record.MessageId,
 					})
 				}
-			case "user.user.ensure_failed":
+			case "user.user.ensure_and_invite_failed":
 				if err := failInvite(config, logger, dynamoClient, snsClient)(ctx, snsRecord); err != nil {
 					logger.ErrorContext(ctx, "failed to fail invite", slog.Any("error", err))
+					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
+						ItemIdentifier: record.MessageId,
+					})
+				}
+			case "endpoint.endpoint.ensured_and_registered":
+				if err := finalizeEndpointRegistration(config, logger, dynamoClient, snsClient)(ctx, snsRecord); err != nil {
+					logger.ErrorContext(ctx, "failed to finalize endpoint registration", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
 					})

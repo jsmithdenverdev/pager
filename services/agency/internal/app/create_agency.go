@@ -53,7 +53,7 @@ func createAgency(config Config, logger *slog.Logger, client *dynamodb.Client) h
 
 		dynamoInput, err := attributevalue.MarshalMap(agency{
 			PK:         fmt.Sprintf("agency#%s", id),
-			SK:         fmt.Sprintf("agency#%s", id),
+			SK:         "meta",
 			Type:       entityTypeAgency,
 			Name:       req.Name,
 			Status:     agencyStatusActive,

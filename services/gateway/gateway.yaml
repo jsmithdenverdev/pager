@@ -68,24 +68,6 @@ Resources:
       AuthorizationType: CUSTOM
       AuthorizerId: !Ref ApiGatewayAuthorizer
 
-  AgencyPageRootRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref ApiGateway
-      RouteKey: ANY /agencies/{agencyid}/pages
-      Target: !Sub integrations/${AgencyPageRootRouteIntegration}
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref ApiGatewayAuthorizer
-
-  AgencyEndpointRootRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref ApiGateway
-      RouteKey: ANY /agencies/{agencyid}/endpoints
-      Target: !Sub integrations/${AgencyEndpointRootRouteIntegration}
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref ApiGatewayAuthorizer
-
   PageRootRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -148,32 +130,6 @@ Resources:
       PayloadFormatVersion: "1.0"
       RequestParameters:
         overwrite:path: !Sub ${Environment}/${!request.path.proxy}
-        append:header.x-pager-userid: $context.authorizer.userid
-        append:header.x-pager-userinfo: $context.authorizer.userinfo
-
-  AgencyPageRootRouteIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref ApiGateway
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${PageServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
-      PayloadFormatVersion: "1.0"
-      RequestParameters:
-        overwrite:path: !Sub ${Environment}/assignments/agencies/${!request.path.agencyid}
-        append:header.x-pager-userid: $context.authorizer.userid
-        append:header.x-pager-userinfo: $context.authorizer.userinfo
-
-  AgencyEndpointRootRouteIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref ApiGateway
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: ANY
-      IntegrationUri: !Sub https://${EndpointServiceApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
-      PayloadFormatVersion: "1.0"
-      RequestParameters:
-        overwrite:path: !Sub ${Environment}/registrations/agencies/${!request.path.agencyid}
         append:header.x-pager-userid: $context.authorizer.userid
         append:header.x-pager-userinfo: $context.authorizer.userinfo
 

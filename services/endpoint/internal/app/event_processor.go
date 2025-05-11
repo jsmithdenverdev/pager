@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -15,7 +14,6 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 	return func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
 		var batchItemFailures []events.SQSBatchItemFailure
 		for _, record := range event.Records {
-			logger.DebugContext(ctx, "processing record", slog.Any("record", record))
 			// Unmarshal the record body into a SNSEntity
 			var snsRecord events.SNSEntity
 			if err := json.Unmarshal([]byte(record.Body), &snsRecord); err != nil {
@@ -27,20 +25,11 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			}
 
 			eventType := snsRecord.MessageAttributes["type"].(map[string]any)["Value"].(string)
-			recieveCount, err := strconv.Atoi(record.Attributes["ApproximateReceiveCount"])
-			if err != nil {
-				logger.ErrorContext(ctx, "failed to convert receive count to int", slog.Any("error", err))
-				batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
-					ItemIdentifier: record.MessageId,
-				})
-				continue
-			}
-			retryCount := recieveCount + 1
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
-			case "user.user.ensure_and_invite":
-				if err := ensureUser(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
-					logger.ErrorContext(ctx, "failed to ensure user", slog.Any("error", err))
+			case "endpoint.endpoint.ensure_and_register":
+				if err := ensureAndRegisterEndpoint(config, logger, dynamoClient, snsClient)(ctx, snsRecord); err != nil {
+					logger.ErrorContext(ctx, "failed to ensure endpoint", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
 					})

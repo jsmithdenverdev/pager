@@ -12,21 +12,19 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/jsmithdenverdev/pager/pkg/identity"
 )
 
-// listMemberships returns a list of memberships in the specified agency.
-// The calling user must have a membership in the specified agency.
-func listMemberships(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
+// listEndpoints returns a list of endpoints. If an account ID is provided the
+// endpoints registered to the account are returned. Otherwise the endpoints
+// registered to the calling user are returned.
+func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
-			err         error
-			user        identity.User
-			first       = 10
-			firstStr    = r.URL.Query().Get("first")
-			cursor      = r.URL.Query().Get("cursor")
-			userinfostr = r.Header.Get("x-pager-userinfo")
-			agencyid    = r.PathValue("id")
+			err      error
+			first    = 10
+			userid   = r.Header.Get("x-pager-userid")
+			firstStr = r.URL.Query().Get("first")
+			cursor   = r.URL.Query().Get("cursor")
 		)
 
 		if firstStr != "" {
@@ -37,19 +35,8 @@ func listMemberships(config Config, logger *slog.Logger, client *dynamodb.Client
 			}
 		}
 
-		if err := json.Unmarshal([]byte(userinfostr), &user); err != nil {
-			logger.ErrorContext(r.Context(), "failed to unmarshal user info", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		if _, ok := user.Memberships[agencyid]; !ok {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
-
 		queryInput := &dynamodb.QueryInput{
-			TableName:              aws.String(config.AgencyTableName),
+			TableName:              aws.String(config.EndpointTableName),
 			Limit:                  aws.Int32(int32(first)),
 			KeyConditionExpression: aws.String("#pk = :pk AND begins_with(#sk, :sk)"),
 			ExpressionAttributeNames: map[string]string{
@@ -58,51 +45,51 @@ func listMemberships(config Config, logger *slog.Logger, client *dynamodb.Client
 			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("agency#%s", agencyid),
+					Value: fmt.Sprintf("user#%s", userid),
 				},
-				":sk": &types.AttributeValueMemberS{Value: "user#"},
+				":sk": &types.AttributeValueMemberS{
+					Value: "endpoint#",
+				},
 			},
 		}
 
 		if cursor != "" {
 			queryInput.ExclusiveStartKey = map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("agency#%s", agencyid),
+					Value: fmt.Sprintf("user#%s", userid),
 				},
 				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("user#%s", cursor),
+					Value: fmt.Sprintf("endpoint#%s", cursor),
 				},
 			}
 		}
 
 		result, err := client.Query(r.Context(), queryInput)
-
 		if err != nil {
-			logger.ErrorContext(r.Context(), "failed to query agencies", slog.Any("error", err))
+			logger.ErrorContext(r.Context(), "failed to query endpoints", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		var memberships []membership
+		var links []ownershipLink
 		if result.Items != nil {
 			for _, item := range result.Items {
-				var membership membership
-				if err := attributevalue.UnmarshalMap(item, &membership); err != nil {
-					logger.ErrorContext(r.Context(), "failed to unmarshal membership record", slog.Any("error", err))
+				var link ownershipLink
+				if err := attributevalue.UnmarshalMap(item, &link); err != nil {
+					logger.ErrorContext(r.Context(), "failed to unmarshal ownership link record", slog.Any("error", err))
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-				memberships = append(memberships, membership)
+				links = append(links, link)
 			}
 		}
 
-		response := new(listResponse[membershipResponse])
+		response := new(listResponse[ownershipLinkResponse])
 
-		for _, membership := range memberships {
-			response.Results = append(response.Results, membershipResponse{
-				AgencyID: strings.Split(membership.PK, "#")[1],
-				UserID:   strings.Split(membership.SK, "#")[1],
-				Role:     membership.Role,
+		for _, link := range links {
+			response.Results = append(response.Results, ownershipLinkResponse{
+				UserID:     strings.Split(link.PK, "#")[1],
+				EndpointID: strings.Split(link.SK, "#")[1],
 			})
 		}
 

@@ -113,7 +113,7 @@ Resources:
           - "agency.membership.updated"
           - "agency.membership.deleted"
           # Commands
-          - "user.user.ensure"
+          - "user.user.ensure_and_invite"
 
 Outputs:
   UserTableName:

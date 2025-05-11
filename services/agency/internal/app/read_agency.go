@@ -41,7 +41,7 @@ func readAgency(config Config, logger *slog.Logger, client *dynamodb.Client) htt
 					Value: fmt.Sprintf("agency#%s", agencyid),
 				},
 				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("agency#%s", agencyid),
+					Value: "meta",
 				},
 			},
 		})
