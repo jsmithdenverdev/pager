@@ -14,9 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
-func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
+func createInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			user     identity.User
@@ -53,12 +54,12 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 
 		now := time.Now()
 
-		invitationAV, err := attributevalue.MarshalMap(invitation{
+		invitationAV, err := attributevalue.MarshalMap(models.Invitation{
 			PK:         fmt.Sprintf("email#%s", req.Email),
 			SK:         fmt.Sprintf("agency#%s", agencyID),
-			Type:       entityTypeInvitation,
+			Type:       models.EntityTypeInvitation,
 			Role:       req.Role,
-			Status:     invitationStatusPending,
+			Status:     models.InvitationStatusPending,
 			Created:    now,
 			Modified:   now,
 			CreatedBy:  user.ID,
@@ -104,11 +105,11 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
 				"type": {
 					DataType:    aws.String("String"),
-					StringValue: aws.String("user.user.ensure_and_invite"),
+					StringValue: aws.String("agency.invite.created"),
 				},
 			},
 		}); err != nil {
-			logger.ErrorContext(r.Context(), "failed to publish SNS message", slog.Any("error", err))
+			logger.ErrorContext(r.Context(), "failed publish to SNS", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -117,7 +118,7 @@ func inviteUser(config Config, logger *slog.Logger, dynamoClient *dynamodb.Clien
 			AgencyID:   agencyID,
 			Email:      req.Email,
 			Role:       req.Role,
-			Status:     invitationStatusPending,
+			Status:     models.InvitationStatusPending,
 			Created:    now,
 			Modified:   now,
 			CreatedBy:  user.ID,
