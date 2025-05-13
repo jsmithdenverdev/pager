@@ -5,14 +5,14 @@ meta {
 }
 
 post {
-  url: {{BASE_URL}}/agencies/{{AGENCY_ID}}/invite
+  url: {{BASE_URL}}/agencies/{{AGENCY_ID}}/invites
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "email": "peanut@fake.com",
+    "email": "sar-writer@pager.com",
     "role": "WRITER"
   }
 }
