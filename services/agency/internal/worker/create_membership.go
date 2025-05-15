@@ -102,53 +102,48 @@ func createMembership(config Config, logger *slog.Logger, dynamoClient *dynamodb
 			return logAndHandleError(ctx, retryCount, "failed to create membership", message, err)
 		}
 
-		_, err = dynamoClient.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
-			RequestItems: map[string][]types.WriteRequest{
-				config.AgencyTableName: {
-					{
-						PutRequest: &types.PutRequest{
-							Item: membershipAV,
-						},
+		if _, err := dynamoClient.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
+			TransactItems: []types.TransactWriteItem{
+				{
+					Put: &types.Put{
+						TableName: aws.String(config.AgencyTableName),
+						Item:      membershipAV,
 					},
-					{
-						PutRequest: &types.PutRequest{
-							Item: membershipInverseAV,
+				},
+				{
+					Put: &types.Put{
+						TableName: aws.String(config.AgencyTableName),
+						Item:      membershipInverseAV,
+					},
+				},
+				{
+					Update: &types.Update{
+						TableName: aws.String(config.AgencyTableName),
+						Key: map[string]types.AttributeValue{
+							"pk": &types.AttributeValueMemberS{
+								Value: fmt.Sprintf("email#%s", message.Email),
+							},
+							"sk": &types.AttributeValueMemberS{
+								Value: fmt.Sprintf("agency#%s", message.AgencyID),
+							},
+						},
+						UpdateExpression: aws.String("set #status = :status"),
+						ExpressionAttributeNames: map[string]string{
+							"#status": "status",
+						},
+						ExpressionAttributeValues: map[string]types.AttributeValue{
+							":status": &types.AttributeValueMemberS{
+								Value: "COMPLETED",
+							},
 						},
 					},
 				},
 			},
-		})
-
-		if err != nil {
+		}); err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to create membership", message, err)
 		}
 
-		_, err = dynamoClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-			TableName: aws.String(config.AgencyTableName),
-			Key: map[string]types.AttributeValue{
-				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("email#%s", message.Email),
-				},
-				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("agency#%s", message.AgencyID),
-				},
-			},
-			UpdateExpression: aws.String("set #status = :status"),
-			ExpressionAttributeNames: map[string]string{
-				"#status": "status",
-			},
-			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":status": &types.AttributeValueMemberS{
-					Value: "COMPLETED",
-				},
-			},
-		})
-
-		if err != nil {
-			return logAndHandleError(ctx, retryCount, "failed to update invite", message, err)
-		}
-
-		_, err = snsClient.Publish(ctx, &sns.PublishInput{
+		if _, err := snsClient.Publish(ctx, &sns.PublishInput{
 			TopicArn: aws.String(config.EventsTopicARN),
 			Message:  aws.String(fmt.Sprintf(`{"userId": "%s", "agencyId": "%s", "role": "%s"}`, message.UserID, message.AgencyID, invite.Role)),
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
@@ -157,10 +152,8 @@ func createMembership(config Config, logger *slog.Logger, dynamoClient *dynamodb
 					StringValue: aws.String(evtMembershipCreated),
 				},
 			},
-		})
-
-		if err != nil {
-			return logAndHandleError(ctx, retryCount, "failed to update invite", message, err)
+		}); err != nil {
+			return logAndHandleError(ctx, retryCount, "failed to publish create membership event", message, err)
 		}
 
 		return nil

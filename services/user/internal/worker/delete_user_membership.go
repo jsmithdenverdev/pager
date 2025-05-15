@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	dynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
-	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/jsmithdenverdev/pager/services/user/internal/models"
 )
 
@@ -98,22 +97,32 @@ func deleteUserMembership(config Config, logger *slog.Logger, dynamoClient *dyna
 			return logAndHandleError(ctx, retryCount, "failed to delete user membership", message, err)
 		}
 
-		_, err = snsClient.Publish(ctx, &sns.PublishInput{
-			TopicArn: aws.String(config.EventsTopicARN),
-			Message:  aws.String(fmt.Sprintf(`{"userId": "%s", "agencyId": "%s"}`, message.UserID, message.AgencyID)),
-			MessageAttributes: map[string]snstypes.MessageAttributeValue{
-				"type": {
-					DataType:    aws.String("String"),
-					StringValue: aws.String(evtMembershipDeleted),
-				},
-			},
-		})
+		// TODO: This has the possibility of causing in infinite loop of events
+		// as it may trigger a handler in the agency service, which would emit an
+		// event that triggers this handler again.
+		// If we absolutely want to emit events from both services we need to add a
+		// source attribute to the event. This attribute would need to be immutable
+		// and created in the initial event in a chain. The agency service would
+		// check to ensure the source is not itself before performing its logic.
+		// In the meantime, the agency service will emit an event that triggers
+		// this handler, but this handler will emit no event as it controls
+		// replicated data and thus is the termination of the flow.
+		// _, err = snsClient.Publish(ctx, &sns.PublishInput{
+		// 	TopicArn: aws.String(config.EventsTopicARN),
+		// 	Message:  aws.String(fmt.Sprintf(`{"userId": "%s", "agencyId": "%s"}`, message.UserID, message.AgencyID)),
+		// 	MessageAttributes: map[string]snstypes.MessageAttributeValue{
+		// 		"type": {
+		// 			DataType:    aws.String("String"),
+		// 			StringValue: aws.String(evtMembershipDeleted),
+		// 		},
+		// 	},
+		// })
 
-		if err != nil {
-			return logAndHandleError(ctx, retryCount, "failed to delete user membership", message, err)
-		}
+		// if err != nil {
+		// 	return logAndHandleError(ctx, retryCount, "failed to delete user membership", message, err)
+		// }
 
-		logger.DebugContext(ctx, "published event", slog.String("type", evtMembershipDeleted))
+		// logger.DebugContext(ctx, "published event", slog.String("type", evtMembershipDeleted))
 
 		return nil
 	}
