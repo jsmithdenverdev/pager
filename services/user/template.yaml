@@ -22,15 +22,15 @@ Parameters:
     Type: String
 
 Resources:
-  EventProcessorFunction:
+  WorkerFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: !Sub "pager-user-event-processor-${Environment}"
+      FunctionName: !Sub "pager-user-worker-${Environment}"
       Handler: bootstrap
       Runtime: provided.al2023
-      CodeUri: ./cmd/event-processor
+      CodeUri: ./cmd/worker
       Timeout: 10
       MemorySize: 128
       Policies:
@@ -108,12 +108,10 @@ Resources:
       Endpoint: !GetAtt UserEventsQueue.Arn
       FilterPolicy:
         type:
-          # Events
+          - "agency.invite.created"
           - "agency.membership.created"
           - "agency.membership.updated"
           - "agency.membership.deleted"
-          # Commands
-          - "user.user.ensure_and_invite"
 
 Outputs:
   UserTableName:

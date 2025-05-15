@@ -8,35 +8,12 @@ import (
 	"time"
 
 	"github.com/jsmithdenverdev/pager/pkg/identity"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
 //-----------------------------------------------------------------------------
 // AGENCY
 //-----------------------------------------------------------------------------
-
-// agency represents an agency in the database.
-type agency struct {
-	PK         string       `dynamodbav:"pk"`
-	SK         string       `dynamodbav:"sk"`
-	Type       entityType   `dynamodbav:"type"`
-	Name       string       `dynamodbav:"name"`
-	Status     agencyStatus `dynamodbav:"status"`
-	Created    time.Time    `dynamodbav:"created"`
-	Modified   time.Time    `dynamodbav:"modified"`
-	CreatedBy  string       `dynamodbav:"createdBy"`
-	ModifiedBy string       `dynamodbav:"modifiedBy"`
-}
-
-// agencyResponse represents a single agency by ID.
-type agencyResponse struct {
-	ID         string       `json:"pk"`
-	Name       string       `json:"name"`
-	Status     agencyStatus `json:"status"`
-	Created    time.Time    `json:"created"`
-	Modified   time.Time    `json:"modified"`
-	CreatedBy  string       `json:"createdBy"`
-	ModifiedBy string       `json:"modifiedBy"`
-}
 
 // createAgencyRequest represents a request to create a new agency.
 type createAgencyRequest struct {
@@ -60,8 +37,19 @@ type createAgencyResponse struct {
 	ID string `json:"id"`
 }
 
+// agencyResponse represents a single agency by ID.
+type agencyResponse struct {
+	ID         string    `json:"pk"`
+	Name       string    `json:"name"`
+	Status     string    `json:"status"`
+	Created    time.Time `json:"created"`
+	Modified   time.Time `json:"modified"`
+	CreatedBy  string    `json:"createdBy"`
+	ModifiedBy string    `json:"modifiedBy"`
+}
+
 // toAgencyResponse converts an agency to a response.
-func toAgencyResponse(agency agency) agencyResponse {
+func toAgencyResponse(agency models.Agency) agencyResponse {
 	return agencyResponse{
 		ID:         strings.Split(agency.PK, "#")[1],
 		Name:       agency.Name,
@@ -77,47 +65,21 @@ func toAgencyResponse(agency agency) agencyResponse {
 // MEMBERSHIP
 //-----------------------------------------------------------------------------
 
-// membership represents a users membership in an agency including their role.
-type membership struct {
-	PK         string           `dynamodbav:"pk"`
-	SK         string           `dynamodbav:"sk"`
-	Type       entityType       `dynamodbav:"type"`
-	Status     membershipStatus `dynamodbav:"status"`
-	Role       identity.Role    `dynamodbav:"role"`
-	Created    time.Time        `dynamodbav:"created"`
-	Modified   time.Time        `dynamodbav:"modified"`
-	CreatedBy  string           `dynamodbav:"createdBy"`
-	ModifiedBy string           `dynamodbav:"modifiedBy"`
-}
-
 // membershipResponse represents a single membership by ID.
 type membershipResponse struct {
-	AgencyID   string           `json:"agencyId"`
-	UserID     string           `json:"userId"`
-	Role       identity.Role    `json:"role"`
-	Status     membershipStatus `json:"status"`
-	Created    time.Time        `json:"created"`
-	Modified   time.Time        `json:"modified"`
-	CreatedBy  string           `json:"createdBy"`
-	ModifiedBy string           `json:"modifiedBy"`
+	AgencyID   string        `json:"agencyId"`
+	UserID     string        `json:"userId"`
+	Role       identity.Role `json:"role"`
+	Status     string        `json:"status"`
+	Created    time.Time     `json:"created"`
+	Modified   time.Time     `json:"modified"`
+	CreatedBy  string        `json:"createdBy"`
+	ModifiedBy string        `json:"modifiedBy"`
 }
 
 //-----------------------------------------------------------------------------
 // INVITATION
 //-----------------------------------------------------------------------------
-
-// invitation represents an invitation to join an agency.
-type invitation struct {
-	PK         string           `dynamodbav:"pk"`
-	SK         string           `dynamodbav:"sk"`
-	Type       entityType       `dynamodbav:"type"`
-	Status     invitationStatus `dynamodbav:"status"`
-	Role       identity.Role    `dynamodbav:"role"`
-	Created    time.Time        `dynamodbav:"created"`
-	Modified   time.Time        `dynamodbav:"modified"`
-	CreatedBy  string           `dynamodbav:"createdBy"`
-	ModifiedBy string           `dynamodbav:"modifiedBy"`
-}
 
 // createInvitationRequest represents a request to create a new invitation.
 type createInvitationRequest struct {
@@ -149,32 +111,19 @@ func (r createInvitationRequest) valid(ctx context.Context) map[string]string {
 // createInvitationResponse represents a response to a request to create a new
 // invitation.
 type createInvitationResponse struct {
-	AgencyID   string           `json:"agencyId"`
-	Email      string           `json:"email"`
-	Role       identity.Role    `json:"role"`
-	Status     invitationStatus `json:"status"`
-	Created    time.Time        `json:"created"`
-	Modified   time.Time        `json:"modified"`
-	CreatedBy  string           `json:"createdBy"`
-	ModifiedBy string           `json:"modifiedBy"`
+	AgencyID   string        `json:"agencyId"`
+	Email      string        `json:"email"`
+	Role       identity.Role `json:"role"`
+	Status     string        `json:"status"`
+	Created    time.Time     `json:"created"`
+	Modified   time.Time     `json:"modified"`
+	CreatedBy  string        `json:"createdBy"`
+	ModifiedBy string        `json:"modifiedBy"`
 }
 
 //-----------------------------------------------------------------------------
 // ENDPOINT REGISTRATION
 //-----------------------------------------------------------------------------
-
-// endpointRegistration represents a endpointRegistration between and endpoint and an agency.
-type endpointRegistration struct {
-	PK         string             `dynamodbav:"pk"`
-	SK         string             `dynamodbav:"sk"`
-	Type       entityType         `dynamodbav:"type"`
-	Status     registrationStatus `dynamodbav:"status"`
-	EndpointID string             `dynamodbav:"endpointId"`
-	Created    time.Time          `dynamodbav:"created"`
-	Modified   time.Time          `dynamodbav:"modified"`
-	CreatedBy  string             `dynamodbav:"createdBy"`
-	ModifiedBy string             `dynamodbav:"modifiedBy"`
-}
 
 // registerEndpointRequest represents a request to create a new registration.
 type registerEndpointRequest struct {
@@ -195,13 +144,13 @@ func (r registerEndpointRequest) valid(ctx context.Context) map[string]string {
 // registerEndpointResponse represents a response to a request to create a new
 // registration.
 type registerEndpointResponse struct {
-	AgencyID         string             `json:"agencyId"`
-	RegistrationCode string             `json:"registrationCode"`
-	Status           registrationStatus `json:"status"`
-	Created          time.Time          `json:"created"`
-	Modified         time.Time          `json:"modified"`
-	CreatedBy        string             `json:"createdBy"`
-	ModifiedBy       string             `json:"modifiedBy"`
+	AgencyID         string    `json:"agencyId"`
+	RegistrationCode string    `json:"registrationCode"`
+	Status           string    `json:"status"`
+	Created          time.Time `json:"created"`
+	Modified         time.Time `json:"modified"`
+	CreatedBy        string    `json:"createdBy"`
+	ModifiedBy       string    `json:"modifiedBy"`
 }
 
 //-----------------------------------------------------------------------------

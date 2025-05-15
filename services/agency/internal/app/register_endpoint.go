@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
 func registerEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
@@ -50,11 +51,11 @@ func registerEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb
 
 		now := time.Now()
 
-		registrationAV, err := attributevalue.MarshalMap(endpointRegistration{
+		registrationAV, err := attributevalue.MarshalMap(models.EndpointRegistration{
 			PK:         fmt.Sprintf("agency#%s", agencyID),
 			SK:         fmt.Sprintf("registration#%s", req.RegistrationCode),
-			Type:       entityTypeRegistration,
-			Status:     registrationStatusPending,
+			Type:       models.EntityTypeRegistration,
+			Status:     models.RegistrationStatusPending,
 			Created:    now,
 			Modified:   now,
 			CreatedBy:  user.ID,
@@ -110,7 +111,7 @@ func registerEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb
 		if err = encode(w, r, http.StatusCreated, registerEndpointResponse{
 			RegistrationCode: req.RegistrationCode,
 			AgencyID:         agencyID,
-			Status:           registrationStatusPending,
+			Status:           models.RegistrationStatusPending,
 			Created:          now,
 			Modified:         now,
 			CreatedBy:        user.ID,

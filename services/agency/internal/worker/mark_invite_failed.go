@@ -1,4 +1,4 @@
-package app
+package worker
 
 import (
 	"context"
@@ -13,8 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 )
 
-func failInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(context.Context, events.SNSEntity) error {
-	return func(ctx context.Context, record events.SNSEntity) error {
+func markInviteFailed(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(context.Context, events.SNSEntity, int) error {
+	return func(ctx context.Context, record events.SNSEntity, retryCount int) error {
 		var message struct {
 			Email    string `json:"email"`
 			AgencyID string `json:"agencyId"`

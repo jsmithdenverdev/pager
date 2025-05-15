@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/google/uuid"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
 // createAgency creates a new agency.
@@ -51,12 +52,12 @@ func createAgency(config Config, logger *slog.Logger, client *dynamodb.Client) h
 
 		id := uuid.New().String()
 
-		dynamoInput, err := attributevalue.MarshalMap(agency{
+		dynamoInput, err := attributevalue.MarshalMap(models.Agency{
 			PK:         fmt.Sprintf("agency#%s", id),
 			SK:         "meta",
-			Type:       entityTypeAgency,
+			Type:       models.EntityTypeAgency,
 			Name:       req.Name,
-			Status:     agencyStatusActive,
+			Status:     models.AgencyStatusActive,
 			Created:    time.Now(),
 			Modified:   time.Now(),
 			CreatedBy:  user.ID,

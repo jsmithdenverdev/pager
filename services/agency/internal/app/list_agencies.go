@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
 // listAgencies returns a list of agencies the calling user is a member of.
@@ -71,10 +72,10 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 				return
 			}
 
-			var agencies []agency
+			var agencies []models.Agency
 			if result.Items != nil {
 				for _, item := range result.Items {
-					var agency agency
+					var agency models.Agency
 					if err := attributevalue.UnmarshalMap(item, &agency); err != nil {
 						logger.ErrorContext(r.Context(), "failed to unmarshal agency record", slog.Any("error", err))
 						w.WriteHeader(http.StatusInternalServerError)
@@ -133,10 +134,10 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 			return
 		}
 
-		var memberships []membership
+		var memberships []models.Membership
 		if result.Items != nil {
 			for _, item := range result.Items {
-				var membership membership
+				var membership models.Membership
 				if err := attributevalue.UnmarshalMap(item, &membership); err != nil {
 					logger.ErrorContext(r.Context(), "failed to unmarshal membership record", slog.Any("error", err))
 					w.WriteHeader(http.StatusInternalServerError)

@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant UI
+    participant AgencyService
+    participant SNSTopic
+    participant UserService
+    participant Auth0
+    participant UserDynamoDB
+    participant AgencyDynamoDB
+
+
+    UI->>AgencyService: POST /agencies/{agency_id}/invitations
+    AgencyService->>AgencyDynamoDB: Create invite record
+    AgencyDynamoDB->>AgencyService: Return invite record
+    AgencyService->>SNSTopic: Publish agency.invite.created(email, agency_id, role)
+    SNSTopic->>UserService: Deliver agency.invite.created via SQS
+    UserService->>UserDynamoDB: Check if user with email exists
+    alt User not found
+        UserService->>Auth0: Create user with email
+        Auth0-->>UserService: Return auth0_user_id
+        UserService->>UserDynamoDB: Create user record
+    end
+    UserService->>SNSTopic: Publish user.invite.ensured(email, auth0_id, agency_id, role)
+    SNSTopic->>AgencyService: Deliver user.invite.ensured via SQS
+    AgencyService->>AgencyDynamoDB: Create membership record
+    AgencyService->>SNSTopic: Publish agency.membership.created(email, agency_id, role)
+    SNSTopic->>UserService: Deliver agency.membership.created via SQS
+    UserService->>UserDynamoDB: Update user record
