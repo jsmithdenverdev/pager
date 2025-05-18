@@ -18,8 +18,9 @@ import (
 	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
-// CreateMembership creates a new membership in the agency.
-func createMembership(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(context.Context, events.SNSEntity, int) error {
+// createMembershipForInvite creates a new membership in the agency related to
+// an originating invitation.
+func createMembershipForInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(context.Context, events.SNSEntity, int) error {
 	type message struct {
 		Email    string `json:"email"`
 		AgencyID string `json:"agencyId"`
@@ -44,7 +45,7 @@ func createMembership(config Config, logger *slog.Logger, dynamoClient *dynamodb
 			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("email#%s", message.Email),
+					Value: fmt.Sprintf("invite#%s", message.Email),
 				},
 				":sk": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("agency#%s", message.AgencyID),

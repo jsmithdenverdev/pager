@@ -20,6 +20,14 @@ Parameters:
     Type: String
   EventsTopicName:
     Type: String
+  Auth0Domain:
+    Type: String
+  Auth0ManagementClientID:
+    Type: String
+  Auth0ManagementClientSecret:
+    Type: String
+  Auth0Connection:
+    Type: String
 
 Resources:
   WorkerFunction:
@@ -45,6 +53,10 @@ Resources:
           EVENT_RETRY_COUNT: !Ref EventRetryCount
           USER_TABLE_NAME: !Ref UserTable
           EVENTS_TOPIC_ARN: !Ref EventsTopicArn
+          AUTH0_DOMAIN: !Ref Auth0Domain
+          AUTH0_MANAGEMENT_CLIENT_ID: !Ref Auth0ManagementClientID
+          AUTH0_MANAGEMENT_CLIENT_SECRET: !Ref Auth0ManagementClientSecret
+          AUTH0_CONNECTION: !Ref Auth0Connection
       Events:
         SQSEvent:
           Type: SQS
@@ -108,7 +120,7 @@ Resources:
       Endpoint: !GetAtt UserEventsQueue.Arn
       FilterPolicy:
         type:
-          - "agency.invite.created"
+          - "user.ensure-invite"
           - "agency.membership.created"
           - "agency.membership.updated"
           - "agency.membership.deleted"

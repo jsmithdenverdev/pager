@@ -142,12 +142,10 @@ Resources:
       Endpoint: !GetAtt AgencyEventsQueue.Arn
       FilterPolicy:
         type:
-          - "user.invite.ensured"
-          - "user.invite.ensure.failed"
-          - "user.membership.upserted"
-          - "user.membership.upsert.failed"
-          - "user.membership.deleted"
-          - "user.membership.delete.failed"
+          - "user.invite-target.ensured"
+          - "user.ensure-invite.failed"
+          # - "user.membership.upsert.failed"
+          # - "user.membership.delete.failed"
 
 Outputs:
   ApiId:

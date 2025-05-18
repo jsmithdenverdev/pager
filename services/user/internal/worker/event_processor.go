@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strconv"
 
+	"github.com/auth0/go-auth0/authentication"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -14,15 +15,15 @@ import (
 )
 
 const (
-	evtUserInviteEnsured      = "user.invite.ensured"
-	evtUserInviteEnsureFailed = "user.invite.ensure.failed"
+	evtInviteTargetEnsured    = "user.invite-target.ensured"
+	evtEnsureInviteFailed     = "user.ensure-invite.failed"
 	evtMembershipUpserted     = "user.membership.upserted"
 	evtMembershipUpsertFailed = "user.membership.upsert.failed"
 	evtMembershipDeleted      = "user.membership.deleted"
 	evtMembershipDeleteFailed = "user.membership.delete.failed"
 )
 
-func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
+func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client, auth0Client *authentication.Authentication) func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
 	return func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
 		var batchItemFailures []events.SQSBatchItemFailure
 		for _, record := range event.Records {
@@ -48,8 +49,8 @@ func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cl
 			retryCount := recieveCount + 1
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
-			case "agency.invite.created":
-				if err := ensureUserFromInvite(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+			case "user.ensure-invite":
+				if err := ensureUserFromInvite(config, logger, dynamoClient, snsClient, auth0Client)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to ensure user from invite", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,

@@ -46,14 +46,14 @@ func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cl
 			retryCount := recieveCount + 1
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
-			case "user.invite.ensured":
-				if err := createMembership(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+			case "user.invite-target.ensured":
+				if err := createMembershipForInvite(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to create membership", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
 					})
 				}
-			case "user.invite.ensure.failed":
+			case "user.ensure-invite.failed":
 				if err := markInviteFailed(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to mark invite as failed", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{

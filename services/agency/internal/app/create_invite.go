@@ -55,7 +55,7 @@ func createInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cli
 		now := time.Now()
 
 		invitationAV, err := attributevalue.MarshalMap(models.Invitation{
-			PK:         fmt.Sprintf("email#%s", req.Email),
+			PK:         fmt.Sprintf("invite#%s", req.Email),
 			SK:         fmt.Sprintf("agency#%s", agencyID),
 			Type:       models.EntityTypeInvitation,
 			Role:       req.Role,
@@ -86,11 +86,9 @@ func createInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cli
 		messageBody, err := json.Marshal(struct {
 			Email    string `json:"email"`
 			AgencyID string `json:"agencyId"`
-			Role     string `json:"role"`
 		}{
 			Email:    req.Email,
 			AgencyID: agencyID,
-			Role:     req.Role,
 		})
 
 		if err != nil {
@@ -105,7 +103,7 @@ func createInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cli
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
 				"type": {
 					DataType:    aws.String("String"),
-					StringValue: aws.String("agency.invite.created"),
+					StringValue: aws.String("user.ensure-invite"),
 				},
 			},
 		}); err != nil {
