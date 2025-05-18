@@ -47,10 +47,14 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 			scanInput := dynamodb.ScanInput{
 				TableName:        aws.String(config.AgencyTableName),
 				Limit:            aws.Int32(int32(first)),
-				FilterExpression: aws.String("begins_with(pk, :pkprefix) AND begins_with(sk, :skprefix)"),
+				FilterExpression: aws.String("begins_with(#pk, :pkprefix) AND #sk = :skprefix"),
+				ExpressionAttributeNames: map[string]string{
+					"#pk": "pk",
+					"#sk": "sk",
+				},
 				ExpressionAttributeValues: map[string]types.AttributeValue{
 					":pkprefix": &types.AttributeValueMemberS{Value: "agency#"},
-					":skprefix": &types.AttributeValueMemberS{Value: "agency#"},
+					":skprefix": &types.AttributeValueMemberS{Value: "meta"},
 				},
 			}
 
@@ -60,7 +64,7 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 						Value: fmt.Sprintf("agency#%s", cursor),
 					},
 					"sk": &types.AttributeValueMemberS{
-						Value: fmt.Sprintf("agency#%s", cursor),
+						Value: "meta",
 					},
 				}
 			}
@@ -108,10 +112,17 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 		queryInput := &dynamodb.QueryInput{
 			TableName:              aws.String(config.AgencyTableName),
 			Limit:                  aws.Int32(int32(first)),
-			KeyConditionExpression: aws.String("pk = :userid"),
+			KeyConditionExpression: aws.String("#pk = :userid AND begins_with(#sk, :skprefix)"),
+			ExpressionAttributeNames: map[string]string{
+				"#pk": "pk",
+				"#sk": "sk",
+			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":userid": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("user#%s", userid),
+				},
+				":skprefix": &types.AttributeValueMemberS{
+					Value: "agency#",
 				},
 			},
 		}
