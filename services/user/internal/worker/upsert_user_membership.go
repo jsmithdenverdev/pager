@@ -68,6 +68,9 @@ func upsertUserMembership(config Config, logger *slog.Logger, dynamoClient *dyna
 			return logAndHandleError(ctx, retryCount, "failed to upsert user membership", message, err)
 		}
 
+		if user.Memberships == nil {
+			user.Memberships = make(map[string]identity.Role)
+		}
 		user.Memberships[message.AgencyID] = message.Role
 
 		memberships, err := attributevalue.MarshalMap(user.Memberships)
