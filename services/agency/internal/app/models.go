@@ -39,7 +39,7 @@ type createAgencyResponse struct {
 
 // agencyResponse represents a single agency by ID.
 type agencyResponse struct {
-	ID         string    `json:"pk"`
+	ID         string    `json:"id"`
 	Name       string    `json:"name"`
 	Status     string    `json:"status"`
 	Created    time.Time `json:"created"`
