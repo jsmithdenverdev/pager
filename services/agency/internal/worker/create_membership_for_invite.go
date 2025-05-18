@@ -122,7 +122,7 @@ func createMembershipForInvite(config Config, logger *slog.Logger, dynamoClient 
 						TableName: aws.String(config.AgencyTableName),
 						Key: map[string]types.AttributeValue{
 							"pk": &types.AttributeValueMemberS{
-								Value: fmt.Sprintf("email#%s", message.Email),
+								Value: fmt.Sprintf("invite#%s", message.Email),
 							},
 							"sk": &types.AttributeValueMemberS{
 								Value: fmt.Sprintf("agency#%s", message.AgencyID),
