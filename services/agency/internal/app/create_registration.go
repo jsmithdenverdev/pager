@@ -16,7 +16,7 @@ import (
 	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
-func registerEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
+func createRegistration(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			user     identity.User
@@ -99,7 +99,7 @@ func registerEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
 				"type": {
 					DataType:    aws.String("String"),
-					StringValue: aws.String("endpoint.endpoint.ensure_and_register"),
+					StringValue: aws.String("endpoint.ensure-registration"),
 				},
 			},
 		}); err != nil {

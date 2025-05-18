@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -16,16 +17,19 @@ import (
 	"github.com/jsmithdenverdev/pager/services/endpoint/internal/models"
 )
 
-func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, snsRecord events.SNSEntity) error {
-	return func(ctx context.Context, snsRecord events.SNSEntity) error {
-		var message struct {
-			AgencyID         string `json:"agencyId"`
-			RegistrationCode string `json:"registrationCode"`
-		}
+func ensureEndpointFromRegistrationCode(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, snsRecord events.SNSEntity, retryCount int) error {
+	type message struct {
+		AgencyID         string `json:"agencyId"`
+		RegistrationCode string `json:"registrationCode"`
+	}
+
+	logAndHandleError := eventProcessorErrorHandler(config, logger, snsClient, evtEnsureRegistrationFailed)
+
+	return func(ctx context.Context, snsRecord events.SNSEntity, retryCount int) error {
+		var message message
 
 		if err := json.Unmarshal([]byte(snsRecord.Message), &message); err != nil {
-			logger.ErrorContext(ctx, "failed to unmarshal message", slog.Any("error", err))
-			return err
+			return logAndHandleError(ctx, retryCount, "failed to ensure endpoint from registration code", message, err)
 		}
 
 		queryRegistrationCodeResult, err := dynamoClient.Query(ctx, &dynamodb.QueryInput{
@@ -46,20 +50,17 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 		})
 
 		if err != nil {
-			logger.ErrorContext(ctx, "failed to query registration code", slog.Any("error", err))
-			return err
+			return logAndHandleError(ctx, retryCount, "failed to ensure endpoint from registration code", message, err)
 		}
 
 		if len(queryRegistrationCodeResult.Items) == 0 {
-			logger.ErrorContext(ctx, "registration code doesn't exist", slog.Any("registrationCode", message.RegistrationCode))
-			return fmt.Errorf("registration code doesn't exist")
+			return logAndHandleError(ctx, retryCount, "failed to ensure endpoint from registration code", message, err)
 		}
 
 		var rc models.RegistrationCode
 
 		if err := attributevalue.UnmarshalMap(queryRegistrationCodeResult.Items[0], &rc); err != nil {
-			logger.ErrorContext(ctx, "failed to unmarshal registration code", slog.Any("error", err))
-			return err
+			return logAndHandleError(ctx, retryCount, "failed to ensure endpoint from registration code", message, err)
 		}
 
 		queryEndpointResult, err := dynamoClient.Query(ctx, &dynamodb.QueryInput{
@@ -80,25 +81,25 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 		})
 
 		if err != nil {
-			logger.ErrorContext(ctx, "failed to query endpoint", slog.Any("error", err))
-			return err
+			return logAndHandleError(ctx, retryCount, "failed to ensure endpoint from registration code", message, err)
 		}
 
 		if len(queryEndpointResult.Items) == 0 {
-			logger.ErrorContext(ctx, "endpoint doesn't exist", slog.Any("userId", rc.UserID), slog.Any("endpointId", rc.EndpointID))
-			return fmt.Errorf("endpoint doesn't exist")
+			return logAndHandleError(ctx, retryCount, "failed to ensure endpoint from registration code", message, errors.New("endpoint doesn't exist"))
 		}
 
 		var endpoint models.Endpoint
 
 		if err := attributevalue.UnmarshalMap(queryEndpointResult.Items[0], &endpoint); err != nil {
-			logger.ErrorContext(ctx, "failed to unmarshal endpoint", slog.Any("error", err))
-			return err
+			return logAndHandleError(ctx, retryCount, "failed to ensure endpoint from registration code", message, err)
 		}
 
+		if endpoint.Registrations == nil {
+			endpoint.Registrations = []string{}
+		}
 		endpoint.Registrations = append(endpoint.Registrations, message.AgencyID)
 
-		_, err = dynamoClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		if _, err := dynamoClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 			TableName: aws.String(config.EndpointTableName),
 			Key: map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
@@ -117,11 +118,8 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 					Value: endpoint.Registrations,
 				},
 			},
-		})
-
-		if err != nil {
-			logger.ErrorContext(ctx, "failed to update endpoint", slog.Any("error", err))
-			return err
+		}); err != nil {
+			return logAndHandleError(ctx, retryCount, "failed to ensure endpoint from registration code", message, err)
 		}
 
 		messageBody, err := json.Marshal(struct {
@@ -135,8 +133,7 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 		})
 
 		if err != nil {
-			logger.ErrorContext(ctx, "failed to marshal SNS message", slog.Any("error", err))
-			return err
+			return logAndHandleError(ctx, retryCount, "failed to ensure endpoint from registration code", message, err)
 		}
 
 		if _, err = snsClient.Publish(ctx, &sns.PublishInput{
@@ -145,12 +142,11 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
 				"type": {
 					DataType:    aws.String("String"),
-					StringValue: aws.String("endpoint.endpoint.ensured_and_registered"),
+					StringValue: aws.String(evtRegistrationEnsured),
 				},
 			},
 		}); err != nil {
-			logger.ErrorContext(ctx, "failed to publish SNS message", slog.Any("error", err))
-			return err
+			return logAndHandleError(ctx, retryCount, "failed to ensure endpoint from registration code", message, err)
 		}
 
 		return nil

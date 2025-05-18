@@ -4,10 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
+	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
+)
+
+const (
+	evtRegistrationEnsured      = "endpoint.registration-code-target.ensured"
+	evtEnsureRegistrationFailed = "endpoint.ensure-registration.failed"
 )
 
 func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
@@ -25,10 +33,19 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			}
 
 			eventType := snsRecord.MessageAttributes["type"].(map[string]any)["Value"].(string)
+			recieveCount, err := strconv.Atoi(record.Attributes["ApproximateReceiveCount"])
+			if err != nil {
+				logger.ErrorContext(ctx, "failed to convert receive count to int", slog.Any("error", err))
+				batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
+					ItemIdentifier: record.MessageId,
+				})
+				continue
+			}
+			retryCount := recieveCount + 1
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
-			case "endpoint.endpoint.ensure_and_register":
-				if err := ensureAndRegisterEndpoint(config, logger, dynamoClient, snsClient)(ctx, snsRecord); err != nil {
+			case "endpoint.ensure-registration":
+				if err := ensureEndpointFromRegistrationCode(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to ensure endpoint", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
@@ -50,5 +67,32 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 		return events.SQSEventResponse{
 			BatchItemFailures: batchItemFailures,
 		}, nil
+	}
+}
+
+func eventProcessorErrorHandler(config Config, logger *slog.Logger, snsClient *sns.Client, eventType string) func(ctx context.Context, retryCount int, msg string, event any, err error, attributes ...any) error {
+	return func(ctx context.Context, retryCount int, msg string, event any, err error, attributes ...any) error {
+		logger.ErrorContext(ctx, msg, append(attributes, slog.Any("error", err))...)
+		if retryCount >= config.EventRetryCount {
+			messageBytes, err := json.Marshal(event)
+			if err != nil {
+				logger.ErrorContext(ctx, "failed to marshal event to json", append(attributes, slog.Any("error", err))...)
+				return err
+			}
+			if _, err := snsClient.Publish(ctx, &sns.PublishInput{
+				TopicArn: aws.String(config.EventsTopicARN),
+				Message:  aws.String(string(messageBytes)),
+				MessageAttributes: map[string]snstypes.MessageAttributeValue{
+					"type": {
+						DataType:    aws.String("String"),
+						StringValue: aws.String(eventType),
+					},
+				},
+			}); err != nil {
+				logger.ErrorContext(ctx, "failed to event", append(attributes, slog.Any("error", err))...)
+				return err
+			}
+		}
+		return err
 	}
 }

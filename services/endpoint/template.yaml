@@ -74,6 +74,7 @@ Resources:
           ENVIRONMENT: !Ref Environment
           ENDPOINT_TABLE_NAME: !Ref EndpointTable
           EVENTS_TOPIC_ARN: !Ref EventsTopicArn
+          EVENT_RETRY_COUNT: !Ref EventRetryCount
       Events:
         SQSEvent:
           Type: SQS
@@ -138,7 +139,7 @@ Resources:
       FilterPolicy:
         type:
           # Events
-          - "endpoint.endpoint.ensure_and_register"
+          - "endpoint.ensure-registration"
 
 Outputs:
   ApiId:

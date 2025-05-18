@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	evtMembershipCreated      string = "agency.membership.created"
-	evtMembershipCreateFailed string = "agency.membership.create.failed"
-	evtMembershipDeleted      string = "agency.membership.deleted"
-	evtMembershipDeleteFailed string = "agency.membership.delete.failed"
+	evtMembershipCreated              string = "agency.membership.created"
+	evtMembershipCreateFailed         string = "agency.membership.create.failed"
+	evtMembershipDeleted              string = "agency.membership.deleted"
+	evtMembershipDeleteFailed         string = "agency.membership.delete.failed"
+	evtRegistrationFinalizationFailed string = "agency.registration.finalization.failed"
 )
 
 func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
@@ -56,6 +57,20 @@ func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cl
 			case "user.ensure-invite.failed":
 				if err := markInviteFailed(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to mark invite as failed", slog.Any("error", err))
+					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
+						ItemIdentifier: record.MessageId,
+					})
+				}
+			case "endpoint.registration-code-target.ensured":
+				if err := finalizeRegistration(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+					logger.ErrorContext(ctx, "failed to finalize registration", slog.Any("error", err))
+					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
+						ItemIdentifier: record.MessageId,
+					})
+				}
+			case "endpoint.ensure-registration.failed":
+				if err := markRegistrationFailed(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+					logger.ErrorContext(ctx, "failed to mark registration as failed", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
 					})

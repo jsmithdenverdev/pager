@@ -7,4 +7,5 @@ type Config struct {
 	Environment       string     `env:"ENVIRONMENT"`
 	EndpointTableName string     `env:"ENDPOINT_TABLE_NAME"`
 	EventsTopicARN    string     `env:"EVENTS_TOPIC_ARN"`
+	EventRetryCount   int        `env:"EVENT_RETRY_COUNT"`
 }
