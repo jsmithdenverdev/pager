@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/google/uuid"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
+	"github.com/jsmithdenverdev/pager/services/endpoint/internal/models"
 )
 
 func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
@@ -38,20 +39,6 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			return
 		}
 
-		// A user can only create an endpoint if they have a membership in an agency
-		// TODO: what about agency status?
-		if len(user.Memberships) == 0 {
-			w.WriteHeader(http.StatusBadRequest)
-			if err := json.NewEncoder(w).Encode(map[string]string{
-				"error": "you must have at least one agency membership to create an endpoint",
-			}); err != nil {
-				logger.ErrorContext(r.Context(), "failed to encode response", slog.Any("error", err))
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			return
-		}
-
 		req, problems, err := decodeValid[createEndpointRequest](r)
 		if err != nil {
 			if len(problems) > 0 {
@@ -67,21 +54,23 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			return
 		}
 
-		now := time.Now()
-		id := uuid.New().String()
-		rc := fmt.Sprintf("%x", sha256.Sum256([]byte(id)))
+		var (
+			now              = time.Now()
+			id               = uuid.New().String()
+			registrationCode = fmt.Sprintf("%x", sha256.Sum256([]byte(id)))
+		)
 
-		endpointAV, err := attributevalue.MarshalMap(endpoint{
-			keyFields: keyFields{
+		endpointAV, err := attributevalue.MarshalMap(models.Endpoint{
+			KeyFields: models.KeyFields{
 				PK:   fmt.Sprintf("endpoint#%s", id),
 				SK:   "meta",
-				Type: entityTypeEndpoint,
+				Type: models.EntityTypeEndpoint,
 			},
-			auditableFields:  newAuditableFields(user.ID, now),
+			AuditableFields:  models.NewAuditableFields(user.ID, now),
 			UserID:           user.ID,
 			Name:             req.Name,
 			EndpointType:     req.EndpointType,
-			RegistrationCode: rc,
+			RegistrationCode: registrationCode,
 			URL:              req.URL,
 		})
 		if err != nil {
@@ -90,13 +79,13 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			return
 		}
 
-		registrationCodeAV, err := attributevalue.MarshalMap(registrationCode{
-			keyFields: keyFields{
-				PK:   fmt.Sprintf("rc#%s", rc),
+		registrationCodeAV, err := attributevalue.MarshalMap(models.RegistrationCode{
+			KeyFields: models.KeyFields{
+				PK:   fmt.Sprintf("rc#%s", registrationCode),
 				SK:   "registrationcode",
-				Type: entityTypeRegistrationCode,
+				Type: models.EntityTypeRegistrationCode,
 			},
-			auditableFields: newAuditableFields(user.ID, now),
+			AuditableFields: models.NewAuditableFields(user.ID, now),
 			EndpointID:      id,
 			UserID:          user.ID,
 		})
@@ -106,13 +95,13 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			return
 		}
 
-		ownershipLinkAV, err := attributevalue.MarshalMap(ownershipLink{
-			keyFields: keyFields{
+		ownershipLinkAV, err := attributevalue.MarshalMap(models.OwnershipLink{
+			KeyFields: models.KeyFields{
 				PK:   fmt.Sprintf("user#%s", user.ID),
 				SK:   fmt.Sprintf("endpoint#%s", id),
-				Type: entityTypeOwnershipLink,
+				Type: models.EntityTypeOwnershipLink,
 			},
-			auditableFields: newAuditableFields(user.ID, now),
+			AuditableFields: models.NewAuditableFields(user.ID, now),
 		})
 		if err != nil {
 			logger.ErrorContext(r.Context(), "failed to marshal ownership link", slog.Any("error", err))

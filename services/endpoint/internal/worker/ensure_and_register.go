@@ -1,4 +1,4 @@
-package app
+package worker
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
+	"github.com/jsmithdenverdev/pager/services/endpoint/internal/models"
 )
 
 func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, snsRecord events.SNSEntity) error {
@@ -54,7 +55,7 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 			return fmt.Errorf("registration code doesn't exist")
 		}
 
-		var rc registrationCode
+		var rc models.RegistrationCode
 
 		if err := attributevalue.UnmarshalMap(queryRegistrationCodeResult.Items[0], &rc); err != nil {
 			logger.ErrorContext(ctx, "failed to unmarshal registration code", slog.Any("error", err))
@@ -88,7 +89,7 @@ func ensureAndRegisterEndpoint(config Config, logger *slog.Logger, dynamoClient 
 			return fmt.Errorf("endpoint doesn't exist")
 		}
 
-		var endpoint endpoint
+		var endpoint models.Endpoint
 
 		if err := attributevalue.UnmarshalMap(queryEndpointResult.Items[0], &endpoint); err != nil {
 			logger.ErrorContext(ctx, "failed to unmarshal endpoint", slog.Any("error", err))
