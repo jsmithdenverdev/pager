@@ -18,9 +18,9 @@ import (
 	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
-// createMembershipForInvite creates a new membership in the agency related to
+// finalizeInvite creates a new membership in the agency related to
 // an originating invitation.
-func createMembershipForInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(context.Context, events.SNSEntity, int) error {
+func finalizeInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(context.Context, events.SNSEntity, int) error {
 	type message struct {
 		Email    string `json:"email"`
 		AgencyID string `json:"agencyId"`

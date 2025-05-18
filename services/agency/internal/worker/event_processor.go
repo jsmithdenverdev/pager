@@ -47,8 +47,8 @@ func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cl
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
 			case "user.invite-target.ensured":
-				if err := createMembershipForInvite(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
-					logger.ErrorContext(ctx, "failed to create membership", slog.Any("error", err))
+				if err := finalizeInvite(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+					logger.ErrorContext(ctx, "failed to finalize invite", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
 					})

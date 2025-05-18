@@ -20,8 +20,8 @@ import (
 func upsertUserMembership(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(context.Context, events.SNSEntity, int) error {
 	type message struct {
 		UserID   string        `json:"userId"`
-		Role     identity.Role `json:"role"`
 		AgencyID string        `json:"agencyId"`
+		Role     identity.Role `json:"role"`
 	}
 
 	logAndHandleError := eventProcessorErrorHandler(config, logger, snsClient, evtMembershipUpsertFailed)
@@ -100,7 +100,7 @@ func upsertUserMembership(config Config, logger *slog.Logger, dynamoClient *dyna
 			return logAndHandleError(ctx, retryCount, "failed to upsert user membership", message, err)
 		}
 
-		_, err = snsClient.Publish(ctx, &sns.PublishInput{
+		if _, err := snsClient.Publish(ctx, &sns.PublishInput{
 			TopicArn: aws.String(config.EventsTopicARN),
 			Message:  aws.String(fmt.Sprintf(`{"userId": "%s", "agencyId": "%s"}`, message.UserID, message.AgencyID)),
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
@@ -109,9 +109,7 @@ func upsertUserMembership(config Config, logger *slog.Logger, dynamoClient *dyna
 					StringValue: aws.String(evtMembershipUpserted),
 				},
 			},
-		})
-
-		if err != nil {
+		}); err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to upsert user membership", message, err)
 		}
 
