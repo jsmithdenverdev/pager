@@ -157,6 +157,8 @@ func finalizeInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			return logAndHandleError(ctx, retryCount, "failed to publish create membership event", message, err)
 		}
 
+		logger.DebugContext(ctx, "published event", slog.String("type", evtMembershipCreated))
+
 		return nil
 	}
 }
