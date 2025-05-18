@@ -56,8 +56,7 @@ func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cl
 						ItemIdentifier: record.MessageId,
 					})
 				}
-			case "agency.membership.created":
-			case "agency.membership.updated":
+			case "agency.membership.created", "agency.membership.updated":
 				if err := upsertUserMembership(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to upsert user membership", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
