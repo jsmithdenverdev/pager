@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/caarlos0/env/v11"
-	"github.com/jsmithdenverdev/pager/services/agency/internal/app"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/worker"
 )
 
 func main() {
@@ -22,7 +22,7 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	var conf app.Config
+	var conf worker.Config
 	if err := env.Parse(&conf); err != nil {
 		return fmt.Errorf("failed to load config from env: %w", err)
 	}
@@ -39,7 +39,7 @@ func run(ctx context.Context) error {
 	dynamoClient := dynamodb.NewFromConfig(awsconf)
 	snsClient := sns.NewFromConfig(awsconf)
 
-	lambda.Start(app.EventProcessor(conf, logger, dynamoClient, snsClient))
+	lambda.Start(worker.ProcessEvents(conf, logger, dynamoClient, snsClient))
 
 	return nil
 }

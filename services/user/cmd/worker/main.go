@@ -6,12 +6,13 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/auth0/go-auth0/authentication"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/caarlos0/env/v11"
-	"github.com/jsmithdenverdev/pager/services/user/internal/app"
+	"github.com/jsmithdenverdev/pager/services/user/internal/worker"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	var conf app.Config
+	var conf worker.Config
 	if err := env.Parse(&conf); err != nil {
 		return fmt.Errorf("failed to load config from env: %w", err)
 	}
@@ -39,7 +40,18 @@ func run(ctx context.Context) error {
 	dynamoClient := dynamodb.NewFromConfig(awsconf)
 	snsClient := sns.NewFromConfig(awsconf)
 
-	lambda.Start(app.EventProcessor(conf, logger, dynamoClient, snsClient))
+	// Initialize a new client using a domain, client ID and client secret.
+	authAPI, err := authentication.New(
+		ctx,
+		conf.Auth0Domain,
+		authentication.WithClientID(conf.Auth0ManagementClientID),
+		authentication.WithClientSecret(conf.Auth0ManagementClientSecret),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize the auth0 authentication API client: %w", err)
+	}
+
+	lambda.Start(worker.ProcessEvents(conf, logger, dynamoClient, snsClient, authAPI))
 
 	return nil
 }

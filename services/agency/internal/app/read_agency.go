@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
 // readAgency returns a single agency by ID.
@@ -52,7 +53,7 @@ func readAgency(config Config, logger *slog.Logger, client *dynamodb.Client) htt
 			return
 		}
 
-		var agency agency
+		var agency models.Agency
 		if result.Item != nil {
 			if err := attributevalue.UnmarshalMap(result.Item, &agency); err != nil {
 				logger.ErrorContext(r.Context(), "failed to unmarshal agency record", slog.Any("error", err))

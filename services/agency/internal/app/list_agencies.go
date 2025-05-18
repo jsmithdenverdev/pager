@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
 // listAgencies returns a list of agencies the calling user is a member of.
@@ -46,10 +47,14 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 			scanInput := dynamodb.ScanInput{
 				TableName:        aws.String(config.AgencyTableName),
 				Limit:            aws.Int32(int32(first)),
-				FilterExpression: aws.String("begins_with(pk, :pkprefix) AND begins_with(sk, :skprefix)"),
+				FilterExpression: aws.String("begins_with(#pk, :pkprefix) AND #sk = :skprefix"),
+				ExpressionAttributeNames: map[string]string{
+					"#pk": "pk",
+					"#sk": "sk",
+				},
 				ExpressionAttributeValues: map[string]types.AttributeValue{
 					":pkprefix": &types.AttributeValueMemberS{Value: "agency#"},
-					":skprefix": &types.AttributeValueMemberS{Value: "agency#"},
+					":skprefix": &types.AttributeValueMemberS{Value: "meta"},
 				},
 			}
 
@@ -59,7 +64,7 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 						Value: fmt.Sprintf("agency#%s", cursor),
 					},
 					"sk": &types.AttributeValueMemberS{
-						Value: fmt.Sprintf("agency#%s", cursor),
+						Value: "meta",
 					},
 				}
 			}
@@ -71,10 +76,10 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 				return
 			}
 
-			var agencies []agency
+			var agencies []models.Agency
 			if result.Items != nil {
 				for _, item := range result.Items {
-					var agency agency
+					var agency models.Agency
 					if err := attributevalue.UnmarshalMap(item, &agency); err != nil {
 						logger.ErrorContext(r.Context(), "failed to unmarshal agency record", slog.Any("error", err))
 						w.WriteHeader(http.StatusInternalServerError)
@@ -107,10 +112,17 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 		queryInput := &dynamodb.QueryInput{
 			TableName:              aws.String(config.AgencyTableName),
 			Limit:                  aws.Int32(int32(first)),
-			KeyConditionExpression: aws.String("pk = :userid"),
+			KeyConditionExpression: aws.String("#pk = :userid AND begins_with(#sk, :skprefix)"),
+			ExpressionAttributeNames: map[string]string{
+				"#pk": "pk",
+				"#sk": "sk",
+			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":userid": &types.AttributeValueMemberS{
 					Value: fmt.Sprintf("user#%s", userid),
+				},
+				":skprefix": &types.AttributeValueMemberS{
+					Value: "agency#",
 				},
 			},
 		}
@@ -133,10 +145,10 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 			return
 		}
 
-		var memberships []membership
+		var memberships []models.Membership
 		if result.Items != nil {
 			for _, item := range result.Items {
-				var membership membership
+				var membership models.Membership
 				if err := attributevalue.UnmarshalMap(item, &membership); err != nil {
 					logger.ErrorContext(r.Context(), "failed to unmarshal membership record", slog.Any("error", err))
 					w.WriteHeader(http.StatusInternalServerError)

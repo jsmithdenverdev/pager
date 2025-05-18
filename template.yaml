@@ -28,6 +28,12 @@ Parameters:
   Auth0Audience:
     Type: String
     Default: pager
+  Auth0ManagementClientID:
+    Type: String
+  Auth0ManagementClientSecret:
+    Type: String
+  Auth0Connection:
+    Type: String
 Resources:
   EventsService:
     Type: AWS::Serverless::Application
@@ -44,6 +50,10 @@ Resources:
         Environment: !Ref Environment
         LogLevel: !Ref LogLevel
         EventRetryCount: !Ref EventRetryCount
+        Auth0Domain: !Ref Auth0Domain
+        Auth0ManagementClientID: !Ref Auth0ManagementClientID
+        Auth0ManagementClientSecret: !Ref Auth0ManagementClientSecret
+        Auth0Connection: !Ref Auth0Connection
         EventsTopicArn: !GetAtt EventsService.Outputs.TopicArn
         EventsTopicName: !GetAtt EventsService.Outputs.TopicName
 
