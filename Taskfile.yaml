@@ -3,7 +3,7 @@ version: "3"
 # This Taskfile organizes commands for the Pager microservices architecture.
 # It is structured in two main sections:
 # 1. Common Tasks: Global and shared task definitions
-# 2. Service-Specific Tasks: Organized by service (agency, auth, page, user)
+# 2. Service-Specific Tasks: Organized by service (agency, endpoint, events, gateway, page, user)
 
 vars:
   AWS_PROFILE_DEFAULT: localstack
@@ -44,6 +44,13 @@ tasks:
     dir: "{{.DIR}}"
     cmds:
       - golangci-lint run {{.DIR}}/...
+
+  mod:tidy:
+    private: true
+    desc: Run go mod tidy
+    dir: "{{.DIR}}"
+    cmds:
+      - go mod tidy
 
   sam:build:
     private: true
@@ -99,6 +106,43 @@ tasks:
       - task: sam:validate:all
       - AWS_PROFILE={{.AWS_PROFILE}} sam deploy
 
+  # Convenience tasks to run operations across all services
+  test:mocks:all:
+    desc: Generate mocks for all services
+    cmds:
+      - task: test:mocks:agency
+      - task: test:mocks:endpoint
+      - task: test:mocks:gateway
+      - task: test:mocks:page
+      - task: test:mocks:user
+
+  test:unit:all:
+    desc: Run unit tests for all services
+    cmds:
+      - task: test:unit:agency
+      - task: test:unit:endpoint
+      - task: test:unit:gateway
+      - task: test:unit:page
+      - task: test:unit:user
+
+  lint:all:
+    desc: Run linter for all services
+    cmds:
+      - task: lint:agency
+      - task: lint:endpoint
+      - task: lint:gateway
+      - task: lint:page
+      - task: lint:user
+
+  mod:tidy:all:
+    desc: Run go mod tidy for all services
+    cmds:
+      - task: mod:tidy:agency
+      - task: mod:tidy:endpoint
+      - task: mod:tidy:gateway
+      - task: mod:tidy:page
+      - task: mod:tidy:user
+
   ###############################################################################
   # Agency Service
   # Handles agency-related functionality including agency management,
@@ -129,6 +173,13 @@ tasks:
     desc: Run linter for agency service
     cmds:
       - task: lint
+        vars:
+          DIR: services/agency
+
+  mod:tidy:agency:
+    desc: Run go mod tidy for agency service
+    cmds:
+      - task: mod:tidy
         vars:
           DIR: services/agency
 
@@ -164,66 +215,179 @@ tasks:
           AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   ###############################################################################
-  # Auth Service
-  # Manages authentication, authorization, and user identity across the platform
+  # Endpoint Service
+  # Manages API endpoints and request handling
   ###############################################################################
-  test:mocks:auth:
-    desc: Generate mocks for auth service
+  test:mocks:endpoint:
+    desc: Generate mocks for endpoint service
     cmds:
       - task: test:mocks
         vars:
-          DIR: services/auth
+          DIR: services/endpoint
 
-  test:unit:auth:
-    desc: Run unit tests for auth service
+  test:unit:endpoint:
+    desc: Run unit tests for endpoint service
     cmds:
       - task: test:unit
         vars:
-          DIR: services/auth
+          DIR: services/endpoint
 
-  test:unit:coverage:auth:
-    desc: Run unit tests with coverage for auth service
+  test:unit:coverage:endpoint:
+    desc: Run unit tests with coverage for endpoint service
     cmds:
       - task: test:unit:coverage
         vars:
-          DIR: services/auth
+          DIR: services/endpoint
 
-  lint:auth:
-    desc: Run linter for auth service
+  lint:endpoint:
+    desc: Run linter for endpoint service
     cmds:
       - task: lint
         vars:
-          DIR: services/auth
+          DIR: services/endpoint
 
-  sam:build:auth:
-    desc: Execute SAM build for auth service
+  mod:tidy:endpoint:
+    desc: Run go mod tidy for endpoint service
+    cmds:
+      - task: mod:tidy
+        vars:
+          DIR: services/endpoint
+
+  sam:build:endpoint:
+    desc: Execute SAM build for endpoint service
     vars:
       AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - task: sam:build
         vars:
-          DIR: services/auth
+          DIR: services/endpoint
           AWS_PROFILE: "{{.AWS_PROFILE}}"
 
-  sam:validate:auth:
-    desc: Execute SAM validate for auth service
+  sam:validate:endpoint:
+    desc: Execute SAM validate for endpoint service
     vars:
       AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
     cmds:
       - task: sam:validate
         vars:
-          DIR: services/auth
+          DIR: services/endpoint
           AWS_PROFILE: "{{.AWS_PROFILE}}"
 
-  sam:deploy:auth:
-    desc: Execute SAM deploy for auth service
+  sam:deploy:endpoint:
+    desc: Execute SAM deploy for endpoint service
     vars:
       AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
-    deps: [sam:build:auth, sam:validate:auth]
+    deps: [sam:build:endpoint, sam:validate:endpoint]
     cmds:
       - task: sam:deploy
         vars:
-          DIR: services/auth
+          DIR: services/endpoint
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
+
+  ###############################################################################
+  # Events Service
+  # Handles event processing and distribution across services
+  # This service is only an AWS SAM template with no relevant code
+  ###############################################################################
+  sam:build:events:
+    desc: Execute SAM build for events service
+    vars:
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
+    cmds:
+      - task: sam:build
+        vars:
+          DIR: services/events
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
+
+  sam:validate:events:
+    desc: Execute SAM validate for events service
+    vars:
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
+    cmds:
+      - task: sam:validate
+        vars:
+          DIR: services/events
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
+
+  sam:deploy:events:
+    desc: Execute SAM deploy for events service
+    vars:
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
+    deps: [sam:build:events, sam:validate:events]
+    cmds:
+      - task: sam:deploy
+        vars:
+          DIR: services/events
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
+
+  ###############################################################################
+  # Gateway Service
+  # Provides API gateway functionality and request routing
+  ###############################################################################
+  test:mocks:gateway:
+    desc: Generate mocks for gateway service
+    cmds:
+      - task: test:mocks
+        vars:
+          DIR: services/gateway
+
+  test:unit:gateway:
+    desc: Run unit tests for gateway service
+    cmds:
+      - task: test:unit
+        vars:
+          DIR: services/gateway
+
+  test:unit:coverage:gateway:
+    desc: Run unit tests with coverage for gateway service
+    cmds:
+      - task: test:unit:coverage
+        vars:
+          DIR: services/gateway
+
+  lint:gateway:
+    desc: Run linter for gateway service
+    cmds:
+      - task: lint
+        vars:
+          DIR: services/gateway
+
+  mod:tidy:gateway:
+    desc: Run go mod tidy for gateway service
+    cmds:
+      - task: mod:tidy
+        vars:
+          DIR: services/gateway
+
+  sam:build:gateway:
+    desc: Execute SAM build for gateway service
+    vars:
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
+    cmds:
+      - task: sam:build
+        vars:
+          DIR: services/gateway
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
+
+  sam:validate:gateway:
+    desc: Execute SAM validate for gateway service
+    vars:
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
+    cmds:
+      - task: sam:validate
+        vars:
+          DIR: services/gateway
+          AWS_PROFILE: "{{.AWS_PROFILE}}"
+
+  sam:deploy:gateway:
+    desc: Execute SAM deploy for gateway service
+    vars:
+      AWS_PROFILE: "{{.AWS_PROFILE | default .AWS_PROFILE_DEFAULT}}"
+    deps: [sam:build:gateway, sam:validate:gateway]
+    cmds:
+      - task: sam:deploy
+        vars:
+          DIR: services/gateway
           AWS_PROFILE: "{{.AWS_PROFILE}}"
 
   ###############################################################################
@@ -255,6 +419,13 @@ tasks:
     desc: Run linter for page service
     cmds:
       - task: lint
+        vars:
+          DIR: services/page
+
+  mod:tidy:page:
+    desc: Run go mod tidy for page service
+    cmds:
+      - task: mod:tidy
         vars:
           DIR: services/page
 
@@ -318,6 +489,13 @@ tasks:
     desc: Run linter for user service
     cmds:
       - task: lint
+        vars:
+          DIR: services/user
+
+  mod:tidy:user:
+    desc: Run go mod tidy for user service
+    cmds:
+      - task: mod:tidy
         vars:
           DIR: services/user
 
