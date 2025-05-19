@@ -19,7 +19,7 @@ func finalizeRegistration(config Config, logger *slog.Logger, dynamoClient *dyna
 	type message struct {
 		RegistrationCode string `json:"registrationCode"`
 		AgencyID         string `json:"agencyId"`
-		EndpointId       string `json:"userId"`
+		EndpointId       string `json:"endpointId"`
 	}
 
 	logAndHandleError := eventProcessorErrorHandler(config, logger, snsClient, evtRegistrationCreateFailed)
