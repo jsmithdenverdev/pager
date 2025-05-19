@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/jsmithdenverdev/pager/services/endpoint/internal/models"
 )
 
 // readEndpoint returns a single endpoint by ID.
@@ -39,7 +40,7 @@ func readEndpoint(config Config, logger *slog.Logger, client *dynamodb.Client) h
 			return
 		}
 
-		var endpoint endpoint
+		var endpoint models.Endpoint
 		if result.Item != nil {
 			if err := attributevalue.UnmarshalMap(result.Item, &endpoint); err != nil {
 				logger.ErrorContext(r.Context(), "failed to unmarshal endpoint record", slog.Any("error", err))

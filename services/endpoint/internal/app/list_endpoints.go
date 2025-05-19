@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/jsmithdenverdev/pager/services/endpoint/internal/models"
 )
 
 // listEndpoints returns a list of endpoints. If an account ID is provided the
@@ -71,10 +72,10 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 			return
 		}
 
-		var links []ownershipLink
+		var links []models.OwnershipLink
 		if result.Items != nil {
 			for _, item := range result.Items {
-				var link ownershipLink
+				var link models.OwnershipLink
 				if err := attributevalue.UnmarshalMap(item, &link); err != nil {
 					logger.ErrorContext(r.Context(), "failed to unmarshal ownership link record", slog.Any("error", err))
 					w.WriteHeader(http.StatusInternalServerError)
@@ -87,10 +88,7 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 		response := new(listResponse[ownershipLinkResponse])
 
 		for _, link := range links {
-			response.Results = append(response.Results, ownershipLinkResponse{
-				UserID:     strings.Split(link.PK, "#")[1],
-				EndpointID: strings.Split(link.SK, "#")[1],
-			})
+			response.Results = append(response.Results, toOwnershipLinkResponse(link))
 		}
 
 		if result.LastEvaluatedKey != nil {

@@ -144,6 +144,8 @@ Resources:
         type:
           - "user.invite-target.ensured"
           - "user.ensure-invite.failed"
+          - "endpoint.resolved"
+          - "endpoint.resolution.failed"
           # - "user.membership.upsert.failed"
           # - "user.membership.delete.failed"
 
