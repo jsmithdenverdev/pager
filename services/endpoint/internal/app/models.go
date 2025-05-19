@@ -15,17 +15,17 @@ import (
 //-----------------------------------------------------------------------------
 
 type endpointResponse struct {
-	ID               string    `json:"id"`
-	UserID           string    `json:"userId"`
-	EndpointType     string    `json:"endpointType"`
-	Name             string    `json:"name"`
-	URL              string    `json:"url"`
-	Registrations    []string  `json:"registrations"`
-	RegistrationCode string    `json:"registrationCode"`
-	Created          time.Time `json:"created"`
-	Modified         time.Time `json:"modified"`
-	CreatedBy        string    `json:"createdBy"`
-	ModifiedBy       string    `json:"modifiedBy"`
+	ID               string         `json:"id"`
+	UserID           string         `json:"userId"`
+	EndpointType     string         `json:"endpointType"`
+	Name             string         `json:"name"`
+	URL              string         `json:"url"`
+	Registrations    map[string]any `json:"registrations"`
+	RegistrationCode string         `json:"registrationCode"`
+	Created          time.Time      `json:"created"`
+	Modified         time.Time      `json:"modified"`
+	CreatedBy        string         `json:"createdBy"`
+	ModifiedBy       string         `json:"modifiedBy"`
 }
 
 func toEndpointResponse(endpoint models.Endpoint) endpointResponse {

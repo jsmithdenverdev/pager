@@ -138,8 +138,10 @@ Resources:
       Endpoint: !GetAtt EndpointEventsQueue.Arn
       FilterPolicy:
         type:
-          # Events
-          - "endpoint.ensure-registration"
+          - "endpoint.resolve"
+          - "agency.registration.created"
+          - "agency.registration.updated"
+          - "agency.registration.deleted"
 
 Outputs:
   ApiId:

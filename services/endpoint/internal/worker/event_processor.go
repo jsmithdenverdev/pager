@@ -14,8 +14,12 @@ import (
 )
 
 const (
-	evtRegistrationEnsured      = "endpoint.registration-code-target.ensured"
-	evtEnsureRegistrationFailed = "endpoint.ensure-registration.failed"
+	evtEndpointResolved         = "endpoint.resolved"
+	evtEndpointResolutionFailed = "endpoint.resolution.failed"
+	evtRegistrationUpserted     = "endpoint.registration.upserted"
+	evtRegistrationUpsertFailed = "endpoint.registration.upsert.failed"
+	evtRegistrationDeleted      = "endpoint.registration.deleted"
+	evtRegistrationDeleteFailed = "endpoint.registration.delete.failed"
 )
 
 func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
@@ -44,9 +48,23 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			retryCount := recieveCount + 1
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
-			case "endpoint.ensure-registration":
-				if err := ensureEndpointFromRegistrationCode(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
-					logger.ErrorContext(ctx, "failed to ensure endpoint", slog.Any("error", err))
+			case "endpoint.resolve":
+				if err := resolveEndpoint(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+					logger.ErrorContext(ctx, "failed to resolve registration", slog.Any("error", err))
+					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
+						ItemIdentifier: record.MessageId,
+					})
+				}
+			case "agency.registration.created", "agency.registration.updated":
+				if err := upsertRegistration(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+					logger.ErrorContext(ctx, "failed to upsert registration", slog.Any("error", err))
+					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
+						ItemIdentifier: record.MessageId,
+					})
+				}
+			case "agency.registration.deleted":
+				if err := deleteRegistration(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+					logger.ErrorContext(ctx, "failed to delete registration", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
 					})

@@ -5,10 +5,10 @@ package models
 type Endpoint struct {
 	KeyFields
 	AuditableFields
-	EndpointType     EndpointType `dynamodbav:"endpointType"`
-	Name             string       `dynamodbav:"name"`
-	URL              string       `dynamodbav:"url"`
-	Registrations    []string     `dynamodbav:"registrations"`
-	UserID           string       `dynamodbav:"userId"`
-	RegistrationCode string       `dynamodbav:"registrationCode"`
+	EndpointType     EndpointType   `dynamodbav:"endpointType"`
+	Name             string         `dynamodbav:"name"`
+	URL              string         `dynamodbav:"url"`
+	Registrations    map[string]any `dynamodbav:"registrations"`
+	UserID           string         `dynamodbav:"userId"`
+	RegistrationCode string         `dynamodbav:"registrationCode"`
 }

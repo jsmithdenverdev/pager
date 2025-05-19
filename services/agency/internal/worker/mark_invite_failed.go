@@ -10,15 +10,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/aws/aws-sdk-go-v2/service/sns"
 )
 
-func markInviteFailed(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(context.Context, events.SNSEntity, int) error {
+func markInviteFailed(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client) func(context.Context, events.SNSEntity, int) error {
+	type message struct {
+		Email    string `json:"email"`
+		AgencyID string `json:"agencyId"`
+	}
 	return func(ctx context.Context, record events.SNSEntity, retryCount int) error {
-		var message struct {
-			Email    string `json:"email"`
-			AgencyID string `json:"agencyId"`
-		}
+		var message message
 
 		if err := json.Unmarshal([]byte(record.Message), &message); err != nil {
 			logger.ErrorContext(ctx, "failed to unmarshal message", slog.Any("error", err))

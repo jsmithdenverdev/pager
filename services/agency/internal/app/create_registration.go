@@ -99,7 +99,7 @@ func createRegistration(config Config, logger *slog.Logger, dynamoClient *dynamo
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
 				"type": {
 					DataType:    aws.String("String"),
-					StringValue: aws.String("endpoint.ensure-registration"),
+					StringValue: aws.String("endpoint.resolve"),
 				},
 			},
 		}); err != nil {

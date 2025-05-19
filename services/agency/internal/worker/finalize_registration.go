@@ -11,30 +11,27 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
+	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
 )
 
 // finalizeRegistration finalizes an endpoint registration.
 func finalizeRegistration(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(context.Context, events.SNSEntity, int) error {
 	type message struct {
-		Email    string `json:"email"`
-		AgencyID string `json:"agencyId"`
-		UserID   string `json:"userId"`
+		RegistrationCode string `json:"registrationCode"`
+		AgencyID         string `json:"agencyId"`
+		EndpointId       string `json:"userId"`
 	}
 
-	logAndHandleError := eventProcessorErrorHandler(config, logger, snsClient, evtMembershipCreateFailed)
+	logAndHandleError := eventProcessorErrorHandler(config, logger, snsClient, evtRegistrationCreateFailed)
 
 	return func(ctx context.Context, record events.SNSEntity, retryCount int) error {
-		var message struct {
-			AgencyID         string `json:"agencyId"`
-			RegistrationCode string `json:"registrationCode"`
-		}
+		var message message
 
 		if err := json.Unmarshal([]byte(record.Message), &message); err != nil {
-			logger.ErrorContext(ctx, "failed to unmarshal message", slog.Any("error", err))
-			return err
+			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
 		}
 
-		_, err := dynamoClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		if _, err := dynamoClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 			TableName: aws.String(config.AgencyTableName),
 			Key: map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
@@ -53,11 +50,24 @@ func finalizeRegistration(config Config, logger *slog.Logger, dynamoClient *dyna
 					Value: "ACTIVE",
 				},
 			},
-		})
-
-		if err != nil {
-			logAndHandleError(ctx, retryCount, "failed to update registration", record, err)
+		}); err != nil {
+			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
 		}
+
+		if _, err := snsClient.Publish(ctx, &sns.PublishInput{
+			TopicArn: aws.String(config.EventsTopicARN),
+			Message:  aws.String(fmt.Sprintf(`{"endpointId": "%s", "agencyId": "%s"}`, message.EndpointId, message.AgencyID)),
+			MessageAttributes: map[string]snstypes.MessageAttributeValue{
+				"type": {
+					DataType:    aws.String("String"),
+					StringValue: aws.String(evtRegistrationCreated),
+				},
+			},
+		}); err != nil {
+			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
+		}
+
+		logger.DebugContext(ctx, "published event", slog.String("type", evtRegistrationCreated))
 
 		return nil
 	}

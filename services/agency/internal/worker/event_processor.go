@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	evtMembershipCreated              string = "agency.membership.created"
-	evtMembershipCreateFailed         string = "agency.membership.create.failed"
-	evtMembershipDeleted              string = "agency.membership.deleted"
-	evtMembershipDeleteFailed         string = "agency.membership.delete.failed"
-	evtRegistrationFinalizationFailed string = "agency.registration.finalization.failed"
+	evtMembershipCreated        string = "agency.membership.created"
+	evtMembershipCreateFailed   string = "agency.membership.create.failed"
+	evtMembershipDeleted        string = "agency.membership.deleted"
+	evtMembershipDeleteFailed   string = "agency.membership.delete.failed"
+	evtRegistrationCreated      string = "agency.registration.created"
+	evtRegistrationCreateFailed string = "agency.registration.create.failed"
 )
 
 func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
@@ -36,7 +37,7 @@ func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cl
 			}
 
 			eventType := snsRecord.MessageAttributes["type"].(map[string]any)["Value"].(string)
-			recieveCount, err := strconv.Atoi(record.Attributes["ApproximateReceiveCount"])
+			receiveCount, err := strconv.Atoi(record.Attributes["ApproximateReceiveCount"])
 			if err != nil {
 				logger.ErrorContext(ctx, "failed to convert receive count to int", slog.Any("error", err))
 				batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
@@ -44,7 +45,7 @@ func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cl
 				})
 				continue
 			}
-			retryCount := recieveCount + 1
+			retryCount := receiveCount + 1
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
 			case "user.invite-target.ensured":
@@ -55,21 +56,21 @@ func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cl
 					})
 				}
 			case "user.ensure-invite.failed":
-				if err := markInviteFailed(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+				if err := markInviteFailed(config, logger, dynamoClient)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to mark invite as failed", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
 					})
 				}
-			case "endpoint.registration-code-target.ensured":
+			case "endpoint.resolved":
 				if err := finalizeRegistration(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to finalize registration", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
 					})
 				}
-			case "endpoint.ensure-registration.failed":
-				if err := markRegistrationFailed(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+			case "endpoint.resolution.failed":
+				if err := markRegistrationFailed(config, logger, dynamoClient)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to mark registration as failed", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
