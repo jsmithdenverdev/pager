@@ -17,7 +17,7 @@ import (
 	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
-func createInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
+func inviteMember(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			user     identity.User
