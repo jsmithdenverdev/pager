@@ -41,13 +41,17 @@ func finalizeRegistration(config Config, logger *slog.Logger, dynamoClient *dyna
 					Value: fmt.Sprintf("registration#%s", message.RegistrationCode),
 				},
 			},
-			UpdateExpression: aws.String("set #status = :status"),
+			UpdateExpression: aws.String("set #status = :status, #endpointid = :endpointid"),
 			ExpressionAttributeNames: map[string]string{
-				"#status": "status",
+				"#status":     "status",
+				"#endpointid": "endpointId",
 			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":status": &types.AttributeValueMemberS{
 					Value: "ACTIVE",
+				},
+				":endpointid": &types.AttributeValueMemberS{
+					Value: message.EndpointId,
 				},
 			},
 		}); err != nil {
