@@ -37,7 +37,7 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			}
 
 			eventType := snsRecord.MessageAttributes["type"].(map[string]any)["Value"].(string)
-			recieveCount, err := strconv.Atoi(record.Attributes["ApproximateReceiveCount"])
+			receiveCount, err := strconv.Atoi(record.Attributes["ApproximateReceiveCount"])
 			if err != nil {
 				logger.ErrorContext(ctx, "failed to convert receive count to int", slog.Any("error", err))
 				batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
@@ -45,7 +45,7 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 				})
 				continue
 			}
-			retryCount := recieveCount + 1
+			retryCount := receiveCount + 1
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
 			case "endpoint.resolve":

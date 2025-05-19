@@ -54,7 +54,7 @@ func resolveEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.
 		}
 
 		if len(queryRegistrationCodeResult.Items) == 0 {
-			return logAndHandleError(ctx, retryCount, "failed to resolve endpoint from registration code", message, err)
+			return logAndHandleError(ctx, retryCount, "failed to resolve endpoint from registration code", message, errors.New("registration code doesn't exist"))
 		}
 
 		var rc models.RegistrationCode
@@ -108,7 +108,7 @@ func resolveEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.
 			return logAndHandleError(ctx, retryCount, "failed to resolve endpoint from registration code", message, err)
 		}
 
-		if _, err = snsClient.Publish(ctx, &sns.PublishInput{
+		if _, err := snsClient.Publish(ctx, &sns.PublishInput{
 			TopicArn: aws.String(config.EventsTopicARN),
 			Message:  aws.String(string(messageBody)),
 			MessageAttributes: map[string]snstypes.MessageAttributeValue{
