@@ -77,16 +77,16 @@ type createEndpointResponse struct {
 }
 
 //-----------------------------------------------------------------------------
-// OWNERSHIP LINK
+// OWNER
 //-----------------------------------------------------------------------------
 
-type ownershipLinkResponse struct {
+type ownerResponse struct {
 	UserID     string `json:"userId"`
 	EndpointID string `json:"endpointId"`
 }
 
-func toOwnershipLinkResponse(link models.OwnershipLink) ownershipLinkResponse {
-	return ownershipLinkResponse{
+func toOwnerResponse(link models.Owner) ownerResponse {
+	return ownerResponse{
 		UserID:     strings.Split(link.PK, "#")[1],
 		EndpointID: strings.Split(link.SK, "#")[1],
 	}

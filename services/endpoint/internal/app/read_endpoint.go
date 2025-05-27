@@ -14,7 +14,6 @@ import (
 )
 
 // readEndpoint returns a single endpoint by ID.
-// The calling user must have a membership in the specified agency.
 func readEndpoint(config Config, logger *slog.Logger, client *dynamodb.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (

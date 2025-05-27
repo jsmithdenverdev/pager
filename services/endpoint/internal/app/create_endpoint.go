@@ -95,7 +95,7 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			return
 		}
 
-		ownershipLinkAV, err := attributevalue.MarshalMap(models.OwnershipLink{
+		ownerAV, err := attributevalue.MarshalMap(models.Owner{
 			KeyFields: models.KeyFields{
 				PK:   fmt.Sprintf("user#%s", user.ID),
 				SK:   fmt.Sprintf("endpoint#%s", id),
@@ -127,7 +127,7 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 				{
 					Put: &types.Put{
 						TableName: aws.String(config.EndpointTableName),
-						Item:      ownershipLinkAV,
+						Item:      ownerAV,
 					},
 				},
 			},

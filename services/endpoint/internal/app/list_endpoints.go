@@ -72,23 +72,23 @@ func listEndpoints(config Config, logger *slog.Logger, client *dynamodb.Client) 
 			return
 		}
 
-		var links []models.OwnershipLink
+		var owners []models.Owner
 		if result.Items != nil {
 			for _, item := range result.Items {
-				var link models.OwnershipLink
-				if err := attributevalue.UnmarshalMap(item, &link); err != nil {
-					logger.ErrorContext(r.Context(), "failed to unmarshal ownership link record", slog.Any("error", err))
+				var owner models.Owner
+				if err := attributevalue.UnmarshalMap(item, &owner); err != nil {
+					logger.ErrorContext(r.Context(), "failed to unmarshal owner record", slog.Any("error", err))
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-				links = append(links, link)
+				owners = append(owners, owner)
 			}
 		}
 
-		response := new(listResponse[ownershipLinkResponse])
+		response := new(listResponse[ownerResponse])
 
-		for _, link := range links {
-			response.Results = append(response.Results, toOwnershipLinkResponse(link))
+		for _, owner := range owners {
+			response.Results = append(response.Results, toOwnerResponse(owner))
 		}
 
 		if result.LastEvaluatedKey != nil {

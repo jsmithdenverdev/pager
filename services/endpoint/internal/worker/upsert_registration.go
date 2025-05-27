@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -73,23 +74,63 @@ func upsertRegistration(config Config, logger *slog.Logger, dynamoClient *dynamo
 			return logAndHandleError(ctx, retryCount, "failed to upsert endpoint registration", message, err)
 		}
 
-		if _, err := dynamoClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-			TableName: aws.String(config.EndpointTableName),
-			Key: map[string]types.AttributeValue{
-				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("endpoint#%s", message.EndpointID),
-				},
-				"sk": &types.AttributeValueMemberS{
-					Value: "meta",
-				},
+		membership, err := attributevalue.MarshalMap(models.Registration{
+			KeyFields: models.KeyFields{
+				PK: fmt.Sprintf("endpoint#%s", message.EndpointID),
+				SK: fmt.Sprintf("agency#%s", message.AgencyID),
 			},
-			UpdateExpression: aws.String("SET #registrations = :registrations"),
-			ExpressionAttributeNames: map[string]string{
-				"#registrations": "registrations",
+			AuditableFields: models.NewAuditableFields("system", time.Now()),
+		})
+		if err != nil {
+			return logAndHandleError(ctx, retryCount, "failed to upsert endpoint registration", message, err)
+		}
+
+		membershipInverse, err := attributevalue.MarshalMap(models.Registration{
+			KeyFields: models.KeyFields{
+				PK: fmt.Sprintf("agency#%s", message.AgencyID),
+				SK: fmt.Sprintf("endpoint#%s", message.EndpointID),
 			},
-			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":registrations": &types.AttributeValueMemberM{
-					Value: registrations,
+			AuditableFields: models.NewAuditableFields("system", time.Now()),
+		})
+		if err != nil {
+			return logAndHandleError(ctx, retryCount, "failed to upsert endpoint registration", message, err)
+		}
+
+		if _, err := dynamoClient.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
+			TransactItems: []types.TransactWriteItem{
+				{
+					Put: &types.Put{
+						TableName: aws.String(config.EndpointTableName),
+						Item:      membership,
+					},
+				},
+				{
+					Put: &types.Put{
+						TableName: aws.String(config.EndpointTableName),
+						Item:      membershipInverse,
+					},
+				},
+				{
+					Update: &types.Update{
+						TableName: aws.String(config.EndpointTableName),
+						Key: map[string]types.AttributeValue{
+							"pk": &types.AttributeValueMemberS{
+								Value: fmt.Sprintf("endpoint#%s", message.EndpointID),
+							},
+							"sk": &types.AttributeValueMemberS{
+								Value: "meta",
+							},
+						},
+						UpdateExpression: aws.String("SET #registrations = :registrations"),
+						ExpressionAttributeNames: map[string]string{
+							"#registrations": "registrations",
+						},
+						ExpressionAttributeValues: map[string]types.AttributeValue{
+							":registrations": &types.AttributeValueMemberM{
+								Value: registrations,
+							},
+						},
+					},
 				},
 			},
 		}); err != nil {
