@@ -75,6 +75,7 @@ func upsertRegistration(config Config, logger *slog.Logger, dynamoClient *dynamo
 		}
 
 		membership, err := attributevalue.MarshalMap(models.Registration{
+			Type: models.EntityTypeRegistration,
 			KeyFields: models.KeyFields{
 				PK: fmt.Sprintf("endpoint#%s", message.EndpointID),
 				SK: fmt.Sprintf("agency#%s", message.AgencyID),
@@ -86,6 +87,7 @@ func upsertRegistration(config Config, logger *slog.Logger, dynamoClient *dynamo
 		}
 
 		membershipInverse, err := attributevalue.MarshalMap(models.Registration{
+			Type: models.EntityTypeRegistration,
 			KeyFields: models.KeyFields{
 				PK: fmt.Sprintf("agency#%s", message.AgencyID),
 				SK: fmt.Sprintf("endpoint#%s", message.EndpointID),

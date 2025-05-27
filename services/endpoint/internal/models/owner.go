@@ -4,6 +4,7 @@ package models
 // The model is a simple relationship binding that doesn't include other
 // metadata. The relationship is encoded within the pk and sk.
 type Owner struct {
+	Type EntityType `dynamodbav:"type"`
 	KeyFields
 	AuditableFields
 }

@@ -99,7 +99,7 @@ func createEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			KeyFields: models.KeyFields{
 				PK:   fmt.Sprintf("user#%s", user.ID),
 				SK:   fmt.Sprintf("endpoint#%s", id),
-				Type: models.EntityTypeOwnershipLink,
+				Type: models.EntityTypeOwner,
 			},
 			AuditableFields: models.NewAuditableFields(user.ID, now),
 		})
