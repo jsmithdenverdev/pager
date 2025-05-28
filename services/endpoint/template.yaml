@@ -139,6 +139,7 @@ Resources:
       FilterPolicy:
         type:
           - "endpoint.resolve"
+          - "endpoint.deliver"
           - "agency.registration.created"
           - "agency.registration.updated"
           - "agency.registration.deleted"

@@ -114,7 +114,7 @@ func createPage(conf Config, logger *slog.Logger, dynamoClient *dynamodb.Client,
 					MessageAttributes: map[string]snstypes.MessageAttributeValue{
 						"type": {
 							DataType:    aws.String("String"),
-							StringValue: aws.String("endpoint.deliver-page"),
+							StringValue: aws.String("endpoint.deliver"),
 						},
 					},
 				}); err != nil {

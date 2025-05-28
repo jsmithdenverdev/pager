@@ -55,6 +55,13 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 						ItemIdentifier: record.MessageId,
 					})
 				}
+			case "endpoint.deliver":
+				if err := deliverToEndpoints(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
+					logger.ErrorContext(ctx, "failed to deliver to endpoints", slog.Any("error", err))
+					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
+						ItemIdentifier: record.MessageId,
+					})
+				}
 			case "agency.registration.created", "agency.registration.updated":
 				if err := upsertRegistration(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
 					logger.ErrorContext(ctx, "failed to upsert registration", slog.Any("error", err))
