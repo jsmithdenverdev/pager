@@ -8,10 +8,10 @@ type createPageRequest struct {
 	Notes    string   `json:"notes"`
 	Notify   bool     `json:"notify"`
 	Location struct {
-		CommonName string  `json:"description"`
-		Latitude   float64 `json:"latitude"`
-		Longitude  float64 `json:"longitude"`
-		Type       string  `json:"type"`
+		Description string  `json:"description"`
+		Latitude    float64 `json:"latitude"`
+		Longitude   float64 `json:"longitude"`
+		Type        string  `json:"type"`
 	} `json:"location"`
 }
 

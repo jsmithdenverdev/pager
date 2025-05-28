@@ -20,8 +20,8 @@ type Page struct {
 // Location represents a location for a page. The location may be a common name (e.g., "Kelso Ridge") or may be a
 // set of coordinates following a specific type (e.g., decimal degrees, degrees minutes seconds, etc.).
 type Location struct {
-	CommonName string  `json:"description"`
-	Latitude   float64 `json:"latitude"`
-	Longitude  float64 `json:"longitude"`
-	Type       string  `json:"type"`
+	Description string  `dynamodbav:"description"`
+	Latitude    float64 `dynamodbav:"latitude"`
+	Longitude   float64 `dynamodbav:"longitude"`
+	Type        string  `dynamodbav:"type"`
 }

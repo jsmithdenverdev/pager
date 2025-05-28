@@ -28,12 +28,12 @@ func deliverToEndpoints(config Config, logger *slog.Logger, dynamoClient *dynamo
 		var message message
 
 		if err := json.Unmarshal([]byte(snsRecord.Message), &message); err != nil {
-			return logAndHandleError(ctx, retryCount, "failed to resolve endpoint from registration code", message, err)
+			return logAndHandleError(ctx, retryCount, "failed to unmarshal endpoint.deliver message", message, err)
 		}
 
 		queryEndpointsResult, err := dynamoClient.Query(ctx, &dynamodb.QueryInput{
 			TableName:              aws.String(config.EndpointTableName),
-			KeyConditionExpression: aws.String("#pk = :pk AND starts_with(#sk, :skprefix)"),
+			KeyConditionExpression: aws.String("#pk = :pk AND begins_with(#sk, :skprefix)"),
 			ExpressionAttributeNames: map[string]string{
 				"#pk": "pk",
 				"#sk": "sk",
@@ -49,7 +49,7 @@ func deliverToEndpoints(config Config, logger *slog.Logger, dynamoClient *dynamo
 		})
 
 		if err != nil {
-			return logAndHandleError(ctx, retryCount, "failed to resolve endpoint from registration code", message, err)
+			return logAndHandleError(ctx, retryCount, "failed to query endpoints", message, err)
 		}
 
 		var endpoints []models.Endpoint

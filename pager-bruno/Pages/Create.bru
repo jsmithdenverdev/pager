@@ -1,0 +1,23 @@
+meta {
+  name: Create
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{BASE_URL}}/pages
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "agencies": ["{{AGENCY_ID}}"],
+    "title": "Test Page",
+    "notes": "[1] Call Type: WRLS\n[2] BACKCOUNTRY SKI INCIDENT\n[3] ON THE N SIDE OF GRIZZLY PEAK\n[4] NEXT TO ABASIN\n[5] NON LIFE THREATENING INJURIES\n[6] Multi-Agency Law Incident #: 04202025-0194263\n[7] Address 39Â°38'45.49\"N / 105Â°50'53.92\"W verified by Latitude / Longitude [Shared]\n[8] RP PROVIDED LONGITUDE AND LATITUDE [Shared]\n[9] [ProQA: Case Entry Complete]\n [Shared]\n[10] Automatic Case Number(s) issued for Incident #[2025CCF-0000795]\n Jurisdiction: Clear Creek Fire. Case Number(s): 25-CCF-000572. requested by CCFN1. [Shared]\n[11] Automatic Case Number(s) issued for Incident #[2025CCF-0000795]\n Jurisdiction: Clear Creek EMS. Case Number(s): 25-CCEMS-0602. requested by CCEN2. [Shared]\n[12] Automatic Case Number(s) issued for Incident #[2025CCF-0000795]\n Jurisdiction: Alpine Rescue Team. Case Number(s): 25-ALP-000026. requested by ALPINE. [Shared]\nTIME: 11:27:03\nDATE: 04/20/2025",
+    "notify": true,
+    "location": {
+      "description": "Grizzly Peak" 
+    }
+  }
+}
