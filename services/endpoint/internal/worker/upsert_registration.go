@@ -75,24 +75,28 @@ func upsertRegistration(config Config, logger *slog.Logger, dynamoClient *dynamo
 		}
 
 		membership, err := attributevalue.MarshalMap(models.Registration{
-			Type: models.EntityTypeRegistration,
 			KeyFields: models.KeyFields{
 				PK: fmt.Sprintf("endpoint#%s", message.EndpointID),
 				SK: fmt.Sprintf("agency#%s", message.AgencyID),
 			},
 			AuditableFields: models.NewAuditableFields("system", time.Now()),
+			Type:            models.EntityTypeRegistration,
+			EndpointType:    endpoint.EndpointType,
+			URL:             endpoint.URL,
 		})
 		if err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to upsert endpoint registration", message, err)
 		}
 
 		membershipInverse, err := attributevalue.MarshalMap(models.Registration{
-			Type: models.EntityTypeRegistration,
 			KeyFields: models.KeyFields{
 				PK: fmt.Sprintf("agency#%s", message.AgencyID),
 				SK: fmt.Sprintf("endpoint#%s", message.EndpointID),
 			},
 			AuditableFields: models.NewAuditableFields("system", time.Now()),
+			Type:            models.EntityTypeRegistration,
+			EndpointType:    endpoint.EndpointType,
+			URL:             endpoint.URL,
 		})
 		if err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to upsert endpoint registration", message, err)
