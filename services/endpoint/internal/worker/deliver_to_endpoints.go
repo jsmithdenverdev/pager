@@ -1,10 +1,12 @@
 package worker
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -52,9 +54,9 @@ func deliverToEndpoints(config Config, logger *slog.Logger, dynamoClient *dynamo
 			return logAndHandleError(ctx, retryCount, "failed to query endpoints", message, err)
 		}
 
-		var endpoints []models.Endpoint
+		var registeredEndpoints []models.Registration
 
-		if err := attributevalue.UnmarshalListOfMaps(queryEndpointsResult.Items, &endpoints); err != nil {
+		if err := attributevalue.UnmarshalListOfMaps(queryEndpointsResult.Items, &registeredEndpoints); err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to unmarshal endpoints for agency", message, err)
 		}
 
@@ -64,7 +66,26 @@ func deliverToEndpoints(config Config, logger *slog.Logger, dynamoClient *dynamo
 			slog.String("pageId", message.PageID),
 			slog.String("agencyId", message.AgencyID),
 			slog.String("title", message.Title),
-			slog.Any("endpoints", endpoints))
+			slog.Any("endpoints", registeredEndpoints))
+
+		for _, registeredEndpoint := range registeredEndpoints {
+			// TEST CODE
+			msg, err := json.Marshal(struct {
+				Title      string `json:"title"`
+				PageID     string `json:"pageId"`
+				EndpointID string `json:"endpointId"`
+			}{
+				message.Title,
+				message.PageID,
+				registeredEndpoint.PK,
+			})
+			if err != nil {
+				return logAndHandleError(ctx, retryCount, "failed to deliver to endpoint", message, err)
+			}
+			if registeredEndpoint.EndpointType == models.EndpointTypeWebhook {
+				http.Post(registeredEndpoint.URL, "application/json", bytes.NewBuffer(msg))
+			}
+		}
 
 		return nil
 	}
