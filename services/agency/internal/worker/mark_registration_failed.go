@@ -12,11 +12,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-func markInviteFailed(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client) func(context.Context, events.SNSEntity, int) error {
+// finalizeRegistration finalizes an endpoint registration.
+func markRegistrationFailed(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client) func(context.Context, events.SNSEntity, int) error {
 	type message struct {
-		Email    string `json:"email"`
-		AgencyID string `json:"agencyId"`
+		RegistrationCode string `json:"registrationCode"`
+		AgencyID         string `json:"agencyId"`
+		EndpointId       string `json:"userId"`
 	}
+
 	return func(ctx context.Context, record events.SNSEntity, retryCount int) error {
 		var message message
 
@@ -25,14 +28,14 @@ func markInviteFailed(config Config, logger *slog.Logger, dynamoClient *dynamodb
 			return err
 		}
 
-		_, err := dynamoClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		if _, err := dynamoClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 			TableName: aws.String(config.AgencyTableName),
 			Key: map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("invite#%s", message.Email),
+					Value: fmt.Sprintf("agency#%s", message.AgencyID),
 				},
 				"sk": &types.AttributeValueMemberS{
-					Value: fmt.Sprintf("agency#%s", message.AgencyID),
+					Value: fmt.Sprintf("registration#%s", message.RegistrationCode),
 				},
 			},
 			UpdateExpression: aws.String("set #status = :status"),
@@ -44,10 +47,8 @@ func markInviteFailed(config Config, logger *slog.Logger, dynamoClient *dynamodb
 					Value: "FAILED",
 				},
 			},
-		})
-
-		if err != nil {
-			logger.ErrorContext(ctx, "failed to update invite", slog.Any("error", err))
+		}); err != nil {
+			logger.ErrorContext(ctx, "failed to update registration", slog.Any("error", err))
 			return err
 		}
 

@@ -52,15 +52,15 @@ Resources:
           Properties:
             ApiId: !Ref Api
 
-  EventProcessorFunction:
+  WorkerFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: !Sub "pager-endpoint-event-processor-${Environment}"
+      FunctionName: !Sub "pager-endpoint-worker-${Environment}"
       Handler: bootstrap
       Runtime: provided.al2023
-      CodeUri: ./cmd/event-processor
+      CodeUri: ./cmd/worker
       Timeout: 10
       MemorySize: 128
       Policies:
@@ -74,6 +74,7 @@ Resources:
           ENVIRONMENT: !Ref Environment
           ENDPOINT_TABLE_NAME: !Ref EndpointTable
           EVENTS_TOPIC_ARN: !Ref EventsTopicArn
+          EVENT_RETRY_COUNT: !Ref EventRetryCount
       Events:
         SQSEvent:
           Type: SQS
@@ -137,8 +138,10 @@ Resources:
       Endpoint: !GetAtt EndpointEventsQueue.Arn
       FilterPolicy:
         type:
-          # Events
-          - "endpoint.endpoint.ensure_and_register"
+          - "endpoint.resolve"
+          - "agency.registration.created"
+          - "agency.registration.updated"
+          - "agency.registration.deleted"
 
 Outputs:
   ApiId:
