@@ -32,7 +32,7 @@ func resolveEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.
 			return logAndHandleError(ctx, retryCount, "failed to resolve endpoint from registration code", message, err)
 		}
 
-		queryRegistrationCodeResult, err := dynamoClient.Query(ctx, &dynamodb.QueryInput{
+		resolveEndpointResult, err := dynamoClient.Query(ctx, &dynamodb.QueryInput{
 			TableName:              aws.String(config.EndpointTableName),
 			KeyConditionExpression: aws.String("#pk = :pk AND #sk = :sk"),
 			ExpressionAttributeNames: map[string]string{
@@ -53,13 +53,13 @@ func resolveEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb.
 			return logAndHandleError(ctx, retryCount, "failed to resolve endpoint from registration code", message, err)
 		}
 
-		if len(queryRegistrationCodeResult.Items) == 0 {
+		if len(resolveEndpointResult.Items) == 0 {
 			return logAndHandleError(ctx, retryCount, "failed to resolve endpoint from registration code", message, errors.New("registration code doesn't exist"))
 		}
 
 		var rc models.RegistrationCode
 
-		if err := attributevalue.UnmarshalMap(queryRegistrationCodeResult.Items[0], &rc); err != nil {
+		if err := attributevalue.UnmarshalMap(resolveEndpointResult.Items[0], &rc); err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to resolve endpoint from registration code", message, err)
 		}
 

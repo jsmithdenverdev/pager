@@ -75,27 +75,25 @@ func finalizeRegistration(config Config, logger *slog.Logger, dynamoClient *dyna
 
 		// When we finalize a registration we replace registrationcode sort key on the record with an endpoint
 		// identifier. Sort keys can't be updated, so we need to delete the record and create a new one.
-		// We perform this in a transaction for atomicity.
-		if _, err := dynamoClient.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
-			TransactItems: []types.TransactWriteItem{
-				{
-					Delete: &types.Delete{
-						TableName: aws.String(config.AgencyTableName),
-						Key: map[string]types.AttributeValue{
-							"pk": &types.AttributeValueMemberS{
-								Value: fmt.Sprintf("agency#%s", message.AgencyID),
-							},
-							"sk": &types.AttributeValueMemberS{
-								Value: fmt.Sprintf("registration#%s", message.RegistrationCode),
-							},
-						},
-					},
-					Put: &types.Put{
-						TableName: aws.String(config.AgencyTableName),
-						Item:      finalRegistrationAV,
-					},
+		// I'd prefer to do this in a dynamodb transaction but you can't perform both a delete and put in a single
+		// transaction.
+		if _, err := dynamoClient.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+			TableName: aws.String(config.AgencyTableName),
+			Key: map[string]types.AttributeValue{
+				"pk": &types.AttributeValueMemberS{
+					Value: fmt.Sprintf("agency#%s", message.AgencyID),
+				},
+				"sk": &types.AttributeValueMemberS{
+					Value: fmt.Sprintf("registration#%s", message.RegistrationCode),
 				},
 			},
+		}); err != nil {
+			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
+		}
+
+		if _, err := dynamoClient.PutItem(ctx, &dynamodb.PutItemInput{
+			TableName: aws.String(config.AgencyTableName),
+			Item:      finalRegistrationAV,
 		}); err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
 		}
