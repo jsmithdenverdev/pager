@@ -1,7 +1,9 @@
 package models
 
 type Registration struct {
-	Type EntityType `dynamodbav:"type"`
 	KeyFields
 	AuditableFields
+	Type         EntityType   `dynamodbav:"type"`
+	URL          string       `dynamodbav:"url"`
+	EndpointType EndpointType `dynamodbav:"endpointType"`
 }

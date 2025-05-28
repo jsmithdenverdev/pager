@@ -53,6 +53,11 @@ type createEndpointRequest struct {
 func (r createEndpointRequest) valid(ctx context.Context) map[string]string {
 	problems := make(map[string]string)
 
+	allowedEndpointTypes := []models.EndpointType{
+		models.EndpointTypePush,
+		models.EndpointTypeWebhook,
+	}
+
 	if r.URL == "" {
 		problems["url"] = "url is required"
 	}
@@ -65,8 +70,8 @@ func (r createEndpointRequest) valid(ctx context.Context) map[string]string {
 		problems["endpointType"] = "endpointType is required"
 	}
 
-	if !slices.Contains([]models.EndpointType{models.EndpointTypePush}, r.EndpointType) {
-		problems["endpointType"] = fmt.Sprintf("endpointType must be one of: %s", strings.Join([]models.EndpointType{models.EndpointTypePush}, ", "))
+	if !slices.Contains(allowedEndpointTypes, r.EndpointType) {
+		problems["endpointType"] = fmt.Sprintf("endpointType must be one of: %s", strings.Join(allowedEndpointTypes, ", "))
 	}
 
 	return problems

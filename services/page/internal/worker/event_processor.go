@@ -14,15 +14,15 @@ import (
 )
 
 const (
-	evtEndpointResolved         = "endpoint.resolved"
-	evtEndpointResolutionFailed = "endpoint.resolution.failed"
-	evtRegistrationUpserted     = "endpoint.registration.upserted"
-	evtRegistrationUpsertFailed = "endpoint.registration.upsert.failed"
-	evtRegistrationDeleted      = "endpoint.registration.deleted"
-	evtRegistrationDeleteFailed = "endpoint.registration.delete.failed"
+	evtMembershipCreated        string = "agency.membership.created"
+	evtMembershipCreateFailed   string = "agency.membership.create.failed"
+	evtMembershipDeleted        string = "agency.membership.deleted"
+	evtMembershipDeleteFailed   string = "agency.membership.delete.failed"
+	evtRegistrationCreated      string = "agency.registration.created"
+	evtRegistrationCreateFailed string = "agency.registration.create.failed"
 )
 
-func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
+func ProcessEvents(config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
 	return func(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
 		var batchItemFailures []events.SQSBatchItemFailure
 		for _, record := range event.Records {
@@ -48,30 +48,16 @@ func EventProcessor(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			retryCount := receiveCount + 1
 			// Use a type attribute on the message to determine the event type
 			switch eventType {
-			case "endpoint.resolve":
-				if err := resolveEndpoint(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
-					logger.ErrorContext(ctx, "failed to resolve registration", slog.Any("error", err))
+			case "endpoint.delivery.succeeded":
+				if err := trackSuccessfulDelivery(config, logger, dynamoClient)(ctx, snsRecord, retryCount); err != nil {
+					logger.ErrorContext(ctx, "failed to track successful delivery", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
 					})
 				}
-			case "endpoint.deliver":
-				if err := deliverToEndpoints(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
-					logger.ErrorContext(ctx, "failed to deliver to endpoints", slog.Any("error", err))
-					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
-						ItemIdentifier: record.MessageId,
-					})
-				}
-			case "agency.registration.created", "agency.registration.updated":
-				if err := upsertRegistration(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
-					logger.ErrorContext(ctx, "failed to upsert registration", slog.Any("error", err))
-					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
-						ItemIdentifier: record.MessageId,
-					})
-				}
-			case "agency.registration.deleted":
-				if err := deleteRegistration(config, logger, dynamoClient, snsClient)(ctx, snsRecord, retryCount); err != nil {
-					logger.ErrorContext(ctx, "failed to delete registration", slog.Any("error", err))
+			case "endpoint.delivery.failed":
+				if err := trackFailedDelivery(config, logger, dynamoClient)(ctx, snsRecord, retryCount); err != nil {
+					logger.ErrorContext(ctx, "failed to track failed delivery", slog.Any("error", err))
 					batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{
 						ItemIdentifier: record.MessageId,
 					})

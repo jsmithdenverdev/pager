@@ -7,7 +7,8 @@ import (
 type EndpointType = string
 
 const (
-	EndpointTypePush EndpointType = "PUSH"
+	EndpointTypePush    EndpointType = "PUSH"
+	EndpointTypeWebhook EndpointType = "WEBHOOK"
 )
 
 type KeyFields struct {
