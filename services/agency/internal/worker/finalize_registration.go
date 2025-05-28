@@ -3,7 +3,10 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 	"log/slog"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -31,7 +34,7 @@ func finalizeRegistration(config Config, logger *slog.Logger, dynamoClient *dyna
 			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
 		}
 
-		if _, err := dynamoClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		readPendingRegistrationResult, err := dynamoClient.GetItem(ctx, &dynamodb.GetItemInput{
 			TableName: aws.String(config.AgencyTableName),
 			Key: map[string]types.AttributeValue{
 				"pk": &types.AttributeValueMemberS{
@@ -41,17 +44,56 @@ func finalizeRegistration(config Config, logger *slog.Logger, dynamoClient *dyna
 					Value: fmt.Sprintf("registration#%s", message.RegistrationCode),
 				},
 			},
-			UpdateExpression: aws.String("set #status = :status, #endpointid = :endpointid"),
-			ExpressionAttributeNames: map[string]string{
-				"#status":     "status",
-				"#endpointid": "endpointId",
-			},
-			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":status": &types.AttributeValueMemberS{
-					Value: "ACTIVE",
-				},
-				":endpointid": &types.AttributeValueMemberS{
-					Value: message.EndpointId,
+		})
+
+		if err != nil {
+			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
+		}
+
+		if readPendingRegistrationResult.Item == nil {
+			return logAndHandleError(ctx, retryCount, "failed to create registration", message, errors.New("registration doesn't exist"))
+		}
+
+		var pendingRegistration models.EndpointRegistration
+		if err := attributevalue.UnmarshalMap(readPendingRegistrationResult.Item, &pendingRegistration); err != nil {
+			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
+		}
+
+		if pendingRegistration.Status != models.RegistrationStatusPending {
+			return logAndHandleError(ctx, retryCount, "failed to create registration", message, errors.New("registration is not pending"))
+		}
+
+		// Mirror the pending registration into a new finalRegistration model to avoid any mutation of the original.
+		finalRegistration := pendingRegistration
+		finalRegistration.Status = models.RegistrationStatusComplete
+		finalRegistration.SK = fmt.Sprintf("endpoint#%s", message.EndpointId)
+
+		finalRegistrationAV, err := attributevalue.MarshalMap(finalRegistration)
+		if err != nil {
+			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
+		}
+
+		// When we finalize a registration we replace registrationcode sort key on the record with an endpoint
+		// identifier. Sort keys can't be updated, so we need to delete the record and create a new one.
+		// We perform this in a transaction for atomicity.
+		if _, err := dynamoClient.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
+			TransactItems: []types.TransactWriteItem{
+				{
+					Delete: &types.Delete{
+						TableName: aws.String(config.AgencyTableName),
+						Key: map[string]types.AttributeValue{
+							"pk": &types.AttributeValueMemberS{
+								Value: fmt.Sprintf("agency#%s", message.AgencyID),
+							},
+							"sk": &types.AttributeValueMemberS{
+								Value: fmt.Sprintf("registration#%s", message.RegistrationCode),
+							},
+						},
+					},
+					Put: &types.Put{
+						TableName: aws.String(config.AgencyTableName),
+						Item:      finalRegistrationAV,
+					},
 				},
 			},
 		}); err != nil {
