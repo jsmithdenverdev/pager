@@ -10,5 +10,5 @@ import (
 )
 
 func addRoutes(mux *http.ServeMux, config Config, logger *slog.Logger, dynamoClient *dynamodb.Client, snsClient *sns.Client) {
-	mux.Handle(fmt.Sprintf("POST /%s", config.Environment), createPage(config, logger, dynamoClient))
+	mux.Handle(fmt.Sprintf("POST /%s", config.Environment), createPage(config, logger, dynamoClient, snsClient))
 }

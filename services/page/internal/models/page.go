@@ -9,8 +9,19 @@ type Page struct {
 	Type       EntityType `dynamodbav:"type"`
 	Title      string     `dynamodbav:"title"`
 	Notes      string     `dynamodbav:"notes"`
+	Notify     bool       `dynamodbav:"notify"`
+	Location   Location   `dynamodbav:"location"`
 	Created    time.Time  `dynamodbav:"created"`
 	Modified   time.Time  `dynamodbav:"modified"`
 	CreatedBy  string     `dynamodbav:"createdBy"`
 	ModifiedBy string     `dynamodbav:"modifiedBy"`
+}
+
+// Location represents a location for a page. The location may be a common name (e.g., "Kelso Ridge") or may be a
+// set of coordinates following a specific type (e.g., decimal degrees, degrees minutes seconds, etc.).
+type Location struct {
+	CommonName string  `json:"description"`
+	Latitude   float64 `json:"latitude"`
+	Longitude  float64 `json:"longitude"`
+	Type       string  `json:"type"`
 }
