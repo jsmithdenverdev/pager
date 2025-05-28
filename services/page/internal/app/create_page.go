@@ -45,10 +45,10 @@ func createPage(conf Config, logger *slog.Logger, dynamoClient *dynamodb.Client,
 			return
 		}
 
-		// Check all the agencies the user is attempting to send the page to. If
-		// they are not a member of all agencies return a forbidden response.
+		// A user must be a writer in all agencies they attempt to send a page to
+		// otherwise they'll get a 403.
 		for _, agency := range req.Agencies {
-			if _, ok := user.Memberships[agency]; !ok {
+			if role, ok := user.Memberships[agency]; !ok || role != identity.RoleWriter {
 				w.WriteHeader(http.StatusForbidden)
 				return
 			}
