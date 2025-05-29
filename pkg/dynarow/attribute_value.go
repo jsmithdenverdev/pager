@@ -23,7 +23,7 @@ func MarshalMap[T RowBuilder](rb T) (map[string]types.AttributeValue, error) {
 	})
 }
 
-func UnmarshalMap[T RowBuilder](m map[string]types.AttributeValue, rb *T) error {
+func UnmarshalMap[T RowBuilder](m map[string]types.AttributeValue, rb T) error {
 	// Extract the key fields from the map
 	pkAttr, ok := m["pk"]
 	if !ok {
@@ -55,7 +55,7 @@ func UnmarshalMap[T RowBuilder](m map[string]types.AttributeValue, rb *T) error 
 	}
 
 	// Set the key fields
-	if err := (*rb).DecodeKey(Key{PK: pk, SK: sk}); err != nil {
+	if err := (rb).DecodeKey(Key{PK: pk, SK: sk}); err != nil {
 		return fmt.Errorf("failed to decode key: %w", err)
 	}
 
