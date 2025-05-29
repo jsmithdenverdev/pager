@@ -1,4 +1,4 @@
-module attributevalue
+module github.com/jsmithdenverdev/pager/pkg/attributevalue
 
 go 1.24
 
