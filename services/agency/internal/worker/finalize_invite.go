@@ -10,7 +10,6 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
@@ -83,13 +82,13 @@ func finalizeInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			ModifiedBy: invite.ModifiedBy,
 		}
 
-		membershipAV, err := attributevalue.MarshalMap(membership)
+		membershipAV, err := dynarow.MarshalMap(membership)
 		if err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to create membership", message, err)
 		}
 
 		membership.Invert()
-		membershipInverseAV, err := attributevalue.MarshalMap(membership)
+		membershipInverseAV, err := dynarow.MarshalMap(membership)
 		if err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to create membership", message, err)
 		}

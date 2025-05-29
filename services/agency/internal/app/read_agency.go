@@ -7,9 +7,9 @@ import (
 	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/jsmithdenverdev/pager/pkg/dynarow"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
@@ -55,7 +55,7 @@ func readAgency(config Config, logger *slog.Logger, client *dynamodb.Client) htt
 
 		var agency models.Agency
 		if result.Item != nil {
-			if err := attributevalue.UnmarshalMap(result.Item, &agency); err != nil {
+			if err := dynarow.UnmarshalMap(result.Item, &agency); err != nil {
 				logger.ErrorContext(r.Context(), "failed to unmarshal agency record", slog.Any("error", err))
 				w.WriteHeader(http.StatusInternalServerError)
 				return
