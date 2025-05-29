@@ -17,9 +17,7 @@ const (
 
 // Invitation represents an invitation to join an agency.
 type Invitation struct {
-	PK         string           `dynamodbav:"pk"`
-	SK         string           `dynamodbav:"sk"`
-	Type       EntityType       `dynamodbav:"type"`
+	ID         string           `dynamodbav:"id"`
 	Status     InvitationStatus `dynamodbav:"status"`
 	Role       identity.Role    `dynamodbav:"role"`
 	Created    time.Time        `dynamodbav:"created"`

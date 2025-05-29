@@ -12,9 +12,7 @@ const (
 )
 
 type EndpointRegistration struct {
-	PK         string             `dynamodbav:"pk"`
-	SK         string             `dynamodbav:"sk"`
-	Type       EntityType         `dynamodbav:"type"`
+	ID         string             `dynamodbav:"id"`
 	Status     RegistrationStatus `dynamodbav:"status"`
 	EndpointID string             `dynamodbav:"endpointId"`
 	Created    time.Time          `dynamodbav:"created"`
