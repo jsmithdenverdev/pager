@@ -162,8 +162,8 @@ func listAgencies(config Config, logger *slog.Logger, client *dynamodb.Client) h
 
 		for _, membership := range memberships {
 			response.Results = append(response.Results, membershipResponse{
-				AgencyID: strings.Split(membership.SK, "#")[1],
-				UserID:   strings.Split(membership.PK, "#")[1],
+				AgencyID: membership.AgencyID,
+				UserID:   membership.UserID,
 				Role:     membership.Role,
 			})
 		}

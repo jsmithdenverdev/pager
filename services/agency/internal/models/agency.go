@@ -2,7 +2,7 @@ package models
 
 import (
 	"fmt"
-	"github.com/jsmithdenverdev/pager/pkg/attributevalue"
+	"github.com/jsmithdenverdev/pager/pkg/dynarow"
 	"strings"
 	"time"
 )
@@ -21,22 +21,22 @@ type Agency struct {
 	Status     AgencyStatus `dynamodbav:"status"`
 	Created    time.Time    `dynamodbav:"created"`
 	Modified   time.Time    `dynamodbav:"modified"`
-	CreatedBy  string       `dynamodbav:"createdBy"`
-	ModifiedBy string       `dynamodbav:"modifiedBy"`
+	CreatedBy  string       `dynamodbav:"created_by"`
+	ModifiedBy string       `dynamodbav:"modified_by"`
 }
 
 func (a *Agency) Type() string {
 	return EntityTypeAgency
 }
 
-func (a *Agency) EncodeKey() attributevalue.Key {
-	return attributevalue.Key{
+func (a *Agency) EncodeKey() dynarow.Key {
+	return dynarow.Key{
 		PK: fmt.Sprintf("agency#%s", a.ID),
 		SK: "meta",
 	}
 }
 
-func (a *Agency) DecodeKey(key attributevalue.Key) error {
+func (a *Agency) DecodeKey(key dynarow.Key) error {
 	idParts := strings.Split(key.PK, "#")
 	if len(idParts) != 2 {
 		return fmt.Errorf("invalid pk: %s", key.PK)

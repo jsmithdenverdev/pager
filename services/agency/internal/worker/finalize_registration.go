@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
-	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 	"log/slog"
+
+	"github.com/jsmithdenverdev/pager/pkg/dynarow"
+	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -55,7 +56,7 @@ func finalizeRegistration(config Config, logger *slog.Logger, dynamoClient *dyna
 		}
 
 		var pendingRegistration models.EndpointRegistration
-		if err := attributevalue.UnmarshalMap(readPendingRegistrationResult.Item, &pendingRegistration); err != nil {
+		if err := dynarow.UnmarshalMap(readPendingRegistrationResult.Item, &pendingRegistration); err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
 		}
 
@@ -66,9 +67,9 @@ func finalizeRegistration(config Config, logger *slog.Logger, dynamoClient *dyna
 		// Mirror the pending registration into a new finalRegistration model to avoid any mutation of the original.
 		finalRegistration := pendingRegistration
 		finalRegistration.Status = models.RegistrationStatusComplete
-		finalRegistration.SK = fmt.Sprintf("endpoint#%s", message.EndpointId)
+		finalRegistration.EndpointID = message.EndpointId
 
-		finalRegistrationAV, err := attributevalue.MarshalMap(finalRegistration)
+		finalRegistrationAV, err := dynarow.MarshalMap(&finalRegistration)
 		if err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to create registration", message, err)
 		}

@@ -2,16 +2,15 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
+	"github.com/jsmithdenverdev/pager/pkg/dynarow"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
@@ -51,10 +50,9 @@ func registerEndpoint(config Config, logger *slog.Logger, dynamoClient *dynamodb
 
 		now := time.Now()
 
-		registrationAV, err := attributevalue.MarshalMap(models.EndpointRegistration{
-			PK:         fmt.Sprintf("agency#%s", agencyID),
-			SK:         fmt.Sprintf("registration#%s", req.RegistrationCode),
-			Type:       models.EntityTypeRegistration,
+		registrationAV, err := dynarow.MarshalMap(&models.EndpointRegistration{
+			AgencyID:   agencyID,
+			EndpointID: req.RegistrationCode,
 			Status:     models.RegistrationStatusPending,
 			Created:    now,
 			Modified:   now,
