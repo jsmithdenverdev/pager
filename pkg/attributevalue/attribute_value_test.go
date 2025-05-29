@@ -1,9 +1,9 @@
 package attributevalue_test
 
 import (
-	"attributevalue"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/jsmithdenverdev/pager/pkg/attributevalue"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
