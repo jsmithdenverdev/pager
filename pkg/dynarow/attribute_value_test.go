@@ -2,11 +2,12 @@ package dynarow_test
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/jsmithdenverdev/pager/pkg/dynarow"
 	"github.com/stretchr/testify/assert"
-	"strings"
-	"testing"
 )
 
 type user struct {
@@ -44,14 +45,12 @@ func TestMarshalMap(t *testing.T) {
 
 	// The expected output now includes the row structure
 	expected := map[string]types.AttributeValue{
-		"pk":   &types.AttributeValueMemberS{Value: "user#123"},
-		"sk":   &types.AttributeValueMemberS{Value: "meta"},
-		"type": &types.AttributeValueMemberS{Value: "USER"},
-		"row": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
-			"id":    &types.AttributeValueMemberS{Value: "123"},
-			"name":  &types.AttributeValueMemberS{Value: "Jon Doe"},
-			"email": &types.AttributeValueMemberS{Value: "fake@.com"},
-		}},
+		"pk":    &types.AttributeValueMemberS{Value: "user#123"},
+		"sk":    &types.AttributeValueMemberS{Value: "meta"},
+		"type":  &types.AttributeValueMemberS{Value: "USER"},
+		"id":    &types.AttributeValueMemberS{Value: "123"},
+		"name":  &types.AttributeValueMemberS{Value: "Jon Doe"},
+		"email": &types.AttributeValueMemberS{Value: "fake@.com"},
 	}
 
 	actual, err := dynarow.MarshalMap(u)
@@ -65,14 +64,12 @@ func TestMarshalMap(t *testing.T) {
 func TestUnmarshalMap(t *testing.T) {
 	// Create a map that represents a DynamoDB item with the row structure
 	item := map[string]types.AttributeValue{
-		"pk":   &types.AttributeValueMemberS{Value: "user#123"},
-		"sk":   &types.AttributeValueMemberS{Value: "meta"},
-		"type": &types.AttributeValueMemberS{Value: "USER"},
-		"row": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
-			"id":    &types.AttributeValueMemberS{Value: "123"},
-			"name":  &types.AttributeValueMemberS{Value: "Jon Doe"},
-			"email": &types.AttributeValueMemberS{Value: "fake@.com"},
-		}},
+		"pk":    &types.AttributeValueMemberS{Value: "user#123"},
+		"sk":    &types.AttributeValueMemberS{Value: "meta"},
+		"type":  &types.AttributeValueMemberS{Value: "USER"},
+		"id":    &types.AttributeValueMemberS{Value: "123"},
+		"name":  &types.AttributeValueMemberS{Value: "Jon Doe"},
+		"email": &types.AttributeValueMemberS{Value: "fake@.com"},
 	}
 
 	// Create a user to unmarshal into
