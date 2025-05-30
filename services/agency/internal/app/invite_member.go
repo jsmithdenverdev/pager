@@ -2,17 +2,16 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"slices"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
+	"github.com/jsmithdenverdev/pager/pkg/dynarow"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
@@ -54,12 +53,11 @@ func inviteMember(config Config, logger *slog.Logger, dynamoClient *dynamodb.Cli
 
 		now := time.Now()
 
-		invitationAV, err := attributevalue.MarshalMap(models.Invitation{
-			PK:         fmt.Sprintf("invite#%s", req.Email),
-			SK:         fmt.Sprintf("agency#%s", agencyID),
-			Type:       models.EntityTypeInvitation,
-			Role:       req.Role,
+		invitationAV, err := dynarow.MarshalMap(&models.Invitation{
+			AgencyID:   agencyID,
+			Email:      req.Email,
 			Status:     models.InvitationStatusPending,
+			Role:       req.Role,
 			Created:    now,
 			Modified:   now,
 			CreatedBy:  user.ID,

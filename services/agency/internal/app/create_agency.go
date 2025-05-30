@@ -2,14 +2,13 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/jsmithdenverdev/pager/pkg/dynarow"
 	"log/slog"
 	"net/http"
 	"slices"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/google/uuid"
 	"github.com/jsmithdenverdev/pager/pkg/identity"
@@ -52,10 +51,8 @@ func createAgency(config Config, logger *slog.Logger, client *dynamodb.Client) h
 
 		id := uuid.New().String()
 
-		dynamoInput, err := attributevalue.MarshalMap(models.Agency{
-			PK:         fmt.Sprintf("agency#%s", id),
-			SK:         "meta",
-			Type:       models.EntityTypeAgency,
+		dynamoInput, err := dynarow.MarshalMap(&models.Agency{
+			ID:         id,
 			Name:       req.Name,
 			Status:     models.AgencyStatusActive,
 			Created:    time.Now(),

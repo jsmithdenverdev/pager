@@ -51,7 +51,7 @@ type agencyResponse struct {
 // toAgencyResponse converts an agency to a response.
 func toAgencyResponse(agency models.Agency) agencyResponse {
 	return agencyResponse{
-		ID:         strings.Split(agency.PK, "#")[1],
+		ID:         agency.ID,
 		Name:       agency.Name,
 		Status:     agency.Status,
 		Created:    agency.Created,

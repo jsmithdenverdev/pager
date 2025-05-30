@@ -10,11 +10,11 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
+	"github.com/jsmithdenverdev/pager/pkg/dynarow"
 	"github.com/jsmithdenverdev/pager/services/agency/internal/models"
 )
 
@@ -63,7 +63,7 @@ func finalizeInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 
 		var invite models.Invitation
 
-		if err := attributevalue.UnmarshalMap(queryInviteResult.Items[0], &invite); err != nil {
+		if err := dynarow.UnmarshalMap(queryInviteResult.Items[0], &invite); err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to create membership", message, err)
 		}
 
@@ -71,34 +71,24 @@ func finalizeInvite(config Config, logger *slog.Logger, dynamoClient *dynamodb.C
 			return logAndHandleError(ctx, retryCount, "failed to create membership", message, errors.New("invite is not pending"))
 		}
 
-		membershipAV, err := attributevalue.MarshalMap(models.Membership{
-			PK:         fmt.Sprintf("user#%s", message.UserID),
-			SK:         fmt.Sprintf("agency#%s", message.AgencyID),
-			Type:       models.EntityTypeMembership,
+		membership := models.Membership{
+			UserID:     message.UserID,
+			AgencyID:   message.AgencyID,
 			Role:       invite.Role,
 			Status:     models.MembershipStatusActive,
 			Created:    time.Now(),
 			Modified:   time.Now(),
 			CreatedBy:  invite.CreatedBy,
 			ModifiedBy: invite.ModifiedBy,
-		})
+		}
 
+		membershipAV, err := dynarow.MarshalMap(membership)
 		if err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to create membership", message, err)
 		}
 
-		membershipInverseAV, err := attributevalue.MarshalMap(models.Membership{
-			PK:         fmt.Sprintf("agency#%s", message.AgencyID),
-			SK:         fmt.Sprintf("user#%s", message.UserID),
-			Type:       models.EntityTypeMembership,
-			Role:       invite.Role,
-			Status:     models.MembershipStatusActive,
-			Created:    time.Now(),
-			Modified:   time.Now(),
-			CreatedBy:  invite.CreatedBy,
-			ModifiedBy: invite.ModifiedBy,
-		})
-
+		membership.Invert()
+		membershipInverseAV, err := dynarow.MarshalMap(membership)
 		if err != nil {
 			return logAndHandleError(ctx, retryCount, "failed to create membership", message, err)
 		}
