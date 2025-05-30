@@ -27,8 +27,8 @@ type Invitation struct {
 	Role       identity.Role    `dynamodbav:"role"`
 	Created    time.Time        `dynamodbav:"created"`
 	Modified   time.Time        `dynamodbav:"modified"`
-	CreatedBy  string           `dynamodbav:"createdBy"`
-	ModifiedBy string           `dynamodbav:"modifiedBy"`
+	CreatedBy  string           `dynamodbav:"created_by"`
+	ModifiedBy string           `dynamodbav:"modified_by"`
 }
 
 func (a *Invitation) Type() string {
